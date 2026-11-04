@@ -59,3 +59,7 @@ Existing band: leader uses /login/email → **밴드 관리** → enable code lo
 Run lint, typecheck, unit/action tests, and build. Run npx supabase test db against a disposable/local Supabase database. Do not run test fixtures on the production database. The database suites cover canonical identity mapping, owner-only submissions/votes, leader-only administration, session revocation, rate limiting, and cross-band denial.
 
 If the administrator PIN is lost, the Supabase project owner must reset its hash through SQL Editor. Never expose an administrator/service key or bypass this check in the client. Avoid bulk deletion of anonymous Auth users: anchor users own persistent band records. No automatic cleanup job is added.
+
+## Shared password minimum length update
+
+Shared band passwords now accept 4..64 characters (UTF-8 maximum 72 bytes). Personal and administrator PINs remain six digits. Apply the NEW 202611050003_shared_password_min4.sql after 202611050002_band_code_login.sql, then deploy the updated UI/server validation. Do not rerun either previously applied migration. Existing hashes and passwords remain valid.

@@ -37,7 +37,7 @@ function refreshIdentity() { revalidatePath('/', 'layout'); }
 
 export async function beginBandAccessAction(_: FormState, form: FormData): Promise<FormState> {
   const parsed = z.object({ code: bandCodeSchema, password: bandPasswordSchema }).safeParse(fields(form));
-  if (!parsed.success) return { error: '밴드 코드 10자리와 8자 이상의 공용 비밀번호를 확인하세요.' };
+  if (!parsed.success) return { error: '밴드 코드 10자리와 4자 이상의 공용 비밀번호를 확인하세요.' };
   const guest = await guestClient();
   if (!guest.client) return { error: guest.error };
   const { data, error } = await guest.client.rpc('begin_band_access', { p_code: parsed.data.code, p_password: parsed.data.password });

@@ -1,5 +1,5 @@
 begin;
-select plan(42);
+select plan(44);
 
 insert into auth.users(id, aud, role, is_anonymous, raw_user_meta_data, created_at, updated_at)
 select ('10000000-0000-4000-8000-00000000000' || n)::uuid, 'authenticated', 'authenticated', true, '{}', now(), now()
@@ -13,7 +13,8 @@ select set_config('request.jwt.claims','{"sub":"10000000-0000-4000-8000-00000000
 select is(private.actor_id(), null::uuid, 'an unverified guest has no actor');
 select is((select count(*)::integer from public.bands), 0, 'an unverified guest reads no band');
 select throws_ok($$select public.create_band('Bypass','guitar','Bypass')$$, 'P0001','UNAUTHENTICATED','old create-band RPC cannot bypass code/PIN login');
-select ok((public.create_code_band('Code band','Leader','guitar','shared-password','001234','987654')->>'ok')::boolean, 'email-free band creation succeeds');
+select is(public.create_code_band('Code band','Leader','guitar','123','001234','987654')->>'error','INVALID_INPUT','three-character shared password rejected on creation');
+select ok((public.create_code_band('Code band','Leader','guitar','1234','001234','987654')->>'ok')::boolean, 'email-free band creation succeeds');
 select set_config('test.band',public.current_band_identity()->>'band_id',true);
 select set_config('test.code',public.band_login_settings()->>'code',true);
 select is(private.actor_id(),'10000000-0000-4000-8000-000000000001'::uuid,'creator owns the leader identity');
@@ -21,14 +22,14 @@ select ok(private.is_band_leader(current_setting('test.band')::uuid),'creator ha
 select set_config('test.leader_member',(select id::text from public.band_members where role='leader'),true);
 
 reset role;
-select ok((select password_hash <> 'shared-password' and admin_pin_hash <> '987654' from private.band_login_credentials where band_id=current_setting('test.band')::uuid),'band password and admin PIN are hashed');
+select ok((select password_hash <> '1234' and admin_pin_hash <> '987654' from private.band_login_credentials where band_id=current_setting('test.band')::uuid),'band password and admin PIN are hashed');
 select ok((select pin_hash <> '001234' from private.member_pins where user_id='10000000-0000-4000-8000-000000000001'),'member PIN is hashed');
 set local role authenticated;
 select set_config('request.jwt.claim.sub','10000000-0000-4000-8000-000000000002',true);
 select set_config('request.jwt.claims','{"sub":"10000000-0000-4000-8000-000000000002","role":"authenticated","is_anonymous":true}',true);
 select is(public.begin_band_access(current_setting('test.code'),'wrong-password')->>'error','BAD_BAND_CREDENTIALS','wrong band password rejected');
 select is(public.band_access_context(),null::jsonb,'wrong password reveals no member list');
-select ok((public.begin_band_access(current_setting('test.code'),'shared-password')->>'ok')::boolean,'correct band code and password accepted');
+select ok((public.begin_band_access(current_setting('test.code'),'1234')->>'ok')::boolean,'correct band code and password accepted');
 select is(jsonb_array_length(public.band_access_context()->'profiles'),1,'password gate exposes only the profile picker');
 select is((select count(*)::integer from public.bands),0,'password alone grants no band data access');
 select is(public.member_pin_login(current_setting('test.leader_member')::uuid,'000000')->>'error','BAD_PIN','wrong member PIN rejected');
@@ -43,7 +44,7 @@ select is(public.unlock_band_admin('987654')->>'error','FORBIDDEN','member canno
 -- New device resumes the exact same canonical member, not a duplicate profile.
 select set_config('request.jwt.claim.sub','10000000-0000-4000-8000-000000000003',true);
 select set_config('request.jwt.claims','{"sub":"10000000-0000-4000-8000-000000000003","role":"authenticated","is_anonymous":true}',true);
-select ok((public.begin_band_access(current_setting('test.code'),'shared-password')->>'ok')::boolean,'second device passes band gate');
+select ok((public.begin_band_access(current_setting('test.code'),'1234')->>'ok')::boolean,'second device passes band gate');
 select ok((public.member_pin_login(current_setting('test.member')::uuid,'223344')->>'ok')::boolean,'second device resumes existing member with PIN');
 select is(private.actor_id(),'10000000-0000-4000-8000-000000000002'::uuid,'second device resolves original member ID');
 select lives_ok($$select public.update_song_difficulty(current_setting('test.song')::bigint,'guitar',3::smallint,0)$$,'resumed member may edit song difficulty');
@@ -55,7 +56,7 @@ select is(private.actor_id(),null::uuid,'PIN change revokes the original device 
 
 select set_config('request.jwt.claim.sub','10000000-0000-4000-8000-000000000004',true);
 select set_config('request.jwt.claims','{"sub":"10000000-0000-4000-8000-000000000004","role":"authenticated","is_anonymous":true}',true);
-select public.begin_band_access(current_setting('test.code'),'shared-password');
+select public.begin_band_access(current_setting('test.code'),'1234');
 select public.member_pin_login(current_setting('test.leader_member')::uuid,'001234');
 select ok(not private.is_band_leader(current_setting('test.band')::uuid),'leader personal PIN does not unlock admin rights');
 select throws_ok($$select public.start_round(current_setting('test.band')::uuid)$$,'P0001','FORBIDDEN','leader management blocked until administrator PIN');
@@ -63,12 +64,13 @@ select is(public.unlock_band_admin('000000')->>'error','BAD_PIN','wrong administ
 select ok((public.unlock_band_admin('987654')->>'ok')::boolean,'administrator PIN elevates leader session');
 select ok(private.is_band_leader(current_setting('test.band')::uuid),'leader management now enabled');
 select set_config('test.round',public.start_round(current_setting('test.band')::uuid)::text,true);
-select ok((public.configure_band_login('rotated-password','876543')->>'ok')::boolean,'elevated leader rotates shared credentials');
+select is(public.configure_band_login('123','876543')->>'error','INVALID_INPUT','three-character shared password rejected on rotation');
+select ok((public.configure_band_login('5678','876543')->>'ok')::boolean,'elevated leader rotates shared credentials');
 
 select set_config('request.jwt.claim.sub','10000000-0000-4000-8000-000000000003',true);
 select set_config('request.jwt.claims','{"sub":"10000000-0000-4000-8000-000000000003","role":"authenticated","is_anonymous":true}',true);
 select is(private.actor_id(),null::uuid,'shared-password rotation revokes other devices');
-select public.begin_band_access(current_setting('test.code'),'rotated-password');
+select public.begin_band_access(current_setting('test.code'),'5678');
 select public.member_pin_login(current_setting('test.member')::uuid,'334455');
 select lives_ok($$select public.cast_vote(current_setting('test.round')::uuid,current_setting('test.song')::bigint,'yes',null)$$,'resumed member votes as the canonical round participant');
 select is((select count(*)::integer from public.song_votes where round_id=current_setting('test.round')::uuid and member_id=current_setting('test.member')::uuid),1,'vote belongs to the original member ID');
@@ -81,7 +83,7 @@ select is(private.actor_id(),null::uuid,'logout revokes device identity immediat
 -- Persistent failure counter: functions return errors rather than rolling the counter back.
 select set_config('request.jwt.claim.sub','10000000-0000-4000-8000-000000000005',true);
 select set_config('request.jwt.claims','{"sub":"10000000-0000-4000-8000-000000000005","role":"authenticated","is_anonymous":true}',true);
-select public.begin_band_access(current_setting('test.code'),'rotated-password');
+select public.begin_band_access(current_setting('test.code'),'5678');
 do $$ begin for n in 1..10 loop perform public.member_pin_login(current_setting('test.member')::uuid,'000000'); end loop; end $$;
 select is(public.member_pin_login(current_setting('test.member')::uuid,'334455')->>'error','RATE_LIMITED','PIN guesses are throttled across device sessions');
 

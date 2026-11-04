@@ -31,9 +31,9 @@ beforeEach(() => {
 describe('band login actions', () => {
   it('creates an Auth guest before the band-password RPC when no session exists', async () => {
     mocks.getUser.mockResolvedValue({ data: { user: null }, error: null });
-    await expect(beginBandAccessAction({}, form({ code: ' ab12cd34ef ', password: 'shared-password' }))).rejects.toThrow('redirect:/login/member');
+    await expect(beginBandAccessAction({}, form({ code: ' ab12cd34ef ', password: '1234' }))).rejects.toThrow('redirect:/login/member');
     expect(mocks.signInAnonymously).toHaveBeenCalledOnce();
-    expect(mocks.rpc).toHaveBeenCalledWith('begin_band_access', { p_code: 'AB12CD34EF', p_password: 'shared-password' });
+    expect(mocks.rpc).toHaveBeenCalledWith('begin_band_access', { p_code: 'AB12CD34EF', p_password: '1234' });
   });
   it('does not replace an existing email account with a guest', async () => {
     mocks.getUser.mockResolvedValue({ data: { user: { is_anonymous: false } }, error: null });

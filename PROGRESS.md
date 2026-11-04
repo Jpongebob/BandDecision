@@ -95,3 +95,12 @@ Local production preview is running at http://localhost:3000 (new login at /logi
 2. Enable Allow anonymous sign-ins in Supabase Authentication settings. Retain existing URL/publishable-key environment variables; no new server secret is required.
 3. Commit/push and deploy the new code. For an existing band, use /login/email and enable the code/PIN flow on the existing profiles rather than creating replacements.
 4. Run the DB suites on an isolated Supabase test database and verify password/PIN rejection, same-band and owner-only writes, leader elevation, revocation, and existing data on two devices before treating the rollout as verified.
+
+## Shared band password minimum: four characters (2026-11-05)
+
+- Shared-band password validation, creation/login/rotation RPC definitions, UI label and HTML minimum now accept 4..64 characters (UTF-8 maximum 72 bytes). Personal and administrator PINs stay six digits. Email-account password rules are unchanged.
+- Added 202611050003_shared_password_min4.sql using CREATE OR REPLACE for the three affected RPCs. The previous migration is unchanged; existing hashes and grants are preserved.
+- Added the 3/4-character boundary unit test, made the login action test use a four-character password, and extended database fixtures to verify four-character creation/login/rotation plus three-character rejection. Updated SPEC and DEPLOYMENT.
+- Executed: lint PASS; typecheck PASS; unit/action tests PASS (5 files, 30 tests); production build PASS (23 pages/routes).
+- BLOCKED: live migration application and actual Supabase authentication/RLS tests were not executed; no provider credentials/test DB are connected. Database suite now declares 44 assertions but remains unexecuted.
+- Rollout: after 202611050002 is already applied, execute ONLY the new 202611050003 migration, then commit/push/redeploy the frontend/server validation. Do not rerun earlier migrations.

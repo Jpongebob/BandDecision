@@ -2,6 +2,16 @@ import { describe, expect, it } from 'vitest';
 import { bandCodeSchema, bandPasswordSchema, createCodeBandSchema, pinSchema } from '../src/lib/band-login-validation';
 
 describe('band credentials', () => {
+  it('accepts four-character shared passwords and rejects shorter ones throughout band creation', () => {
+    const fields = { name: '밴드', nickname: '멤버', part: '기타', pin: '001234', admin_pin: '567890' };
+    expect(bandPasswordSchema.parse('1234')).toBe('1234');
+    expect(createCodeBandSchema.safeParse({ ...fields, password: '1234' }).success).toBe(true);
+    for (const password of ['', '1', '12', '123']) {
+      expect(bandPasswordSchema.safeParse(password).success).toBe(false);
+      expect(createCodeBandSchema.safeParse({ ...fields, password }).success).toBe(false);
+    }
+  });
+
   it('normalizes band codes without changing passwords', () => {
     expect(bandCodeSchema.parse(' ab12cd34ef ')).toBe('AB12CD34EF');
     expect(bandPasswordSchema.parse(' password ')).toBe(' password ');
