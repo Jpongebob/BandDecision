@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import { Card, CardTitle } from '@/components/ui/card';
 import { SongList } from '@/components/song-list';
 import { createClient } from '@/lib/supabase/server';
@@ -23,5 +24,5 @@ export default async function SongsPage() {
     });
   }
   const songs = await loadSongs(db, member.band_id, round?.id ?? null);
-  return <div className="space-y-5"><div><h1 className="text-3xl font-black">합주곡</h1><p className="mt-2 text-sm text-slate-500">회차별 한 표씩 투표하고 반대 사유를 공유합니다.</p></div><div className="flex flex-wrap gap-2"><a className="rounded-lg px-3 py-2 text-sm font-semibold text-blue-700" href="/songs/recommendations">곡 추천 보기 →</a></div><SongList bandId={member.band_id} roundId={round?.id ?? null} isLeader={member.role === 'leader'} memberId={member.id} participants={participants} songs={songs}/></div>;
+  return <div className="space-y-5"><div><h1 className="text-3xl font-black">합주곡</h1><p className="mt-2 text-sm text-slate-500">회차별 한 표씩 투표하고 반대 사유를 공유합니다.</p></div><div className="flex flex-wrap gap-2"><Link className="rounded-lg px-3 py-2 text-sm font-semibold text-blue-700" href="/songs/recommendations">곡 추천 보기 →</Link></div><SongList bandId={member.band_id} roundId={round?.id ?? null} isLeader={member.role === 'leader'} memberId={member.id} participants={participants} songs={songs}/></div>;
 }
