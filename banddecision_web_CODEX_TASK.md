@@ -10,7 +10,7 @@ BandDecision이라는 밴드 합주 의사결정 **반응형 웹서비스를 처
 
 ### 1. 먼저 읽을 파일
 
-- `SPEC.md`: 반드시 전체를 읽으세요. **기능·알고리즘·DB·보안·AC01~AC56의 최종 계약**입니다.
+- `SPEC.md`: 반드시 전체를 읽으세요. **기능·알고리즘·DB·보안·AC01~AC60의 최종 계약**입니다.
 - `AGENTS.md`: 코딩, 보안, 테스트, 진행 기록 규칙입니다.
 - `CODEX_TASK.md`: 지금 요청한 전체 개발 범위와 종료 조건입니다.
 
@@ -69,7 +69,7 @@ BandDecision이라는 밴드 합주 의사결정 **반응형 웹서비스를 처
 - `DEPLOYMENT.md` (Supabase 초기화, 인증 redirect URL, Vercel 환경 변수와 배포)
 - `PROGRESS.md` (Phase별 실제 구현/검증, 미구현·BLOCKED 기록)
 - 단위 테스트(날짜 계산/곡 점수/동률/입력 예외)와 가능한 API/권한 통합 테스트
-- `SPEC.md` AC01~AC56 검증 상태표
+- `SPEC.md` AC01~AC60 검증 상태표
 
 ### 6. 필수 검사와 완료 보고
 
@@ -87,3 +87,12 @@ npm run build
 최종 보고는 한국어로 작성하여 **실제로 동작하는 기능**, **실제로 수행한 테스트 결과**, **외부 설정이 없어서 검증하지 못한 기능**, **로컬 실행법**, **Vercel 배포 방법**을 명확히 구분해 주세요.
 
 **작업 목표:** 앱스토어용 앱이 아닌, URL만 공유하면 밴드 멤버들이 모바일/PC에서 접속해 실제로 사용할 수 있는 BandDecision 웹서비스의 전체 구현입니다.
+
+
+## v3.1 song permissions update
+
+- Any active band member may register a candidate song and create or edit per-part difficulty for songs in their own band. The band leader retains member management and final plan confirmation.
+- Difficulty writes use an authenticated membership-checked RPC and optimistic `expected_version`; store `updated_by`, `updated_at`, and a monotonically increasing version. Reject stale writes rather than overwriting another member's change.
+- A difficulty change refreshes the active round's recommendation version but never mutates an already confirmed plan snapshot.
+- Direct table DML remains revoked. RLS policies and server RPC checks must prevent cross-band access. Availability and votes remain self-only.
+- Add tests for ordinary-member song creation, difficulty create/edit, modifier/time/version metadata, stale conflict rejection, and cross-band denial.
