@@ -1,5 +1,5 @@
 begin;
-select plan(44);
+select plan(47);
 
 insert into auth.users(id, aud, role, is_anonymous, raw_user_meta_data, created_at, updated_at)
 select ('10000000-0000-4000-8000-00000000000' || n)::uuid, 'authenticated', 'authenticated', true, '{}', now(), now()
@@ -37,6 +37,7 @@ select is(private.actor_id(),null::uuid,'wrong PIN cannot select another member'
 select is(public.register_band_profile('Leader','drums','223344')->>'error','DUPLICATE_NICKNAME','duplicate active nickname rejected');
 select ok((public.register_band_profile('Member','guitar','223344')->>'ok')::boolean,'new member may register after shared-password gate');
 select set_config('test.member',(select id::text from public.band_members where user_id=private.actor_id()),true);
+select throws_ok($$select public.update_member_skill(current_setting('test.member')::uuid,5::smallint)$$,'P0001','FORBIDDEN','ordinary member cannot change their own skill');
 select set_config('test.song',public.add_song(current_setting('test.band')::uuid,'Member song','Artist')::text,true);
 select throws_ok($$select public.start_round(current_setting('test.band')::uuid)$$,'P0001','FORBIDDEN','member cannot start a round');
 select is(public.unlock_band_admin('987654')->>'error','FORBIDDEN','member cannot elevate with leader admin PIN');
@@ -63,6 +64,8 @@ select throws_ok($$select public.start_round(current_setting('test.band')::uuid)
 select is(public.unlock_band_admin('000000')->>'error','BAD_PIN','wrong administrator PIN rejected');
 select ok((public.unlock_band_admin('987654')->>'ok')::boolean,'administrator PIN elevates leader session');
 select ok(private.is_band_leader(current_setting('test.band')::uuid),'leader management now enabled');
+select lives_ok($$select public.update_member_skill(current_setting('test.leader_member')::uuid,5::smallint)$$,'elevated leader may set their own skill');
+select is((select skill::integer from public.band_members where id=current_setting('test.leader_member')::uuid),5,'leader self skill is explicitly saved');
 select set_config('test.round',public.start_round(current_setting('test.band')::uuid)::text,true);
 select is(public.configure_band_login('123','876543')->>'error','INVALID_INPUT','three-character shared password rejected on rotation');
 select ok((public.configure_band_login('5678','876543')->>'ok')::boolean,'elevated leader rotates shared credentials');

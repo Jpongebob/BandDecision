@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
+import { bandCodeSchema } from '@/lib/band-login-validation';
 
 export type FormState={error?:string;success?:string};
 const authSchema=z.object({email:z.email(),password:z.string().min(8).max(128)});
@@ -20,7 +21,32 @@ export async function updatePasswordAction(_:FormState,form:FormData):Promise<Fo
 export async function signOutAction(){const{client}=await clientOrError();if(client){const{error}=await client.rpc('end_band_session');if(error)throw new Error('로그아웃을 완료하지 못했습니다. 다시 시도해 주세요.');await client.auth.signOut();}redirect('/login');}
 
 export async function createBandAction(_:FormState,form:FormData):Promise<FormState>{const name=value(form,'name'),part=value(form,'part'),nickname=value(form,'nickname');if(!z.string().trim().min(2).max(40).safeParse(name).success||!part||!nickname)return{error:'밴드명·파트·닉네임을 확인해 주세요.'};const{client,error}=await clientOrError();if(!client)return{error:error!};const{error:rpcError}=await client.rpc('create_band',{p_name:name,p_part:part,p_nickname:nickname});if(rpcError)return{error:errorText(rpcError)};revalidatePath('/dashboard');redirect('/dashboard');}
-export async function createInviteAction(_:FormState,form:FormData):Promise<FormState>{const bandId=value(form,'band_id');const{client,error}=await clientOrError();if(!client)return{error:error!};const{data,error:rpcError}=await client.rpc('create_invite',{p_band:bandId});if(rpcError)return{error:errorText(rpcError)};const row=Array.isArray(data)?data[0]:data;return{success:`${siteOrigin()}/join/${row.token}`};}
+export async function createInviteAction(_: FormState, form: FormData): Promise<FormState> {
+  const bandId = value(form, 'band_id');
+  const { client, error } = await clientOrError();
+  if (!client) return { error: error! };
+  const [identityResult, settingsResult] = await Promise.all([
+    client.rpc('current_band_identity'),
+    client.rpc('band_login_settings'),
+  ]);
+  if (identityResult.error || settingsResult.error) return { error: '초대 설정을 불러오지 못했습니다. 연결과 인증 마이그레이션 적용 여부를 확인하세요.' };
+  const identity = identityResult.data as { band_id?: string } | null;
+  const settings = settingsResult.data as { role?: string; admin_unlocked?: boolean; code?: string | null } | null;
+  if (identity?.band_id !== bandId || settings?.role !== 'leader' || !settings.admin_unlocked) {
+    return { error: '멤버 초대는 관리자 PIN 잠금을 해제한 밴드장만 가능합니다.' };
+  }
+  if (settings.code) {
+    const code = bandCodeSchema.safeParse(settings.code);
+    if (!code.success) return { error: '밴드 코드 설정을 확인하세요.' };
+    return { success: siteOrigin() + '/login?code=' + encodeURIComponent(code.data) };
+  }
+  // Only bands that have not enabled code login retain the legacy one-use email invite.
+  const { data, error: rpcError } = await client.rpc('create_invite', { p_band: bandId });
+  if (rpcError) return { error: errorText(rpcError) };
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row?.token) return { error: '초대 링크를 생성하지 못했습니다.' };
+  return { success: siteOrigin() + '/join/' + encodeURIComponent(row.token) };
+}
 export async function redeemInviteAction(_:FormState,form:FormData):Promise<FormState>{const token=value(form,'token'),part=value(form,'part');if(!token||!part)return{error:'파트를 입력해 주세요.'};const{client,error}=await clientOrError();if(!client)return{error:error!};const{error:rpcError}=await client.rpc('redeem_invite',{p_token:token,p_part:part});if(rpcError)return{error:errorText(rpcError)};redirect('/dashboard');}
 export async function startRoundAction(_:FormState,form:FormData):Promise<FormState>{const{client,error}=await clientOrError();if(!client)return{error:error!};const{error:rpcError}=await client.rpc('start_round',{p_band:value(form,'band_id')});if(rpcError)return{error:errorText(rpcError)};revalidatePath('/dashboard');revalidatePath('/schedule');redirect('/schedule');}
 export async function submitUnavailableAction(_:FormState,form:FormData):Promise<FormState>{const round=value(form,'round_id'),raw=value(form,'dates_json'),ack=value(form,'ack_outside')==='true';let dates:unknown;try{dates=JSON.parse(raw);}catch{return{error:'날짜 목록을 확인해 주세요.'};}if(!Array.isArray(dates))return{error:'날짜 목록을 확인해 주세요.'};const{client,error}=await clientOrError();if(!client)return{error:error!};const{error:rpcError}=await client.rpc('save_unavailability',{p_round:round,p_dates:dates,p_ack_outside:ack});if(rpcError)return{error:errorText(rpcError)};revalidatePath('/schedule');revalidatePath('/schedule/recommendations');return{success:'일정을 저장했습니다.'};}

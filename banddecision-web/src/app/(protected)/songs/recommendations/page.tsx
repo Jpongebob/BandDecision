@@ -14,9 +14,8 @@ export default async function SongRecommendationsPage() {
   const { data: round } = await db.from('planning_rounds').select('id,start_date,end_date').eq('band_id', member.band_id).in('status', ['collecting', 'ready']).maybeSingle();
   if (!round) return <Card><CardTitle>진행 중 회차가 없습니다</CardTitle></Card>;
   const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' });
-  const data = await loadRoundData(db, member.band_id, round.id, today);
+  const [data, songs] = await Promise.all([loadRoundData(db, member.band_id, round.id, today), loadSongs(db, member.band_id, round.id)]);
   if (!data) return null;
-  const songs = await loadSongs(db, member.band_id, round.id);
   const ranked = recommendSongs(data.participants, songs);
   return (
     <div className="space-y-4">

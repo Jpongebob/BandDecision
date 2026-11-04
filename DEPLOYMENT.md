@@ -63,3 +63,7 @@ If the administrator PIN is lost, the Supabase project owner must reset its hash
 ## Shared password minimum length update
 
 Shared band passwords now accept 4..64 characters (UTF-8 maximum 72 bytes). Personal and administrator PINs remain six digits. Apply the NEW 202611050003_shared_password_min4.sql after 202611050002_band_code_login.sql, then deploy the updated UI/server validation. Do not rerun either previously applied migration. Existing hashes and passwords remain valid.
+
+## Code-based invite rollout
+
+No new SQL is needed for the invite-flow correction. Redeploy the updated app and open the current production domain. In a code-enabled band, unlock admin access and generate a fresh 간편 초대 link under 밴드 관리. The new /login?code=... link pre-fills the band code; send the shared password separately. Previously issued /join/... links remain legacy email invitations and should be replaced for email-free onboarding. Existing profiles select their own PIN; newcomers register nickname, part and PIN after the shared-password gate.

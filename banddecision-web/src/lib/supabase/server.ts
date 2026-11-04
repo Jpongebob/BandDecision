@@ -1,7 +1,8 @@
+import { cache } from 'react';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
-export async function createClient() {
+export const createClient = cache(async function createClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) return null;
@@ -18,10 +19,10 @@ export async function createClient() {
       },
     },
   });
-}
+});
 
 // Resolve the PIN-verified canonical profile. Raw anonymous Auth IDs are device sessions only.
-export async function getCurrentUser(client: NonNullable<Awaited<ReturnType<typeof createClient>>>) {
+export const getCurrentUser = cache(async function getCurrentUser(client: NonNullable<Awaited<ReturnType<typeof createClient>>>) {
   const { data: { user }, error } = await client.auth.getUser();
   if (error || !user) return null;
   const { data, error: identityError } = await client.rpc('current_band_identity');
@@ -29,4 +30,4 @@ export async function getCurrentUser(client: NonNullable<Awaited<ReturnType<type
   if (identityError || !identity) return null;
   return { id: identity.id, email: user.email, nickname: identity.nickname,
     is_anonymous: user.is_anonymous, adminUnlocked: identity.admin_unlocked };
-}
+});

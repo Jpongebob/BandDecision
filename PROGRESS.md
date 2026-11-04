@@ -113,3 +113,36 @@ Local production preview is running at http://localhost:3000 (new login at /logi
 - Executed: lint PASS; typecheck PASS; tests PASS (5 files / 38 tests, including 8 new Auth failure regressions); production build PASS (23 routes).
 - BLOCKED: exact live failure remains undiagnosed until the new diagnostic code is deployed or provider logs are available. No connected Supabase/Vercel account or live credentials are available. This change improves diagnosis and does not claim to fix the underlying provider failure.
 - Next action: push/deploy this code, retry once, then inspect the displayed error code. No SQL needs to be rerun for this diagnostic update.
+
+## Fix invitations still requiring email signup (2026-11-05)
+
+- Root cause: the invitation action always generated legacy /join/token email invitations despite band-code/PIN onboarding.
+- Code-enabled bands now share /login?code=... links. Login validates and prefills the code; recipients enter the shared password and then select their PIN-protected member or register nickname/part/PIN. No password or PIN is placed in the URL. Code links are reusable.
+- Invitation generation verifies the canonical current band, leader role and administrator elevation. Failed settings reads do not silently fall back to email. Bands without code login retain one-use email invitations.
+- Management shows the matching invitation method. Older /join/token pages prominently offer code entry; legacy email participation remains collapsed. Replace previously issued email links with new code invites.
+- Executed: lint PASS; typecheck PASS; tests PASS (6 files / 45 tests including 7 invitation regressions); production build PASS (23 routes); local /login?code=ab12cd34ef returned 200 with the normalized AB12CD34EF input value; git diff --check PASS.
+- No new SQL/provider settings are required. No commit/push/live deployment was performed.
+- BLOCKED/unverified: real Supabase invite/join flow on two devices and RLS integration; provider credentials and an isolated test DB are unavailable.
+- Rollout: push/redeploy, open the current production domain, unlock administrator access and create a new 간편 초대 link under 밴드 관리. Send the shared password separately.
+
+## Signed-in home and leader self-skill correction (2026-11-05)
+
+- User screenshots showed band-management membership but a dashboard/create-band prompt and an ALREADY_IN_BAND error. Home/layout queries embedded bands(name) and silently treated any query error as no membership. The exact remote query error was not available; no live root-cause confirmation is claimed.
+- Added shared getBandContext with independent membership/band-name queries and distinct ready/none/error states. Layout/dashboard/band settings now show a retryable lookup error with a sanitized code instead of claiming an existing member has no band. Canonical member IDs and RLS remain in use.
+- Authenticated visits to / and plain /login now redirect to /dashboard. An explicit invitation code retains its profile-switch context.
+- Explained the existing DB default of skill=3/5 in band management. Restored the missing own-leader skill form after administrator elevation, while preserving leader-only skill assignment. No saved skill values or scoring formula were changed. Removed duplicate automatic/explicit submit buttons from dashboard and round creation.
+- Executed: lint PASS; typecheck PASS; tests PASS (8 files / 54 tests, including 6 membership/error cases and 3 authenticated routing regressions); production build PASS (23 routes); git diff --check PASS.
+- Database test suite now declares 47 assertions, adding leader own-skill update and member-denial coverage; NOT executed because the isolated Supabase DB/provider connection remains unavailable.
+- No new SQL migration is needed. Remote query behavior, true provider sessions, and device-level self-skill updates remain unverified.
+- Rollout: push/redeploy all pending invitation/home fixes and open the fixed production domain from Vercel Domains. Previously copied immutable deployment URLs retain their earlier code. If lookup still fails, use the newly displayed error code to diagnose the actual remote DB response.
+
+## Menu navigation performance (2026-11-05)
+
+- Source-level contributors: layout/page repeated client creation, getUser, identity and band lookups; independent route data was awaited sequentially; every Realtime row triggered router.refresh; protected routes had no loading boundary.
+- React.cache now deduplicates createClient, getCurrentUser and getBandContext only within one Server Component render request. No global/shared-user data cache, skipped authorization, or cross-request membership cache was introduced.
+- Parallelized independent queries in dashboard, band settings, schedule, candidate songs, song recommendations and plans. Kept authentication and dependent IDs before their queries. Plan confirmation UI also checks administrator elevation; server permission/version checks remain.
+- Added protected loading.tsx for streaming/partial prefetch and responsive navigation while page data loads.
+- Batched Realtime refreshes into fixed 200ms windows without indefinitely delaying updates. Hidden tabs defer work; focus/visibility restoration refreshes once. Cleanup cancels pending work and removes listeners/subscription.
+- Executed: lint PASS; typecheck PASS; tests PASS (10 files / 60 tests); production build PASS (23 routes); git diff --check PASS. New tests cover 100 event schedules producing one refresh, continuous streams, later batches, cancellation, and actual component background/focus behavior.
+- Evidence is limited to code paths and synthetic refresh counts. Actual deployed latency, Supabase/Vercel regional distance, cold starts and authenticated live workload were NOT measured because provider access/live credentials are unavailable. No latency/percentage improvement claim is made.
+- No SQL, environment-variable or provider-region changes are needed. Push/redeploy and measure the current production domain before adjusting database/function regions.
