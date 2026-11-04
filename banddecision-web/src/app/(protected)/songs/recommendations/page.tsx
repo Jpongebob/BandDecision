@@ -1,13 +1,13 @@
 import { Card, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, getCurrentUser } from '@/lib/supabase/server';
 import { loadRoundData, loadSongs } from '@/lib/round-data';
 import { recommendSongs } from '@/services/recommendations';
 
 export default async function SongRecommendationsPage() {
   const db = await createClient();
   if (!db) return null;
-  const { data: { user } } = await db.auth.getUser();
+  const user=await getCurrentUser(db);
   if (!user) return null;
   const { data: member } = await db.from('band_members').select('band_id').eq('user_id', user.id).eq('status', 'active').maybeSingle();
   if (!member) return <Card><CardTitle>밴드 가입 후 이용할 수 있습니다</CardTitle></Card>;

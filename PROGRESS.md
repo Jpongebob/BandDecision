@@ -54,3 +54,44 @@ The pgTAP test is written but was not executed, so DB policies and RPC integrati
 - Local production preview is running at `http://localhost:3000`.
 - Not verified: authenticated Supabase flows and remote Vercel redeployment. `.env.local` is absent in this checkout; push the layout fix to the connected GitHub branch to trigger a new Vercel build.
 
+
+## v3.2 band-code/password and member PIN login (2026-11-05)
+
+### Implemented
+
+- Default onboarding: /bands/new creates a band with a generated 10-character code, shared password, member nickname/part, personal 6-digit PIN, and a distinct 6-digit administrator PIN. /login checks band credentials, then /login/member selects an existing PIN-protected profile or creates a new member.
+- Supabase Anonymous Sign-Ins provides device sessions; the database maps PIN-verified device sessions to stable canonical member IDs. RLS and all affected authenticated RPCs resolve canonical actors, so existing membership, own availability/votes, song editor metadata, and rehearsal snapshots keep their IDs. No service-role key or client-supplied role/user ID is used.
+- Added 202611050002_band_code_login.sql as one transaction. Prior migrations were not rewritten. The migration restates existing identity-sensitive helpers/policies/RPCs with the actor resolver, preserving direct-write revocations and band isolation.
+- Password/PIN hashes and session mappings live in the private schema. Failed PIN/password attempts persist instead of being rolled back by SQL exceptions. Shared passwords enforce bcrypt's UTF-8 byte limit. Anonymous profile creation now works without an email address.
+- Member sessions expire after 30 days. Logout removes the device mapping; a personal PIN change removes other mappings for that member; shared credential rotation invalidates other code sessions. Raw anonymous IDs cannot bypass a removed/expired mapping.
+- Code-session leaders must unlock administrator rights with a separate PIN for 30 minutes before member management, invitations, round creation, sole-leader band deletion, or final confirmation. UI controls and server checks enforce this. A member knowing the admin PIN still cannot acquire the leader role.
+- Existing email accounts remain at /login/email. Existing members set their PIN under 내 정보; leaders enable shared code login under 밴드 관리. A leader can reset another member PIN; existing band data is retained. Instructions cover recovery and avoiding destructive blanket anonymous-user cleanup.
+- Updated SPEC, CODEX_TASK, both READMEs, and DEPLOYMENT. Existing pgTAP difficulty fixture calls now explicitly cast smallint arguments for PostgreSQL function resolution.
+
+### Checks actually executed
+
+| Check | Result |
+|---|---|
+| npm.cmd run lint | PASS |
+| npm.cmd run typecheck | PASS |
+| npm.cmd test | PASS: 5 files, 29 tests (15 existing + 14 credential/action/identity tests) |
+| npm.cmd run build | PASS: 23 pages/routes generated |
+| Local production HTTP smoke | PASS: /, /login, /bands/new, /login/email returned 200; /login/member redirected to /login without a band access grant |
+| git diff --check | PASS after normalizing README EOF whitespace |
+
+Local production preview is running at http://localhost:3000 (new login at /login). The checkout has no .env.local, so these HTTP checks validate rendering/routing rather than authenticated Supabase operations.
+
+### BLOCKED / not executed
+
+- New database pgTAP suite: 42 assertions written, NOT executed. Supabase CLI, Docker, psql, an isolated DB connection, and connected provider credentials are unavailable. SQL migration execution and actual RLS/RPC behavior remain unverified.
+- Live Supabase migration and Allow anonymous sign-ins toggle were NOT applied by this session.
+- Live Vercel redeployment, actual multi-device code/PIN login, administrator timeout, browser/device layout, and Realtime behavior were NOT verified.
+- User previously reported that the first two migrations ran successfully; this does not verify the new migration.
+- No Git commit/push or production deployment was performed for v3.2.
+
+### Required rollout
+
+1. Apply ONLY 202611050002_band_code_login.sql in Supabase SQL Editor, after the already-applied first two migrations. Do not rerun those migrations. SQL Editor and CLI migration histories are separate; see DEPLOYMENT.md before using db push.
+2. Enable Allow anonymous sign-ins in Supabase Authentication settings. Retain existing URL/publishable-key environment variables; no new server secret is required.
+3. Commit/push and deploy the new code. For an existing band, use /login/email and enable the code/PIN flow on the existing profiles rather than creating replacements.
+4. Run the DB suites on an isolated Supabase test database and verify password/PIN rejection, same-band and owner-only writes, leader elevation, revocation, and existing data on two devices before treating the rollout as verified.

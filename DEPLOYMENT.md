@@ -45,3 +45,17 @@ npm run start
 ```
 
 The database pgTAP suite requires Supabase CLI and Docker. A successful local Next.js build does not validate remote authentication, RLS, RPCs, Realtime, or provider deployment.
+
+## v3.2 migration on an existing deployment
+
+The two original migrations were reported successful by the user. Apply only 202611050002_band_code_login.sql in SQL Editor (the file has a single transaction). For a CLI-managed project, use the normal migration history workflow; SQL Editor runs do not automatically register CLI migration history. Do not db push old migrations blindly onto a project initialized through SQL Editor.
+
+Enable **Allow anonymous sign-ins** in Supabase Authentication settings, then redeploy the updated application. These sessions are mapped to a PIN-verified canonical member; raw anonymous sessions have no band access. Keep Supabase Auth rate limits enabled.
+
+Keep the current Supabase URL and publishable/anon key. There is no new service-role credential. Production NEXT_PUBLIC_SITE_URL, Supabase Site URL, and allowed /auth/callback URLs still use the fixed production origin for legacy email login/reset/invites.
+
+Existing band: leader uses /login/email → **밴드 관리** → enable code login; each member uses **내 정보** → set own PIN. The leader can set an initial PIN for another existing member and communicate it privately. New members enter the code/shared password and register their own profile; current round snapshots do not change.
+
+Run lint, typecheck, unit/action tests, and build. Run npx supabase test db against a disposable/local Supabase database. Do not run test fixtures on the production database. The database suites cover canonical identity mapping, owner-only submissions/votes, leader-only administration, session revocation, rate limiting, and cross-band denial.
+
+If the administrator PIN is lost, the Supabase project owner must reset its hash through SQL Editor. Never expose an administrator/service key or bypass this check in the client. Avoid bulk deletion of anonymous Auth users: anchor users own persistent band records. No automatic cleanup job is added.

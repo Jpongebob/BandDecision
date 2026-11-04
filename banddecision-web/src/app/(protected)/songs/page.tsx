@@ -1,13 +1,13 @@
 import Link from 'next/link';
 import { Card, CardTitle } from '@/components/ui/card';
 import { SongList } from '@/components/song-list';
-import { createClient } from '@/lib/supabase/server';
+import { createClient, getCurrentUser } from '@/lib/supabase/server';
 import { loadRoundData, loadSongs } from '@/lib/round-data';
 import type { Participant } from '@/services/recommendations';
 
 export default async function SongsPage() {
   const db = await createClient(); if (!db) return null;
-  const { data: { user } } = await db.auth.getUser(); if (!user) return null;
+  const user=await getCurrentUser(db); if (!user) return null;
   const { data: member } = await db.from('band_members').select('id,band_id,role,part_key,part_label,skill').eq('user_id', user.id).eq('status', 'active').maybeSingle();
   if (!member) return <Card><CardTitle>가입한 밴드가 없습니다</CardTitle></Card>;
   const { data: round } = await db.from('planning_rounds').select('id').eq('band_id', member.band_id).in('status', ['collecting', 'ready']).maybeSingle();

@@ -18,3 +18,18 @@ From `banddecision-web/`, run `npm run lint`, `npm run typecheck`, `npm test`, a
 Any active band member can register candidate songs and create or edit per-part difficulty in their band. Difficulty edits record the member, timestamp, and version; stale concurrent edits are rejected. They update current recommendations but do not alter confirmed plan snapshots. Members can only edit their own availability and votes; band leaders alone manage members and confirm plans. Direct table writes remain revoked, and RPCs enforce band membership.
 
 See `PROGRESS.md` for implemented phases, checks, and blocked external integration/deployment work.
+
+## Band code and PIN login (v3.2)
+
+The default flow is /bands/new to create a band, then /login (band code/shared password) followed by /login/member (existing profile + 6-digit PIN, or new nickname/part/PIN). The server issues a random 10-character band code. Member login lasts up to 30 days. Leaders unlock management and confirmation for 30 minutes with a separate administrator PIN.
+
+Before using it:
+
+1. Apply the NEW migration banddecision-web/supabase/migrations/202611050002_band_code_login.sql once, after the two existing migrations. Do not rerun already-applied migrations.
+2. In Supabase Authentication settings, enable **Allow anonymous sign-ins**. This provides device sessions only; it does not bypass the application's band/password/PIN checks. No service-role key is required.
+3. Existing email members use /login/email, set a personal PIN under **내 정보**, and the leader enables code login under **밴드 관리**. Existing records keep their IDs. Do not create a duplicate band/profile for migration.
+4. Deploy the updated code and verify real multi-device login, owner-only writes, admin elevation, logout, and credential rotation.
+
+Passwords and PINs are hashed in the private schema and never returned to the browser. PIN attempts are throttled across devices. Changing a personal PIN revokes that member's other device sessions. Rotating shared credentials revokes other code sessions; email login remains available to existing accounts. A leader can reset other member PINs after administrator verification.
+
+Anonymous Auth users include the permanent anchor IDs referenced by band data. **Do not run blanket anonymous-user cleanup**: deleting an anchor can remove profiles and owned records. Administrator-PIN recovery requires the Supabase project owner; there is no public reset bypass.

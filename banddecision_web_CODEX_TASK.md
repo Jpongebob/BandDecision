@@ -96,3 +96,7 @@ npm run build
 - A difficulty change refreshes the active round's recommendation version but never mutates an already confirmed plan snapshot.
 - Direct table DML remains revoked. RLS policies and server RPC checks must prevent cross-band access. Availability and votes remain self-only.
 - Add tests for ordinary-member song creation, difficulty create/edit, modifier/time/version metadata, stale conflict rejection, and cross-band denial.
+
+## v3.2 band-code login update (2026-11-05)
+
+Default onboarding uses band code/shared password followed by member profile/6-digit PIN. Creation issues a random band code and distinct personal/admin PINs. Keep Supabase Auth device sessions and canonical server-side identity mappings, RLS ownership, same-band isolation, hashed secrets, persistent failed-attempt throttling, and revocation. Leader management and final confirmation require a 30-minute administrator elevation for code sessions. Preserve email login at /login/email for existing account migration and recovery. Do not rewrite existing profile IDs or rehearsal snapshots. Add a new migration, meaningful action/unit and database authorization tests, and setup documentation. Do not claim integration success without actual verification.
