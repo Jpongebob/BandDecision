@@ -14,4 +14,5 @@ describe('song recommendations',()=>{
  it('orders eligible score ties by yes, burden, then id',()=>{const a=song(1,5,4),b=song(2,5,4);a.difficulties.guitar=4;b.difficulties.guitar=4;expect(recommendSongs(participants,[b,a]).map(x=>x.id)).toEqual([1,2]);});
  it('marks missing required part difficulty',()=>{const s=song(1,5,5);s.difficulties={};expect(recommendSongs(participants,[s])[0]?.status).toBe('difficulty_pending');});
  it('uses dynamic thresholds for seven-member and solo groups',()=>{const seven=participants.concat([{...participants[0]!,id:'m6'},{...participants[0]!,id:'m7'}]);expect(recommendSongs(seven,[{...song(1,7,5),difficulties:{guitar:2}}])[0]).toMatchObject({status:'eligible',requiredYes:5});expect(recommendSongs([participants[0]!],[{...song(2,1,1),difficulties:{guitar:2}}])[0]).toMatchObject({status:'eligible',requiredYes:1});});
+ it('matches the documented five-yes, burden-three score of nine',()=>{const team=participants.map((p,i)=>({...p,skill:[1,3,4,4,4][i]!}));expect(recommendSongs(team,[{...song(1,5,5),difficulties:{guitar:4}}])[0]).toMatchObject({status:'eligible',burden:3,score:9});});
 });
