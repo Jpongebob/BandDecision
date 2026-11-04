@@ -11,3 +11,6 @@ export default async function ProtectedLayout({children}:{children:React.ReactNo
  const relation=member?.bands; const band=Array.isArray(relation)?relation[0] as {name:string}|undefined:relation as {name:string}|null|undefined;
  return <AppShell email={user.email??''} band={band?.name??null}>{children}</AppShell>;
 }
+
+export const instant = false;
+
