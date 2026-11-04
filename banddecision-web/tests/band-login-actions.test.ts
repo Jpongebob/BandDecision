@@ -29,6 +29,26 @@ beforeEach(() => {
   mocks.signInAnonymously.mockResolvedValue({ error: null });
 });
 describe('band login actions', () => {
+  it.each([
+    [{ code: 'anonymous_provider_disabled', status: 422 }, '익명 로그인이 꺼져'],
+    [{ code: 'signup_disabled', status: 422 }, '새 사용자 생성이 차단'],
+    [{ code: 'captcha_failed', status: 400 }, 'CAPTCHA'],
+    [{ status: 429 }, '요청 제한'],
+    [{ status: 401 }, '연결 키'],
+    [{ code: 'unexpected_failure', status: 500 }, '트리거'],
+    [{ name: 'AuthRetryableFetchError', status: 0 }, '연결하지 못했습니다'],
+    [{ code: 'unknown_reason', status: 422 }, 'unknown_reason'],
+  ])('shows a useful, sanitized Auth failure before any band RPC: %j', async (failure, expected) => {
+    mocks.getUser.mockResolvedValue({ data: { user: null }, error: null });
+    mocks.signInAnonymously.mockResolvedValue({ error: { ...failure, message: 'PRIVATE_PROVIDER_DETAILS' } });
+    const result = await beginBandAccessAction({}, form({ code: 'AB12CD34EF', password: '1234' }));
+    expect(result.error).toContain(expected);
+    expect(result.error).toContain('인증 오류:');
+    expect(result.error).not.toContain('PRIVATE_PROVIDER_DETAILS');
+    expect(mocks.rpc).not.toHaveBeenCalled();
+    expect(mocks.redirect).not.toHaveBeenCalled();
+  });
+
   it('creates an Auth guest before the band-password RPC when no session exists', async () => {
     mocks.getUser.mockResolvedValue({ data: { user: null }, error: null });
     await expect(beginBandAccessAction({}, form({ code: ' ab12cd34ef ', password: '1234' }))).rejects.toThrow('redirect:/login/member');

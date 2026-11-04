@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import type { FormState } from '@/app/actions';
 import { createClient } from '@/lib/supabase/server';
+import { anonymousSignInError } from '@/lib/auth-errors';
 import { bandCodeSchema, bandLoginErrors, bandPasswordSchema, createCodeBandSchema, pinSchema, profileInputSchema } from '@/lib/band-login-validation';
 
 type Database = NonNullable<Awaited<ReturnType<typeof createClient>>>;
@@ -23,7 +24,7 @@ async function guestClient(): Promise<{ client: Database | null; error?: string 
   if (user && !user.is_anonymous) return { client: null, error: '기존 이메일 계정에서 먼저 로그아웃하세요.' };
   if (!user || authError) {
     const { error } = await client.auth.signInAnonymously();
-    if (error) return { client: null, error: '간편 접속을 시작하지 못했습니다. Supabase의 Anonymous Sign-Ins 활성화와 접속 제한을 확인하세요.' };
+    if (error) return { client: null, error: anonymousSignInError(error) };
   }
   return { client };
 }

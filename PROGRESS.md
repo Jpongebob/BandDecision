@@ -104,3 +104,12 @@ Local production preview is running at http://localhost:3000 (new login at /logi
 - Executed: lint PASS; typecheck PASS; unit/action tests PASS (5 files, 30 tests); production build PASS (23 pages/routes).
 - BLOCKED: live migration application and actual Supabase authentication/RLS tests were not executed; no provider credentials/test DB are connected. Database suite now declares 44 assertions but remains unexecuted.
 - Rollout: after 202611050002 is already applied, execute ONLY the new 202611050003 migration, then commit/push/redeploy the frontend/server validation. Do not rerun earlier migrations.
+
+## Anonymous Auth failure diagnostics (2026-11-05)
+
+- Investigated the generic guest-session failure. Supabase Auth runs inside a Next.js Server Action, which returns a form error without necessarily making the browser request fail/red. Browser Network red-request guidance was insufficient for this implementation.
+- Added sanitized Auth diagnostics for anonymous-provider disabled, signup disabled, CAPTCHA failure, rate limits, invalid API key/401, connection failure, and upstream 500 errors. Messages include only stable provider code/HTTP status, never raw provider messages, cookies, tokens, or passwords. No retry loop, authentication bypass, or SQL change was introduced.
+- Verified against Supabase official error-code documentation: https://supabase.com/docs/guides/auth/debugging/error-codes
+- Executed: lint PASS; typecheck PASS; tests PASS (5 files / 38 tests, including 8 new Auth failure regressions); production build PASS (23 routes).
+- BLOCKED: exact live failure remains undiagnosed until the new diagnostic code is deployed or provider logs are available. No connected Supabase/Vercel account or live credentials are available. This change improves diagnosis and does not claim to fix the underlying provider failure.
+- Next action: push/deploy this code, retry once, then inspect the displayed error code. No SQL needs to be rerun for this diagnostic update.
