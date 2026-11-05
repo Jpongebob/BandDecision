@@ -16,9 +16,9 @@ select ok(not has_function_privilege('authenticated','public.start_round(uuid)',
 select ok(not has_function_privilege('authenticated','public.cast_vote(uuid,bigint,text,text)','execute'),'round vote API retired');
 select lives_ok($$select public.save_band_unavailability(jsonb_build_array(jsonb_build_object('date',current_setting('test.day'),'reason','first')))$$,'append a future date');
 select throws_ok($$select public.save_band_unavailability(jsonb_build_array(jsonb_build_object('date',current_setting('test.day'),'reason','overwrite')))$$,'P0001','DATE_ALREADY_SAVED','append cannot overwrite a saved row');
-select is((select reason from public.unavailable_dates where member_id=current_setting('test.member')::uuid and unavailable_date=current_setting('test.day')::date),'first','saved reason preserved');
+select is((select reason from public.unavailable_dates where member_id=current_setting('test.member')::uuid and unavailable_date=current_setting('test.day')::date),'','old reason not retained under date-only policy');
 select lives_ok($$select public.update_band_unavailability(current_setting('test.day')::date,current_setting('test.day')::date+1,'edited')$$,'change date and reason in saved list');
-select is((select reason from public.unavailable_dates where member_id=current_setting('test.member')::uuid and unavailable_date=current_setting('test.day')::date+1),'edited','date edit persists');
+select is((select reason from public.unavailable_dates where member_id=current_setting('test.member')::uuid and unavailable_date=current_setting('test.day')::date+1),'','date edit persists without reason');
 select lives_ok($$select public.delete_band_unavailability(current_setting('test.day')::date+1)$$,'delete saved date individually');
 select is((select count(*)::int from public.unavailable_dates where member_id=current_setting('test.member')::uuid),2,'other saved dates retained');
 select set_config('test.version',public.band_planning_context()->>'version',true);

@@ -1,9 +1,9 @@
-﻿'use server';
+'use server';
 import {revalidatePath} from 'next/cache';
 import {z} from 'zod';
 import {createClient} from '@/lib/supabase/server';
 import type {FormState} from '@/app/actions';
-const date=z.iso.date(),reason=z.string().trim().min(1).max(200);
+const date=z.iso.date(),reason=z.string().trim().max(200).optional();
 const text=(f:FormData,k:string)=>String(f.get(k)??'');
 function failure(message:string):FormState{
  const code=message.match(/[A-Z_]{4,}/)?.[0]??'';
@@ -18,13 +18,13 @@ async function execute(name:string,args:Record<string,unknown>,success:string):P
 export async function addAvailabilityAction(_:FormState,form:FormData):Promise<FormState>{
  let raw:unknown;try{raw=JSON.parse(text(form,'dates_json'));}catch{return{error:'날짜 목록을 확인하세요.'};}
  const parsed=z.array(z.object({date,reason})).min(1).max(366).safeParse(raw);
- if(!parsed.success)return{error:'날짜와 불참 사유를 입력하세요.'};
+ if(!parsed.success)return{error:'날짜를 선택하세요.'};
  return execute('save_band_unavailability',{p_dates:parsed.data},'날짜를 저장했습니다.');
 }
 export async function editAvailabilityAction(_:FormState,form:FormData):Promise<FormState>{
- const parsed=z.object({old:date,next:date,reason}).safeParse({old:text(form,'old_date'),next:text(form,'date'),reason:text(form,'reason')});
- if(!parsed.success)return{error:'날짜와 불참 사유를 확인하세요.'};
- return execute('update_band_unavailability',{p_date:parsed.data.old,p_new_date:parsed.data.next,p_reason:parsed.data.reason},'날짜를 수정했습니다.');
+ const parsed=z.object({old:date,next:date,reason}).safeParse({old:text(form,'old_date'),next:text(form,'date'),reason:form.has('reason')?text(form,'reason'):undefined});
+ if(!parsed.success)return{error:'수정할 날짜를 확인하세요.'};
+ return execute('update_band_unavailability',{p_date:parsed.data.old,p_new_date:parsed.data.next,...(parsed.data.reason!==undefined?{p_reason:parsed.data.reason}:{})},'날짜를 수정했습니다.');
 }
 export async function deleteAvailabilityAction(_:FormState,form:FormData):Promise<FormState>{
  const parsed=date.safeParse(text(form,'date'));if(!parsed.success)return{error:'삭제할 날짜를 확인하세요.'};
@@ -45,4 +45,10 @@ export async function deleteLivePlanAction(_:FormState,form:FormData):Promise<Fo
  const parsed=z.object({id:z.uuid(),version:z.coerce.number().int().positive(),confirm:z.literal('yes')}).safeParse({id:text(form,'plan_id'),version:text(form,'plan_version'),confirm:text(form,'confirm_delete')});
  if(!parsed.success)return{error:'삭제할 계획과 동의를 확인하세요.'};
  return execute('delete_live_plan',{p_plan:parsed.data.id,p_expected_version:parsed.data.version},'계획을 삭제했습니다.');
+}
+
+export async function withdrawSongVoteAction(_:FormState,form:FormData):Promise<FormState>{
+ const parsed=z.coerce.number().int().positive().safeParse(text(form,'song_id'));
+ if(!parsed.success)return{error:'취소할 투표의 곡을 확인하세요.'};
+ return execute('withdraw_band_song_vote',{p_song:parsed.data},'내 투표를 취소했습니다. 다시 투표할 수 있습니다.');
 }

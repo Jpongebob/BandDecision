@@ -12,9 +12,12 @@ describe('band credentials', () => {
     }
   });
 
-  it('normalizes band codes without changing passwords', () => {
+  it('removes credential whitespace while preserving internal password spaces', () => {
     expect(bandCodeSchema.parse(' ab12cd34ef ')).toBe('AB12CD34EF');
-    expect(bandPasswordSchema.parse(' password ')).toBe(' password ');
+    expect(bandPasswordSchema.parse(' password ')).toBe('password');
+    expect(pinSchema.parse(' 00 12\t34\n')).toBe('001234');
+    expect(bandCodeSchema.parse(' ab12 cd34 ef ')).toBe('AB12CD34EF');
+    expect(bandPasswordSchema.parse(' pass word ')).toBe('pass word');
     expect(bandCodeSchema.safeParse('unknown-band').success).toBe(false);
   });
   it('preserves leading zeroes in six-digit member PINs', () => {

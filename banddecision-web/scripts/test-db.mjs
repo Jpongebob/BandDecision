@@ -12,6 +12,7 @@ try{
  const dir=new URL('../supabase/migrations/',import.meta.url);let historical=false;
  for(const name of (await readdir(dir)).filter(n=>n.endsWith('.sql')).sort()){
   if(name>='202611050011'&&!historical){await suites(new URL('../supabase/tests/database/',import.meta.url),'HISTORICAL through 010');historical=true;await db.exec((await readFile(new URL('../supabase/tests/upgrade/before_011.sql',import.meta.url),'utf8')).replace(/^\uFEFF/,''));}
+  if(name==='202611050014_dates_without_reasons.sql')await db.exec("update public.confirmed_plan_members set reason_snapshot='pre-removal absence reason' where plan_id=current_setting('qa.upgrade.plan')::uuid;");
   await db.exec((await readFile(new URL(name,dir),'utf8')).replace(/^\uFEFF/,''));console.log('MIGRATION PASS',name);
  }
  if(!historical)throw Error('Continuous planning migration missing');

@@ -4,7 +4,7 @@ import {saveLivePlanAction} from '@/app/live-actions';
 import type {FormState} from '@/app/actions';
 import type {LivePlanning,SavedPlan} from '@/lib/live-planning';
 import {recommendDates,type SongRanking} from '@/services/recommendations';
-import {Input} from '@/components/ui/input';
+import {CalendarPicker} from '@/components/date-calendar';
 import {Button} from '@/components/ui/button';
 export function ConfirmPlanForm({data,songs,today,plan}:{data:LivePlanning;songs:SongRanking[];today:string;plan?:SavedPlan}){
  const[date,setDate]=useState(plan?.rehearsal_date??''),[selected,setSelected]=useState<number[]>(plan?.confirmed_plan_songs.flatMap(s=>s.source_song_id===null?[]:[s.source_song_id])??[]),[partial,setPartial]=useState(false);
@@ -17,7 +17,7 @@ export function ConfirmPlanForm({data,songs,today,plan}:{data:LivePlanning;songs
  const absent=data.members.filter(m=>data.unavailable.some(d=>d.memberId===m.id&&d.date===date)),attending=data.members.length-absent.length;
  const choices=[...songs.filter(s=>s.status==='eligible').map(s=>({id:s.id,title:s.title,artist:s.artist})),...(plan?.confirmed_plan_songs.filter(s=>s.source_song_id!==null&&!songs.some(song=>song.id===s.source_song_id&&song.status==='eligible')).map(s=>({id:s.source_song_id!,title:s.title_snapshot,artist:s.artist_snapshot}))??[])];
  return <form action={save} className="space-y-4"><input type="hidden" name="band_id" value={data.band_id}/><input type="hidden" name="version" value={data.version}/><input type="hidden" name="plan_id" value={plan?.id??''}/><input type="hidden" name="plan_version" value={plan?.version??''}/><input type="hidden" name="ack_partial" value={partial?'true':'false'}/>
- <label className="block text-sm font-semibold">합주 날짜<Input type="date" name="date" value={date} min={plan&&plan.rehearsal_date<today?plan.rehearsal_date:today} onChange={e=>chooseDate(e.target.value)} required/></label>
+ <input type="hidden" name="date" value={date}/><div><p className="text-sm font-semibold">합주 날짜</p><CalendarPicker value={date} onChange={chooseDate} today={today} label="합주 가능한 날짜" annotation={day=>{const n=data.members.filter(m=>!data.unavailable.some(d=>d.memberId===m.id&&d.date===day)).length;return n+'/'+data.members.length+'명';}} disabled={day=>(day<today&&day!==plan?.rehearsal_date)||data.members.every(m=>data.unavailable.some(d=>d.memberId===m.id&&d.date===day))}/></div>
  <fieldset className="min-w-0" aria-label="추천 날짜"><legend className="text-sm font-semibold">추천 날짜 <span className="font-normal text-slate-500">· 참석 인원순 상위 5개</span></legend>
  {suggested.length>0?<div className="mt-2 grid grid-cols-3 gap-1.5 sm:grid-cols-5">{suggested.map(item=>{
   const weekday=new Intl.DateTimeFormat('ko-KR',{weekday:'short',timeZone:'Asia/Seoul'}).format(new Date(item.date+'T12:00:00+09:00'));

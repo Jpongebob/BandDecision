@@ -1,9 +1,9 @@
 import { z } from 'zod';
 
-export const pinSchema = z.string().regex(/^[0-9]{6}$/, 'PIN은 숫자 6자리로 입력해 주세요.');
-export const bandPasswordSchema = z.string().min(4).max(64)
+export const pinSchema = z.string().transform(value=>value.replace(/\s/g,'' )).pipe(z.string().regex(/^[0-9]{6}$/, 'PIN은 숫자 6자리로 입력해 주세요.'));
+export const bandPasswordSchema = z.string().trim().min(4).max(64)
   .refine(value => new TextEncoder().encode(value).length <= 72, '비밀번호는 UTF-8 기준 72바이트 이하여야 합니다.');
-export const bandCodeSchema = z.string().trim().toUpperCase().regex(/^[A-F0-9]{10}$/);
+export const bandCodeSchema = z.string().transform(value=>value.replace(/\s/g,'').toUpperCase()).pipe(z.string().regex(/^[A-F0-9]{10}$/));
 export const profileInputSchema = z.object({
   nickname: z.string().trim().min(1).max(30),
   part: z.string().trim().min(1).max(30),

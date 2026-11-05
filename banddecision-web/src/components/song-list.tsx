@@ -1,4 +1,5 @@
-import { liveVoteAction as voteAction } from '@/app/live-actions';
+import {SongVoteFields} from '@/components/song-vote-fields';
+import { liveVoteAction as voteAction,withdrawSongVoteAction } from '@/app/live-actions';
 import Link from 'next/link';
 import { Card, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -11,11 +12,13 @@ export function SongList({
   memberId,
   participants,
   songs,
+  detailed=false,
 }: {
   bandId: string;
   memberId: string;
   participants: Participant[];
   songs: SongInput[];
+  detailed?: boolean;
 }) {
   const parts = [...new Map(participants.map((participant) => [participant.partKey, participant])).values()];
 
@@ -23,15 +26,14 @@ export function SongList({
 
   return (
     <div className="space-y-4">
-      <Card>
-        <CardTitle>후보곡 등록</CardTitle>
+      {!detailed&&<Card className="p-3 sm:p-4"><details><summary className="cursor-pointer text-sm font-semibold">후보곡 등록</summary>
         <p className="mt-1 text-sm text-slate-600">밴드 멤버 누구나 후보곡을 추가할 수 있습니다.</p>
         <ActionForm action={addSongAction} className="mt-4 sm:grid-cols-2">
           <input type="hidden" name="band_id" value={bandId} />
           <label className="text-sm font-semibold">곡 제목<input name="title" maxLength={120} required className="mt-1 min-h-11 w-full rounded-xl border px-3" /></label>
           <label className="text-sm font-semibold">아티스트<input name="artist" maxLength={120} required className="mt-1 min-h-11 w-full rounded-xl border px-3" /></label>
-        </ActionForm>
-      </Card>
+        </ActionForm></details>
+      </Card>}
 
 
 
@@ -41,14 +43,14 @@ export function SongList({
         const mine = song.votes.find((vote) => vote.memberId === memberId);
 
         return (
-          <Card key={song.id}>
+          <Card key={song.id} data-song-id={song.id} className="p-3 sm:p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
-              <div><Link href={`/songs/${song.id}`} className="text-lg font-bold hover:text-blue-700">{song.title}</Link><p className="text-sm text-slate-500">{song.artist}</p></div>
+              <div><Link href={`/songs/${song.id}`} className="break-all text-base font-bold hover:text-blue-700">{song.title}</Link><p className="text-sm text-slate-500">{song.artist}</p></div>
               {<Badge>찬성 {yes} · 반대 {no} · 미응답 {Math.max(0, participants.length - yes - no)}</Badge>}
             </div>
 
-            <div className="mt-4">
-              <p className="mb-2 text-sm font-bold">파트별 난이도</p>
+            {!detailed&&<><p className="mt-2 text-xs leading-5 text-slate-500">{parts.map(p=>p.part+' '+(song.difficulties[p.partKey]??'미등록')).join(' · ')}</p><div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs"><span>내 투표: {mine?(mine.choice==='yes'?'찬성':'반대'):'미투표'}</span><Link className="inline-flex min-h-9 items-center rounded-lg bg-blue-50 px-3 font-semibold text-blue-700" href={`/songs/${song.id}`}>곡 상세 · 투표 수정</Link></div></>}
+            {detailed&&<details open className="mt-3"><summary className="cursor-pointer text-sm font-semibold">파트별 난이도 <span className="font-normal text-slate-500">{parts.map(p=>p.part+' '+(song.difficulties[p.partKey]??'미등록')).join(' · ')}</span></summary><div className="mt-3">
               {parts.length ? <div className="grid gap-2 sm:grid-cols-2">
                 {parts.map((part) => {
                   const meta = song.difficultyMeta?.[part.partKey];
@@ -61,18 +63,18 @@ export function SongList({
                   </ActionForm>;
                 })}
               </div> : <p className="text-sm text-slate-500">등록된 밴드 파트가 없습니다.</p>}
-            </div>
+            </div></details>}
 
-            {canVote && <div className="mt-5 border-t pt-4">
-              <p className="mb-2 text-sm font-bold">내 투표</p>
-              <ActionForm key={memberId} action={voteAction} submit="투표 저장">
-                <input type="hidden" name="song_id" value={song.id} />
-                <div key={JSON.stringify([mine?.choice,mine?.reason])} className="grid gap-4"><label className="text-sm">찬반<select name="choice" defaultValue={mine?.choice ?? 'yes'} className="mt-1 min-h-11 w-full rounded-xl border px-3"><option value="yes">찬성</option><option value="no">반대</option></select></label>
-                <label className="text-sm">반대 사유 (반대 선택 시 필수)<textarea name="reason" defaultValue={mine?.reason ?? ''} maxLength={300} className="mt-1 min-h-20 w-full rounded-xl border px-3 py-2" /></label></div>
+            {detailed&&canVote && <div className="mt-3 border-t pt-3"><p className="text-xs text-slate-600">내 투표: {mine?(mine.choice==='yes'?'찬성':'반대'):'미투표'}</p>
+              <details open className="mt-2" data-vote-editor><summary className="min-h-9 cursor-pointer text-sm font-semibold text-blue-700">{mine?'투표 수정':'투표하기'}</summary>
+              <ActionForm key={memberId} action={voteAction} submit={mine?'투표 수정 저장':'투표 저장'} className="mt-2 max-w-lg gap-3">
+                <input type="hidden" name="song_id" value={song.id}/>
+                <SongVoteFields key={JSON.stringify([memberId,mine?.choice,mine?.reason])} choice={mine?.choice} reason={mine?.reason}/>
               </ActionForm>
-            </div>}
+              {mine&&<ActionForm action={withdrawSongVoteAction} submit="내 투표 취소" className="mt-3 max-w-lg gap-2"><input type="hidden" name="song_id" value={song.id}/><p className="text-xs text-slate-500">취소하면 미투표 상태로 돌아갑니다.</p></ActionForm>}
+              </details></div>}
 
-            {song.votes.some((vote) => vote.choice === 'no') && <details className="mt-3 text-sm"><summary className="cursor-pointer font-semibold">반대 사유 보기</summary><ul className="mt-2 space-y-1">{song.votes.filter((vote) => vote.choice === 'no').map((vote) => <li key={vote.memberId} className="text-slate-600">{participants.find((participant) => participant.id === vote.memberId)?.nickname ?? '멤버'}: {vote.reason}</li>)}</ul></details>}
+            {detailed&&song.votes.some((vote) => vote.choice === 'no') && <details className="mt-3 text-sm"><summary className="cursor-pointer font-semibold">반대 사유 보기</summary><ul className="mt-2 space-y-1">{song.votes.filter((vote) => vote.choice === 'no').map((vote) => <li key={vote.memberId} className="text-slate-600">{participants.find((participant) => participant.id === vote.memberId)?.nickname ?? '멤버'}: {vote.reason}</li>)}</ul></details>}
           </Card>
         );
       })}

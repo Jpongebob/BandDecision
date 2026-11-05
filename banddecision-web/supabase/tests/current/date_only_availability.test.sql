@@ -1,0 +1,18 @@
+begin;select plan(10);
+set local role authenticated;
+select set_config('request.jwt.claim.sub','c1000000-0000-4000-8000-000000000001',true);
+select set_config('request.jwt.claims','{"is_anonymous":true}',true);
+select set_config('qa.date.day',((now() at time zone 'Asia/Seoul')::date+35)::text,true);
+select lives_ok($$select public.save_band_unavailability(jsonb_build_array(jsonb_build_object('date',current_setting('qa.date.day'))))$$,'save date without reason');
+select is((select reason from public.unavailable_dates where unavailable_date=current_setting('qa.date.day')::date),'','new date has empty reason');
+select lives_ok($$select public.update_band_unavailability(current_setting('qa.date.day')::date,current_setting('qa.date.day')::date+1)$$,'edit date without reason');
+select public.save_band_unavailability(jsonb_build_array(jsonb_build_object('date',current_setting('qa.date.day'),'reason','historic reason')));
+select public.update_band_unavailability(current_setting('qa.date.day')::date,current_setting('qa.date.day')::date+2);
+select is((select reason from public.unavailable_dates where unavailable_date=current_setting('qa.date.day')::date+2),'','legacy reason submissions are discarded rather than retained');
+select throws_ok($$select public.save_band_unavailability(jsonb_build_array(jsonb_build_object('date',current_setting('qa.date.day'),'reason',42)))$$,'P0001','INVALID_INPUT','malformed optional reason still rejected');
+select throws_ok($$select public.save_band_unavailability(jsonb_build_array(jsonb_build_object('date',current_setting('qa.date.day'),'reason',repeat('x',201))))$$,'P0001','INVALID_INPUT','length limit retained');
+select lives_ok($$select public.delete_band_unavailability(current_setting('qa.date.day')::date+1)$$,'delete date-only saved entry');
+select is((select count(*)::int from public.unavailable_dates where reason<>''),0,'all existing date reasons erased');
+select is((select count(*)::int from public.confirmed_plan_members where reason_snapshot is not null),0,'all historical confirmed absence reasons erased');
+select ok((select count(*) from public.band_song_votes where choice='no' and reason is not null)>0,'negative song-vote reasons retained');
+select * from finish();rollback;

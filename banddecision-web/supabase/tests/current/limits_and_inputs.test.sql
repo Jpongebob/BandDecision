@@ -21,7 +21,7 @@ select throws_ok($$select public.save_band_unavailability(jsonb_build_array(json
 select is((select count(*)::int from public.unavailable_dates where unavailable_date=current_setting('test.day')::date),0,'bad append does not save first valid row');
 select public.save_band_unavailability(jsonb_build_array(jsonb_build_object('date',current_setting('test.day'),'reason','work'),jsonb_build_object('date',(current_setting('test.day')::date+1)::text,'reason','class')));
 select throws_ok($$select public.update_band_unavailability(current_setting('test.day')::date,current_setting('test.day')::date+1,'overwrite')$$,'P0001','DATE_ALREADY_SAVED','editing onto an existing date cannot overwrite it');
-select is((select reason from public.unavailable_dates where member_id=current_setting('test.me')::uuid and unavailable_date=current_setting('test.day')::date+1),'class','conflicting date remains intact');
+select is((select reason from public.unavailable_dates where member_id=current_setting('test.me')::uuid and unavailable_date=current_setting('test.day')::date+1),'','conflicting date remains intact without reason');
 select throws_ok($$select public.save_rehearsal_plan(current_setting('test.band')::uuid,current_setting('test.day')::date,'{}',(public.band_planning_context()->>'version')::bigint,current_setting('test.plan')::uuid,2,true)$$,'P0001','NO_ATTENDEES','zero attendees still denied');
 select public.delete_band_unavailability(current_setting('test.day')::date);
 select lives_ok($$select public.delete_live_plan(current_setting('test.plan')::uuid,2)$$,'delete frees capacity');
