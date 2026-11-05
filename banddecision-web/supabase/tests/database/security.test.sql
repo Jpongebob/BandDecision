@@ -11,10 +11,10 @@ select ok(not has_table_privilege('authenticated','public.band_members','INSERT'
 select ok(not has_table_privilege('anon','public.bands','SELECT'),'anonymous users cannot read band tables');
 select ok(not has_table_privilege('authenticated','public.song_votes','UPDATE'),'votes cannot be updated directly');
 select ok(not has_table_privilege('authenticated','public.unavailable_dates','DELETE'),'availability cannot be deleted directly');
-select ok(has_function_privilege('authenticated','public.create_band(text,text,text)','EXECUTE'),'authenticated may create a band through RPC');
+select ok(not has_function_privilege('authenticated','public.create_band(text,text,text)','EXECUTE'),'legacy band creation is retired');
 select ok(has_function_privilege('authenticated','public.confirm_rehearsal_plan(uuid,date,bigint[],bigint,boolean)','EXECUTE'),'authenticated may request a validated confirmation');
 select ok(not has_function_privilege('anon','public.create_band(text,text,text)','EXECUTE'),'anon cannot create bands');
 select ok(not has_function_privilege('anon','public.confirm_rehearsal_plan(uuid,date,bigint[],bigint,boolean)','EXECUTE'),'anon cannot confirm plans');
-select ok(has_function_privilege('anon','public.inspect_invite(text)','EXECUTE'),'public invite inspection is the only unauthenticated band RPC');
+select ok(not has_function_privilege('anon','public.inspect_invite(text)','EXECUTE'),'legacy public invite inspection is retired');
 select * from finish();
 rollback;

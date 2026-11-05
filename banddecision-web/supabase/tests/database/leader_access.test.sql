@@ -21,7 +21,7 @@ select ok((public.current_band_identity()->>'admin_unlocked')::boolean,'identity
 select ok((public.band_login_settings()->>'admin_unlocked')::boolean,'legacy settings flag stays compatible with immediate authorization');
 select ok(not private.is_band_leader('50000000-0000-4000-8000-000000001999'),'leader has no authority over another band');
 select lives_ok($$select public.update_member_skill('50000000-0000-4000-8000-000000002002',4::smallint)$$,'leader manages members without extra unlock');
-select lives_ok($$select public.create_invite('50000000-0000-4000-8000-000000001001')$$,'leader creates invite without extra unlock');
+select ok(not has_function_privilege('authenticated','public.create_invite(uuid)','EXECUTE'),'email invite creation remains retired even for a leader');
 select set_config('test.round',public.start_round('50000000-0000-4000-8000-000000001001')::text,true);
 select set_config('test.song',public.add_song('50000000-0000-4000-8000-000000001001','No unlock song','Band')::text,true);
 select public.update_song_difficulty(current_setting('test.song')::bigint,'guitar',2::smallint,0);

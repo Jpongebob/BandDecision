@@ -1,3 +1,4 @@
+import type { BandSnapshot } from '@/lib/band-context';
 import { cache } from 'react';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
@@ -26,8 +27,10 @@ export const getCurrentUser = cache(async function getCurrentUser(client: NonNul
   const { data: { user }, error } = await client.auth.getUser();
   if (error || !user) return null;
   const { data, error: identityError } = await client.rpc('current_band_identity');
-  const identity = data as { id: string; nickname: string; band_id: string | null; admin_unlocked: boolean; code_enabled?: boolean } | null;
+  const identity = data as { id: string; nickname: string; band_id: string | null; admin_unlocked: boolean; code_enabled?: boolean; context_version?: number; member?: BandSnapshot['member']; band?: BandSnapshot['band'] } | null;
   if (identityError || !identity) return null;
-  return { id: identity.id, email: user.email, nickname: identity.nickname,
+  const bandContext: BandSnapshot | undefined = identity.context_version === 1
+    ? { actorId: identity.id, member: identity.member ?? null, band: identity.band ?? null } : undefined;
+  return { id: identity.id, nickname: identity.nickname, bandContext,
     is_anonymous: user.is_anonymous, adminUnlocked: identity.admin_unlocked, codeLoginEnabled: identity.code_enabled ?? Boolean(user.is_anonymous) };
 });

@@ -84,3 +84,17 @@ Navigation optimizations preserve user checks and avoid shared-user caches. Actu
 ## Latest policy: no extra administrator unlock (005)
 This supersedes earlier instructions to unlock administrator access before management/finalization. A signed-in active band leader can administer immediately; ordinary members remain restricted. Apply ONLY supabase/migrations/202611050005_leader_without_admin_unlock.sql after 004, then redeploy the UI/server changes. If 004 has not yet been applied, apply 004 first, then 005, each once. Do not rerun older files.
 Existing personal/shared passwords and sessions remain intact. Individual session expiry/revocation still blocks access. Old administrator PIN hashes/fields are retained for compatibility; they no longer expire or gate leader administration. Existing PIN inputs on credential setup/transfer remain compatibility fields. No additional provider setting/environment secret is required. Live deployment and multi-device verification remain outstanding.
+
+
+## Current onboarding: code-only (006)
+After 005 succeeded, run ONLY banddecision-web/supabase/migrations/202611050006_retire_email_login_and_invites.sql once, then push/redeploy the application. Do not rerun prior successful migrations. Email login/signup/password reset/callback and /join/token routes are removed; use /login?code=... for invitations. Old email-invite RPCs and invite-table reads are denied; existing records are preserved.
+
+Supabase account-owner step: disable the Email sign-in provider if still enabled; keep Allow anonymous sign-ins enabled for the current device sessions. Removing application routes does not modify hosted provider settings. No new environment secret is required. NEXT_PUBLIC_SITE_URL still supplies the fixed origin of code invite links; old Auth callback redirect URLs are unused by the app. This agent has not changed hosted provider settings or deployed these changes.
+
+## Identity context / user test-band setup (007)
+After 006 succeeds, run ONLY 202611050007_identity_context_and_test_band.sql once and deploy the matching app. Old identity response versions fall back safely but receive no query-count improvement. No new environment secret or Auth bypass is needed. /bands/test creates its fixtures only after the caller explicitly submits personal credentials; merely applying SQL does not create a shared public demo band. Use a private browser session if already in a real band. Fixture RPC adds no Auth users and rolls back on failure. Follow TEST_CASES.md.
+
+Hosted creation and latency were not measured by the agent. Existing provider access/region limitations remain; do not assume a query-count reduction equals a particular response-time improvement.
+
+## Strict input / reproduced bug corrections (008)
+If 007 already succeeded, run ONLY 202611050008_strict_submission_inputs.sql once and deploy the app. This redefines availability/vote RPCs with strict reason type and null-choice validation. Existing data and ACLs are retained. No provider setting/environment secret is added. App corrections include refreshed form-version alignment, none/past dates, no editing for new members outside the round roster, and retryable data errors. Follow BUG_AUDIT.md; full live Auth/Realtime/concurrency checks remain outstanding.

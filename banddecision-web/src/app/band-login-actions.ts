@@ -21,7 +21,7 @@ async function guestClient(): Promise<{ client: Database | null; error?: string 
   const client = await createClient();
   if (!client) return { client: null, error: 'Supabase 연결 설정이 필요합니다.' };
   const { data: { user }, error: authError } = await client.auth.getUser();
-  if (user && !user.is_anonymous) return { client: null, error: '기존 이메일 계정에서 먼저 로그아웃하세요.' };
+  if (user && !user.is_anonymous) return { client: null, error: '다른 접속 세션에서 먼저 로그아웃하세요.' };
   if (!user || authError) {
     const { error } = await client.auth.signInAnonymously();
     if (error) return { client: null, error: anonymousSignInError(error) };
@@ -101,4 +101,19 @@ export async function changeMemberPinAction(_: FormState, form: FormData): Promi
   if (failure) return failure;
   refreshIdentity();
   return { success: 'PIN을 저장했습니다. 이 멤버의 다른 기기는 로그아웃됩니다.' };
+}
+
+
+export async function createTestBandAction(_: FormState, form: FormData): Promise<FormState> {
+  const parsed = z.object({ nickname: z.string().trim().min(1).max(30), password: bandPasswordSchema, pin: pinSchema }).safeParse(fields(form));
+  if (!parsed.success) return { error: '닉네임, 4자 이상 공용 비밀번호, 숫자 6자리 개인 PIN을 확인하세요.' };
+  const guest = await guestClient();
+  if (!guest.client) return { error: guest.error };
+  const { data, error } = await guest.client.rpc('create_test_band', {
+    p_nickname: parsed.data.nickname, p_password: parsed.data.password, p_pin: parsed.data.pin,
+  });
+  const failure = responseError(error, data);
+  if (failure) return failure;
+  refreshIdentity();
+  redirect('/dashboard');
 }

@@ -1,4 +1,3 @@
-import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { ActionForm } from '@/components/action-form';
@@ -22,10 +21,9 @@ export default async function MemberLoginPage() {
         <label className="grid gap-1 text-sm font-semibold">내 프로필<select name="member" required defaultValue="" className="min-h-11 w-full rounded-xl border px-3"><option value="" disabled>프로필 선택</option>{context.profiles.map(member => <option key={member.id} value={member.id} disabled={!member.pin_ready}>{member.nickname} · {member.part}{member.role === 'leader' ? ' · 밴드장' : ''}{member.pin_ready ? '' : ' · PIN 설정 필요'}</option>)}</select></label>
         <PinField />
       </ActionForm>
-      <p className="mt-4 text-xs text-slate-500">기존 이메일 멤버는 이메일로 로그인한 뒤 내 정보에서 PIN을 먼저 설정하세요. PIN을 잊으면 밴드장에게 초기화를 요청하세요.</p>
+      <p className="mt-4 text-xs text-slate-500">내 프로필을 선택하고 개인 PIN으로 접속하세요. PIN을 잊으면 밴드장에게 초기화를 요청하세요.</p>
     </Card>
     <details className="rounded-2xl border bg-white p-5"><summary className="cursor-pointer font-bold">처음 참여하나요? 새 프로필 만들기</summary><ActionForm action={registerBandProfileAction} submit="프로필 만들고 참여" className="mt-5"><ProfileFields /></ActionForm><p className="mt-3 text-xs text-slate-500">이미 프로필이 있다면 새로 만들지 말고 위에서 선택하세요. 새 멤버는 다음 기획 회차부터 투표와 일정 제출에 참여합니다.</p></details>
     <form action={signOutAction}><button className="text-sm font-semibold text-blue-700">다른 밴드로 접속</button></form>
-    <Link href="/login/email" className="inline-block text-sm text-slate-600">기존 이메일 로그인</Link>
   </main>;
 }

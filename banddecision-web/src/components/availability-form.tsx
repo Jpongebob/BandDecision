@@ -57,6 +57,8 @@ export function AvailabilityForm({
 
   function addCalendarDate() {
     if (!calendarDate) return;
+    if (calendarDate < today) { setParseError('지난 날짜는 입력할 수 없습니다.'); return; }
+    setParseError('');
     upsertDate(calendarDate, reason.trim());
     setCalendarDate('');
   }
@@ -65,6 +67,11 @@ export function AvailabilityForm({
     setParseError('');
     try {
       const parsed = parseUnavailableText(text, today, startDate, endDate, reason.trim());
+      if (parsed.dates.length === 0) {
+        setRows([]);
+        setAck(false);
+        return;
+      }
       const additions = parsed.dates.map((date) => ({ date, reason: reason.trim() }));
       setRows((current) => {
         const merged = new Map(current.map((row) => [row.date, row]));

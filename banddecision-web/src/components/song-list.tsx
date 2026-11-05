@@ -20,6 +20,8 @@ export function SongList({
 }) {
   const parts = [...new Map(participants.map((participant) => [participant.partKey, participant])).values()];
 
+  const canVote = Boolean(roundId) && participants.some(participant => participant.id === memberId);
+
   return (
     <div className="space-y-4">
       <Card>
@@ -31,6 +33,8 @@ export function SongList({
           <label className="text-sm font-semibold">아티스트<input name="artist" maxLength={120} required className="mt-1 min-h-11 w-full rounded-xl border px-3" /></label>
         </ActionForm>
       </Card>
+
+      {roundId && !canVote && <Card><p className="text-sm text-slate-600">이번 회차 참여자가 아니므로 새 회차부터 투표할 수 있습니다. 후보곡 등록과 난이도 수정은 지금도 가능합니다.</p></Card>}
 
       {songs.map((song) => {
         const yes = song.votes.filter((vote) => vote.choice === 'yes').length;
@@ -49,7 +53,7 @@ export function SongList({
               {parts.length ? <div className="grid gap-2 sm:grid-cols-2">
                 {parts.map((part) => {
                   const meta = song.difficultyMeta?.[part.partKey];
-                  return <ActionForm key={part.partKey} action={difficultyAction} submit={`${part.part} 난이도 저장`} className="rounded-xl bg-slate-50 p-3">
+                  return <ActionForm key={part.partKey+':'+(meta?.version??0)} action={difficultyAction} submit={`${part.part} 난이도 저장`} className="rounded-xl bg-slate-50 p-3">
                     <input type="hidden" name="song_id" value={song.id} />
                     <input type="hidden" name="part_key" value={part.partKey} />
                     <input type="hidden" name="expected_version" value={meta?.version ?? 0} />
@@ -60,10 +64,10 @@ export function SongList({
               </div> : <p className="text-sm text-slate-500">등록된 밴드 파트가 없습니다.</p>}
             </div>
 
-            {roundId && <div className="mt-5 border-t pt-4">
+            {canVote && <div className="mt-5 border-t pt-4">
               <p className="mb-2 text-sm font-bold">내 투표</p>
-              <ActionForm action={voteAction} submit="투표 저장">
-                <input type="hidden" name="round_id" value={roundId} /><input type="hidden" name="song_id" value={song.id} />
+              <ActionForm key={JSON.stringify([roundId,mine?.choice,mine?.reason])} action={voteAction} submit="투표 저장">
+                <input type="hidden" name="round_id" value={roundId??''} /><input type="hidden" name="song_id" value={song.id} />
                 <label className="text-sm">찬반<select name="choice" defaultValue={mine?.choice ?? 'yes'} className="mt-1 min-h-11 w-full rounded-xl border px-3"><option value="yes">찬성</option><option value="no">반대</option></select></label>
                 <label className="text-sm">반대 사유 (반대 선택 시 필수)<textarea name="reason" defaultValue={mine?.reason ?? ''} maxLength={300} className="mt-1 min-h-20 w-full rounded-xl border px-3 py-2" /></label>
               </ActionForm>

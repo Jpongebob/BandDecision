@@ -11,9 +11,9 @@ export default async function SongRecommendationsPage() {
   if (!db) return null;
   const user=await getCurrentUser(db);
   if (!user) return null;
-  const { data: member } = await getActiveMember(db,user.id);
+  const { data: member } = await getActiveMember(db,user.id,user.bandContext);
   if (!member) return <Card><CardTitle>밴드 가입 후 이용할 수 있습니다</CardTitle></Card>;
-  const { data: round } = await db.from('planning_rounds').select('id,start_date,end_date').eq('band_id', member.band_id).in('status', ['collecting', 'ready']).maybeSingle();
+  const { data: round, error: roundError } = await db.from('planning_rounds').select('id,start_date,end_date').eq('band_id', member.band_id).in('status', ['collecting', 'ready']).maybeSingle();if(roundError)throw new Error('DATA_LOAD_FAILED');
   if (!round) return <Card><CardTitle>진행 중 회차가 없습니다</CardTitle></Card>;
   const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' });
   const [data, songs] = await Promise.all([loadRoundData(db, member.band_id, round.id, today), loadSongs(db, member.band_id, round.id)]);

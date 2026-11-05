@@ -12,7 +12,7 @@ select set_config('request.jwt.claim.sub','10000000-0000-4000-8000-000000000001'
 select set_config('request.jwt.claims','{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated","is_anonymous":true}',true);
 select is(private.actor_id(), null::uuid, 'an unverified guest has no actor');
 select is((select count(*)::integer from public.bands), 0, 'an unverified guest reads no band');
-select throws_ok($$select public.create_band('Bypass','guitar','Bypass')$$, 'P0001','UNAUTHENTICATED','old create-band RPC cannot bypass code/PIN login');
+select throws_ok($$select public.create_band('Bypass','guitar','Bypass')$$, '42501',null,'retired create-band RPC is not executable');
 select is(public.create_code_band('Code band','Leader','guitar','123','001234','987654')->>'error','INVALID_INPUT','three-character shared password rejected on creation');
 select ok((public.create_code_band('Code band','Leader','guitar','1234','001234','987654')->>'ok')::boolean, 'email-free band creation succeeds');
 select set_config('test.band',public.current_band_identity()->>'band_id',true);

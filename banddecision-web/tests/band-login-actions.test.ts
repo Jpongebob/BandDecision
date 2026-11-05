@@ -15,7 +15,7 @@ vi.mock('@/lib/supabase/server', () => ({
 }));
 vi.mock('next/navigation', () => ({ redirect: mocks.redirect }));
 vi.mock('next/cache', () => ({ revalidatePath: mocks.revalidatePath }));
-import { beginBandAccessAction, memberPinLoginAction, registerBandProfileAction, unlockBandAdminAction } from '../src/app/band-login-actions';
+import { beginBandAccessAction, memberPinLoginAction, registerBandProfileAction, unlockBandAdminAction, createTestBandAction } from '../src/app/band-login-actions';
 
 function form(values: Record<string, string>) {
   const result = new FormData();
@@ -83,4 +83,26 @@ describe('band login actions', () => {
     expect(result.success).toBeUndefined();
     expect(mocks.revalidatePath).not.toHaveBeenCalled();
   });
+});
+
+
+describe('isolated test band creation action', () => {
+ it('validates credentials before starting an anonymous session', async () => {
+   expect((await createTestBandAction({}, form({nickname:'Me',password:'123',pin:'112233'}))).error).toBeTruthy();
+   expect(mocks.rpc).not.toHaveBeenCalled();
+   expect(mocks.signInAnonymously).not.toHaveBeenCalled();
+ });
+ it('uses the transactional fixture RPC then enters the new leader dashboard', async () => {
+   mocks.rpc.mockResolvedValue({data:{ok:true,code:'ABCDEF1234'},error:null});
+   await expect(createTestBandAction({},form({nickname:'My test',password:'test1234',pin:'112233'}))).rejects.toThrow('redirect:/dashboard');
+   expect(mocks.rpc).toHaveBeenCalledWith('create_test_band',{p_nickname:'My test',p_password:'test1234',p_pin:'112233'});
+   expect(mocks.revalidatePath).toHaveBeenCalledWith('/','layout');
+ });
+ it('does not redirect or report success when an existing band blocks fixture creation', async () => {
+   mocks.rpc.mockResolvedValue({data:{error:'ALREADY_SIGNED_IN'},error:null});
+   const result=await createTestBandAction({},form({nickname:'My test',password:'test1234',pin:'112233'}));
+   expect(result.error).toBeTruthy();
+   expect(result.success).toBeUndefined();
+   expect(mocks.revalidatePath).not.toHaveBeenCalled();
+ });
 });

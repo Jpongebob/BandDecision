@@ -9,9 +9,9 @@ import type { Participant } from '@/services/recommendations';
 export default async function SongsPage() {
   const db = await createClient(); if (!db) return null;
   const user=await getCurrentUser(db); if (!user) return null;
-  const { data: member } = await getActiveMember(db,user.id);
+  const { data: member } = await getActiveMember(db,user.id,user.bandContext);
   if (!member) return <Card><CardTitle>가입한 밴드가 없습니다</CardTitle></Card>;
-  const { data: round } = await db.from('planning_rounds').select('id').eq('band_id', member.band_id).in('status', ['collecting', 'ready']).maybeSingle();
+  const { data: round, error: roundError } = await db.from('planning_rounds').select('id').eq('band_id', member.band_id).in('status', ['collecting', 'ready']).maybeSingle();if(roundError)throw new Error('DATA_LOAD_FAILED');
   const [participants, songs] = await Promise.all([(async (): Promise<Participant[]> => {
   if (round) {
     const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' });

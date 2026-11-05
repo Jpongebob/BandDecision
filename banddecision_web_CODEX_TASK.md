@@ -106,3 +106,12 @@ Implement confirmed same-band leadership handoff with administrator PIN rotation
 
 ## v3.4 immediate leader administration
 Per explicit user request, remove the additional administrator-unlock requirement in server role checks, invitation checks and UI. Keep verified personal sessions, active matching owner/leader membership, self-only edits, cross-band denial and version checks. Apply new migration 005 after 004, never rewrite historical migrations. Verify null/expired legacy admin_until still permits leader finalization while expired personal sessions and ordinary members are denied.
+
+## v3.5 code-only onboarding
+Remove email routes/actions/forms/reset/callback and legacy token invites. Keep reusable band-code invite prefilling and personal-PIN identity, ordinary-member restrictions and same-band isolation. Revoke legacy onboarding/invite RPC and table privileges in a new migration; preserve historical migrations/data. Test that disabled RPCs reject direct requests and code flows remain enabled. Record provider Email-toggle/deployment as unverified if credentials are unavailable.
+
+## v3.6 latency and test fixtures
+Reduce verified identity/member/band query waterfalls without global user caches or auth bypass. Add user-operated isolated test-band creation with caller as leader using real RPCs atomically; respect one-active-band policy, keep normal personal credentials and document scenarios. Test snapshot isolation, initial eligibility, finalization, refusal to overwrite existing bands and late-failure rollback. Report unavailable hosted setup and actual-latency measurements separately.
+
+## v3.7 reproduced regression audit
+Keep failure-first regression tests for explicit-none/past dates, refreshed difficulty-version alignment, saved/new-round vote state, roster-excluded new members, partial database read errors and malformed RPC inputs. Fail closed rather than invent empty dates or skill. New migration 008 preserves records and validates before writes. Distinguish real public-browser tests, local PostgreSQL/React tests and unverified hosted Auth/concurrency.

@@ -17,7 +17,7 @@ export const createCodeBandSchema = profileInputSchema.extend({
 
 export const bandLoginErrors: Record<string, string> = {
   BAD_BAND_CREDENTIALS: '밴드 코드 또는 공용 비밀번호를 확인해 주세요.',
-  BAD_PIN: 'PIN을 확인해 주세요. 아직 PIN이 없다면 기존 이메일로 로그인해 설정하세요.',
+  BAD_PIN: '개인 PIN을 확인해 주세요. PIN을 잊었다면 밴드장에게 초기화를 요청하세요.',
   BAND_ACCESS_EXPIRED: '밴드 접속 시간이 만료됐습니다. 밴드 코드부터 다시 입력해 주세요.',
   RATE_LIMITED: '입력 시도가 너무 많습니다. 15분 후 다시 시도해 주세요.',
   DUPLICATE_NICKNAME: '이미 사용 중인 닉네임입니다. 기존 프로필을 선택하거나 다른 닉네임을 입력하세요.',

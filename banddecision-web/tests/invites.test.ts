@@ -12,7 +12,6 @@ function setup(settings: { code: string | null; role: string; admin_unlocked: bo
   state.rpc.mockImplementation(async (name: string) => {
     if (name === 'current_band_identity') return { data: { band_id: identityBand }, error: null };
     if (name === 'band_login_settings') return { data: settings, error: null };
-    if (name === 'create_invite') return { data: [{ token: 'legacy-token' }], error: null };
     throw new Error('Unexpected RPC: ' + name);
   });
 }
@@ -54,10 +53,10 @@ describe('invitation authentication mode', () => {
     expect((await createInviteAction({}, form())).error).toBeTruthy();
     expect(state.rpc.mock.calls.some(([name]) => name === 'create_invite')).toBe(false);
   });
-  it('retains one-use email invitations only for bands without code login', async () => {
+  it('requires code setup instead of issuing an email invitation', async () => {
     setup({ code: null, role: 'leader', admin_unlocked: true });
-    expect(await createInviteAction({}, form())).toEqual({ success: 'https://band.example/join/legacy-token' });
-    expect(state.rpc).toHaveBeenCalledWith('create_invite', { p_band: band });
+    expect((await createInviteAction({}, form())).error).toBeTruthy();
+    expect(state.rpc.mock.calls.some(([name]) => name === 'create_invite')).toBe(false);
   });
   it('does not emit an invalid or injected stored band code', async () => {
     setup({ code: 'https://other.example', role: 'leader', admin_unlocked: true });

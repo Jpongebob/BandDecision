@@ -8,7 +8,7 @@ vi.mock('@/lib/supabase/server', () => ({ createClient: async () => ({
 }) }));
 vi.mock('next/cache', () => ({ revalidatePath: mocks.revalidate }));
 vi.mock('next/navigation', () => ({ redirect: mocks.redirect }));
-import { transferLeaderAction, skillAction, leaveBandAction, submitUnavailableAction, voteAction, confirmPlanAction, signInAction } from '../src/app/actions';
+import { transferLeaderAction, skillAction, leaveBandAction, submitUnavailableAction, voteAction, confirmPlanAction } from '../src/app/actions';
 
 const band = '50000000-0000-4000-8000-000000000001';
 const member = '50000000-0000-4000-8000-000000000002';
@@ -108,8 +108,5 @@ describe('reviewed form boundaries', () => {
     mocks.rpc.mockResolvedValue({ error: { message: 'TRANSFER_LEADERSHIP_REQUIRED' } });
     await expect(leaveBandAction()).rejects.toThrow('redirect:/settings/band?notice=leave_failed');
     expect(mocks.signOut).not.toHaveBeenCalled();
-  });
-  it('prevents a backslash open redirect after legacy email login', async () => {
-    await expect(signInAction({}, form({ email: 'member@example.test', password: 'test-password', next: '/\\evil.example' }))).rejects.toThrow('redirect:/dashboard');
   });
 });

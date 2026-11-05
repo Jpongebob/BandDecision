@@ -1,0 +1,24 @@
+begin;
+select plan(11);
+insert into auth.users(id,aud,role,is_anonymous,raw_user_meta_data) values
+('70000000-0000-4000-8000-000000000001','authenticated','authenticated',true,'{}');
+set local role authenticated;
+select set_config('request.jwt.claim.sub','70000000-0000-4000-8000-000000000001',true);
+select set_config('request.jwt.claims','{"sub":"70000000-0000-4000-8000-000000000001","is_anonymous":true}',true);
+select public.create_test_band('Boundary owner','test1234','112233');
+select set_config('test.band',public.current_band_identity()->>'band_id',true);
+select set_config('test.round',(select id::text from public.planning_rounds where band_id=current_setting('test.band')::uuid),true);
+select set_config('test.song',(select id::text from public.songs where band_id=current_setting('test.band')::uuid and title like '[테스트 A]%'),true);
+select throws_ok($$select public.save_unavailability(current_setting('test.round')::uuid,jsonb_build_array(jsonb_build_object('date',((now() at time zone 'Asia/Seoul')::date+2)::text,'reason',42)),false)$$,'P0001','INVALID_INPUT','numeric reason is not a valid text reason');
+select throws_ok($$select public.save_unavailability(current_setting('test.round')::uuid,jsonb_build_array(jsonb_build_object('date',((now() at time zone 'Asia/Seoul')::date+2)::text,'reason',true)),false)$$,'P0001','INVALID_INPUT','boolean reason is not accepted as text');
+select throws_ok($$select public.save_unavailability(current_setting('test.round')::uuid,jsonb_build_array(jsonb_build_object('date',((now() at time zone 'Asia/Seoul')::date+2)::text,'reason','{"text":"x"}'::jsonb)),false)$$,'P0001','INVALID_INPUT','object reason is rejected');
+select throws_ok($$select public.save_unavailability(current_setting('test.round')::uuid,jsonb_build_array(jsonb_build_object('date',((now() at time zone 'Asia/Seoul')::date+2)::text,'reason','["x"]'::jsonb)),false)$$,'P0001','INVALID_INPUT','array reason is rejected');
+select is((select count(*)::integer from public.unavailable_dates where band_id=current_setting('test.band')::uuid),2,'invalid inputs leave original two dates intact');
+select throws_ok($$select public.cast_vote(current_setting('test.round')::uuid,current_setting('test.song')::bigint,null,null)$$,'P0001','INVALID_INPUT','null choice is a validation error rather than a constraint failure');
+select is((select choice from public.song_votes where round_id=current_setting('test.round')::uuid and song_id=current_setting('test.song')::bigint),'yes','invalid vote leaves original vote intact');
+select lives_ok($$select public.save_unavailability(current_setting('test.round')::uuid,jsonb_build_array(jsonb_build_object('date',((now() at time zone 'Asia/Seoul')::date+2)::text,'reason','valid text')),false)$$,'valid text reason continues to save');
+select throws_ok($$select public.save_unavailability(current_setting('test.round')::uuid,jsonb_build_array(jsonb_build_object('date',((now() at time zone 'Asia/Seoul')::date+2)::text)),false)$$,'P0001','INVALID_INPUT','missing reason rejected');
+select throws_ok($$select public.cast_vote(current_setting('test.round')::uuid,current_setting('test.song')::bigint,'',null)$$,'P0001','INVALID_INPUT','empty vote choice rejected');
+select throws_ok($$select public.cast_vote(current_setting('test.round')::uuid,current_setting('test.song')::bigint,'no',null)$$,'P0001','INVALID_INPUT','negative vote needs reason');
+select * from finish();
+rollback;
