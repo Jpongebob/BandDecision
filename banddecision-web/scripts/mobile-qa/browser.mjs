@@ -23,7 +23,7 @@ try{
  await go('/settings/band','멤버와 설정');const code=await run("document.querySelector('.font-mono')?.textContent");assert(/^[A-F0-9]{10}$/.test(code),'band code displayed');await touchText('간편 초대 링크 만들기');await wait('document.querySelector("[role=status]")?.textContent.includes("code=")');assert(await run('document.querySelector("[role=status]").textContent.includes('+JSON.stringify(code)+')'),'reusable code invite generated');await layout('leader settings');
  await writeFile(resolve(artifacts,'session.json'),JSON.stringify({code}));
  const routes=[['/dashboard','반가워요'],['/schedule','불가능한 날짜'],['/schedule/recommendations','추천'],['/songs','후보곡 등록'],['/songs/recommendations','추천'],['/plans','합주 계획'],['/settings/band','멤버와 설정'],['/settings','설정'],['/settings/profile','내 정보'],['/bands/test','5인 테스트 준비']];
- for(const width of (process.env.QA_FAST?[]:[320,390,430,768,844])){await viewport(width,width===844?390:844);for(const [path,text]of routes){await go(path,text);await layout(path);}}
+ for(const width of (process.env.QA_FAST?[]:[320,390,430,768,844,1280])){await viewport(width,width===844?390:844);for(const [path,text]of routes){await go(path,text);await layout(path);}}
  if(process.env.QA_BENCHMARK){
   const measurements=[];
   for(let pass=0;pass<3;pass++)for(const [path,marker]of [['/schedule','저장된 날짜'],['/schedule/recommendations','날짜 추천'],['/dashboard','반가워요']]){

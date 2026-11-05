@@ -7,7 +7,7 @@ import {AvailabilityForm} from '../src/components/availability-form';
 Object.defineProperty(HTMLDialogElement.prototype,'showModal',{configurable:true,value:function(){this.setAttribute('open','');}});
 Object.defineProperty(HTMLDialogElement.prototype,'close',{configurable:true,value:function(){this.removeAttribute('open');}});
 afterEach(cleanup);
-const props={members:[{id:'me'},{id:'other'}],memberId:'me',unavailable:[{memberId:'me',date:'2026-11-08'}],today:'2026-11-05',savedDates:[{date:'2026-11-08',reason:'original'}]};
+const props={members:[{id:'me',nickname:'My name',part:'기타'},{id:'other',nickname:'Other name',part:'베이스'}],memberId:'me',unavailable:[{memberId:'me',date:'2026-11-08'}],today:'2026-11-05',savedDates:[{date:'2026-11-08',reason:'original'}]};
 function draft(view:ReturnType<typeof render>){return JSON.parse((view.container.querySelector('input[name=dates_json]') as HTMLInputElement).value) as {date:string;reason:string}[];}
 describe('calendar new dates and separate saved rows',()=>{
  it('starts with an empty new draft and preserves the saved editor',()=>{const view=render(createElement(AvailabilityForm,props));expect(draft(view)).toEqual([]);expect(view.container.querySelectorAll('[data-saved-date]')).toHaveLength(1);expect(view.container.querySelector('input[name=old_date]')).toBeNull();expect(screen.queryByText(/이번 회차/)).toBeNull();});
@@ -30,4 +30,17 @@ it('shows current active attendance and previews own additions without double-co
  expect((screen.getByRole('button',{name:'2026-11-08 · 참석 1명 · 불참 1명 · 저장됨'}) as HTMLButtonElement).disabled).toBe(true);
  expect(view.container.querySelector('[name=reason]')).toBeNull();
 });
-it('updates attendance when refreshed members or dates arrive',()=>{const view=render(createElement(AvailabilityForm,props));view.rerender(createElement(AvailabilityForm,{...props,members:[...props.members,{id:'new'}],unavailable:[...props.unavailable,{memberId:'new',date:'2026-11-10'}]}));expect(screen.getByRole('button',{name:'2026-11-10 · 참석 2명 · 불참 1명'})).toBeTruthy();});
+it('updates attendance when refreshed members or dates arrive',()=>{const view=render(createElement(AvailabilityForm,props));view.rerender(createElement(AvailabilityForm,{...props,members:[...props.members,{id:'new',nickname:'New name',part:'보컬'}],unavailable:[...props.unavailable,{memberId:'new',date:'2026-11-10'}]}));expect(screen.getByRole('button',{name:'2026-11-10 · 참석 2명 · 불참 1명'})).toBeTruthy();});
+
+it('shows who attends and is absent, including unsaved own selection changes',()=>{
+ const view=render(createElement(AvailabilityForm,{...props,unavailable:[...props.unavailable,{memberId:'other',date:'2026-11-06'}]}));
+ fireEvent.click(screen.getByRole('button',{name:'2026-11-06 · 참석 1명 · 불참 1명'}));
+ const panel=screen.getByRole('region',{name:'날짜별 참석·불참 명단'});
+ expect(panel.textContent).toContain('불참 2명');expect(panel.textContent).toContain('My name (나)');expect(panel.textContent).toContain('Other name');
+ fireEvent.click(screen.getByRole('button',{name:'2026-11-06 · 참석 0명 · 불참 2명 · 선택 중'}));expect(panel.textContent).toContain('참석 1명');expect(panel.textContent).toContain('불참 1명');expect(view.container.querySelector('[name=reason]')).toBeNull();
+});
+it('view-only calendar can inspect saved days without changing the availability draft',()=>{
+ const view=render(createElement(AvailabilityForm,props));const before=draft(view);fireEvent.click(screen.getByRole('button',{name:'2026-11-05'}));
+ const dialog=screen.getByRole('dialog',{name:'명단을 확인할 날짜'});fireEvent.click(dialog.querySelector('[data-day="2026-11-08"]')!);
+ expect(draft(view)).toEqual(before);const panel=screen.getByRole('region',{name:'날짜별 참석·불참 명단'});expect(panel.textContent).toContain('참석 1명');expect(panel.textContent).toContain('불참 1명');expect(panel.textContent).toContain('My name (나)');
+});
