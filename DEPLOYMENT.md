@@ -1,3 +1,5 @@
+> 최신 기능: 회차 없는 일정·투표, 날짜만 확정, 계획 수정/삭제는 011 마이그레이션과 함께 배포합니다. 009 중복 오류와 적용 순서는 루트 CONTINUOUS_PLANNING.md를 참고하세요. 아래 이전 배포 기록보다 이 안내가 우선합니다.
+
 # Deployment
 
 The application is in `banddecision-web/`. Production deployment requires a Supabase project and a Vercel project connected to this repository. The current checkout has neither provider credentials nor a Vercel project link, so these steps have not been run against a live service.

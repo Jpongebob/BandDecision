@@ -1,3 +1,5 @@
+> Current v4 contract is continuous planning. The older AC table below records historical behavior through 010; frozen-roster/round-start/preview-required cases are retired. Current results are in the 011 section and CONTINUOUS_PLANNING.md.
+
 # QA report — 2026-11-05
 
 PASS means only the local scope named below. It does not certify deployed Auth, PostgREST, Realtime or device behavior. Historical PROGRESS entries describe earlier runs; this report reflects the latest run.
@@ -93,3 +95,18 @@ Current run: 17 files / 102 tests, 7 migrations / 191 SQL assertions. Dedicated 
 
 ## v3.9 local mobile workflow and multi-plan update
 AC50 now means retaining up to five independently confirmed plans, denying a sixth and allowing explicit current-leader deletion. Local SQL/UI/action tests pass under the new contract; older replacement-one behavior is retired. Final regression results: 163 unit/component/action tests, 300 SQL assertions across 11 migrations, 157 actual Chrome mobile checks, lint/type/build pass. See MOBILE_QA_REPORT.md for exact sizes, successful check list, reproduced defects and the Auth/REST substitute boundary. Physical phones, Safari, native keyboard, hosted Auth/REST/Realtime, real concurrent connections, deployment and production latency are NOT verified by these results.
+
+
+## 011 current contract
+| Case | Local result |
+|---|---|
+| CP01 Saved dates listed once, add/edit/delete without replacing others | PASS UI + SQL + Chrome |
+| CP02 Date-only confirmation without preview | PASS UI + SQL + Chrome |
+| CP03 Same-plan date/song edit and song removal | PASS UI + SQL + Chrome |
+| CP04 Five-plan cap with editing at capacity | PASS SQL + Chrome |
+| CP05 Current membership immediately changes attendance and vote eligibility | PASS SQL + Chrome |
+| CP06 Own-only dates/votes; leader-only plans; cross-band denial | PASS SQL + actions/UI |
+| CP07 Planning and plan stale-version rejection | PASS SQL + actions |
+| CP08 Existing dates/latest votes/plan snapshots survive upgrade | PASS seeded 010 -> 011 SQL |
+| CP09 Mobile width/long text and navigation | PASS Chrome emulation |
+Current unit/component/action tests: 182 PASS. Current SQL assertions: 66 PASS. Historical contract through 010: 300 PASS. Current Chrome full run: 100 checks PASS, zero uncaught JS exceptions. Real Auth/PostgREST/Realtime/phones/parallel connections/hosted latency remain unverified. Build/lint/type final results are recorded in PROGRESS.md after completion.

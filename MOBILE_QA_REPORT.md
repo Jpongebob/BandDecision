@@ -1,3 +1,115 @@
+# 최신 011 검사: 회차 없는 계획
+
+현재 실행은 **모바일 전체 100개 PASS, 예외 0 / 단위·컴포넌트·액션 182개 PASS / 새 DB 계약·업그레이드 66개 PASS**입니다. 아래 이전 010의 157개 체크 기록은 과거 흐름이며, 회차·미리보기 관련 항목은 최신 계약으로 대체합니다.
+011까지의 마이그레이션을 적용하고 로컬 Chrome에서 현재 명단, 별도 저장 날짜 목록과 개별 편집/삭제, 날짜만 즉시 확정, 기존 계획 날짜·곡 편집/제거, 5개 제한 중 편집, 새 멤버 즉시 참여를 실제 화면·서버 액션·SQL에 연결해 검사했습니다. Supabase 설정이 있는 프로덕션 빌드도 통과했고 로컬 QA 서버는 종료했습니다.
+운영 Supabase/실기기/Safari/OS 키보드/Realtime/다중 실제 연결/운영 지연시간은 여전히 미검증입니다. Auth/REST는 루프백 대역이라는 범위는 유지합니다. CONTINUOUS_PLANNING.md에 적용 순서와 사용자 흐름을 정리했습니다.
+
+## 최신 단일 실행 체크 목록
+- touch creates five-member fixture via real Next server action
+- band code displayed
+- reusable code invite generated
+- leader settings fits 390px []
+- /dashboard fits 320px []
+- /schedule fits 320px []
+- /schedule/recommendations fits 320px []
+- /songs fits 320px []
+- /songs/recommendations fits 320px []
+- /plans fits 320px []
+- /settings/band fits 320px []
+- /settings fits 320px []
+- /settings/profile fits 320px []
+- /bands/test fits 320px []
+- /dashboard fits 390px []
+- /schedule fits 390px []
+- /schedule/recommendations fits 390px []
+- /songs fits 390px []
+- /songs/recommendations fits 390px []
+- /plans fits 390px []
+- /settings/band fits 390px []
+- /settings fits 390px []
+- /settings/profile fits 390px []
+- /bands/test fits 390px []
+- /dashboard fits 430px []
+- /schedule fits 430px []
+- /schedule/recommendations fits 430px []
+- /songs fits 430px []
+- /songs/recommendations fits 430px []
+- /plans fits 430px []
+- /settings/band fits 430px []
+- /settings fits 430px []
+- /settings/profile fits 430px []
+- /bands/test fits 430px []
+- /dashboard fits 768px []
+- /schedule fits 768px []
+- /schedule/recommendations fits 768px []
+- /songs fits 768px []
+- /songs/recommendations fits 768px []
+- /plans fits 768px []
+- /settings/band fits 768px []
+- /settings fits 768px []
+- /settings/profile fits 768px []
+- /bands/test fits 768px []
+- /dashboard fits 844px []
+- /schedule fits 844px []
+- /schedule/recommendations fits 844px []
+- /songs fits 844px []
+- /songs/recommendations fits 844px []
+- /plans fits 844px []
+- /settings/band fits 844px []
+- /settings fits 844px []
+- /settings/profile fits 844px []
+- /bands/test fits 844px []
+- all original saved dates listed once
+- new-date field starts blank
+- no duplicate selected-date list or round terminology
+- successful add clears only new input
+- saved date and reason editable without duplicates
+- deleting one date preserves other saved dates
+- quick add appends without replacing saved dates
+- editable saved dates fits 320px []
+- editable saved dates fits 390px []
+- editable saved dates fits 430px []
+- editable saved dates fits 768px []
+- editable saved dates fits 844px []
+- no preview step
+- date-only plan created with no vote or song requirement
+- adding a song edits the same plan without consuming a slot
+- plan date changed and songs removed in place
+- no preview step
+- no preview step
+- no preview step
+- no preview step
+- five-plan capacity enforced in screen
+- existing plans remain editable at capacity
+- five editable date-only plans fits 390px []
+- explicit deletion frees one plan slot
+- long title live songs fits 320px []
+- long title live songs fits 390px []
+- long title live songs fits 430px []
+- long title live songs fits 844px []
+- difficulty and persistent vote save without a round
+- code invite prefilled
+- profile available: 테스트 베이스
+- invalid PIN retry preserves selection and signs in
+- ordinary member cannot edit/delete/confirm plans
+- ordinary member can add own date immediately
+- code invite prefilled
+- new member votes and saves dates immediately without starting a round
+- new member persistent vote accepted
+- code invite prefilled
+- profile available: Mobile QA Leader
+- invalid PIN retry preserves selection and signs in
+- roster automatically changes to six current members
+- no preview step
+- date-only plan uses new current roster despite pending song votes
+- member management has no manual round controls
+- recommendations return directly home
+- no uncaught JavaScript exceptions: []
+
+---
+
+# 이전 010 검사 기록
+
 # 모바일 전체 흐름 및 다중 계획 검사
 
 ## 검증 환경

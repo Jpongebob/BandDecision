@@ -32,6 +32,6 @@ export async function prepareTestMembers(leader: SupabaseClient, password: strin
   }
  }
  const prepared=await leader.rpc('prepare_test_band');
- if(prepared.error||prepared.data?.error)return '5인 테스트 회차를 준비하지 못했습니다. 실제 멤버가 섞이지 않았는지 확인하고 다시 시도하세요.';
+ if(prepared.error||prepared.data?.error)return '5인 테스트 데이터를 준비하지 못했습니다. 실제 멤버가 섞이지 않았는지 확인하고 다시 시도하세요.';
  return null;
 }

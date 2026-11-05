@@ -1,4 +1,4 @@
-﻿-- Continuous planning: current active members, persistent availability/votes, editable date-only plans.
+-- Continuous planning: current active members, persistent availability/votes, editable date-only plans.
 -- Retain historical round tables and confirmed snapshots; the application no longer uses rounds.
 begin;
 alter table public.bands add column planning_version bigint not null default 0 check(planning_version>=0);

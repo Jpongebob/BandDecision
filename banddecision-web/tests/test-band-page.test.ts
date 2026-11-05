@@ -11,7 +11,7 @@ describe('test band entry',()=>{
  it('lets an existing one-person fixture leader resume preparation',async()=>{
   state.setup={prepared:false,members:[]};state.user.mockResolvedValue({nickname:'Test leader'});
   render(await TestBandPage());
-  expect(screen.getByRole('button',{name:'테스트 멤버 추가하고 5인 회차 준비'})).toBeTruthy();
+  expect(screen.getByRole('button',{name:'테스트 멤버 추가하고 5인 추천 준비'})).toBeTruthy();
  });
  it('lets an unassigned visitor choose personal credentials and shows the actual test cases',async()=>{
   state.setup=null;state.user.mockResolvedValue(null);

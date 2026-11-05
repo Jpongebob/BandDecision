@@ -1,3 +1,5 @@
+> 현재 계약 v4: 사용자의 2026-11-05 요청으로 회차·고정 명단·회차별 제출 대기·미리보기 필수·필수 곡 선택을 없앴습니다. CONTINUOUS_PLANNING.md가 이전 회차 관련 절의 동작 계약을 대체합니다. 역사적 DB는 보존하고 현재 API/화면은 지속 방식으로 동작합니다.
+
 # Codex 전체 개발 일괄 요청문 — BandDecision Web v3.1
 
 아래 블록을 그대로 Codex 채팅 첫 메시지로 붙여 넣거나, **"프로젝트 루트의 CODEX_TASK.md를 읽고 이 작업을 수행해"**라고 전달한다. 이 문서는 단계별 승인 없이 가능한 모든 개발을 **한 번의 작업 요청**으로 진행하도록 명시한다.
@@ -122,3 +124,7 @@ Provision four actual anonymous demo accounts through normal Auth/password/PIN g
 
 ## v3.9 multiple rehearsal plans and mobile flows
 Keep up to five independent plans per band without replacing old snapshots. Serialize adds/deletes on the band row, enforce capacity in the database, increment round versions, require current leader permission and explicit deletion consent, and display all plans on home/plans. Preserve existing migrations/data. Exercise actual Next browser actions at mobile sizes against disposable SQL with clearly documented Auth/REST substitutes; never label this hosted or physical-device verification.
+
+
+## v4 지속 일정·투표와 수정 가능한 날짜 단독 계획
+현재 활성 멤버를 자동 반영하며 일정은 개별 추가/수정/삭제하고, 투표는 지속한다. 추천은 저장된 불가능 날짜 기준이며 미입력은 가능으로 계산한다. 계획은 곡 없이 날짜만 즉시 확정할 수 있고 최대 5개까지 보관한다. 밴드장만 기존 계획 날짜/곡을 수정·삭제하며 빈 곡 목록도 유효하다. 멤버 변경 후 기존 확정 스냅샷은 유지하고, 명시적 계획 수정 시 현재 멤버/일정으로 갱신한다. 과거 선택곡은 유지할 수 있고 새 선택곡은 현재 자격을 검증한다. 현재 계획 버전과 개별 계획 버전으로 오래된 편집·삭제를 거절한다. 회차 API는 인증 사용자에게서 권한을 회수한다. 이전 데이터의 업그레이드 보존과 자기 일정/투표·밴드장 권한·타 밴드 격리를 검증한다.

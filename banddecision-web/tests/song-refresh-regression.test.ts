@@ -3,26 +3,26 @@ import { createElement } from 'react';
 import { cleanup, render, fireEvent, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 vi.mock('@/app/actions',()=>({addSongAction:vi.fn(async()=>({})),difficultyAction:vi.fn(async()=>({success:'difficulty saved'})),voteAction:vi.fn(async()=>({success:'vote saved'}))}));
+vi.mock('@/app/live-actions',()=>({liveVoteAction:vi.fn(async()=>({success:'vote saved'}))}));
 import { SongList } from '../src/components/song-list';
 import type { Participant, SongInput } from '../src/services/recommendations';
 afterEach(cleanup);
 const participants:Participant[]=[{id:'m',userId:'u',nickname:'Me',part:'기타',partKey:'기타',skill:3}];
 const song:SongInput={id:1,title:'Test',artist:'Band',difficulties:{'기타':2},difficultyMeta:{'기타':{version:1,updatedAt:'2026-11-05T00:00:00Z',updatedBy:'A'}},votes:[{memberId:'m',choice:'yes'}]};
-const props={bandId:'band',roundId:'round',memberId:'m',participants,songs:[song]};
+const props={bandId:'band',memberId:'m',participants,songs:[song]};
 describe('saved song form refresh consistency',()=>{
- it('resets an unsaved vote draft when a new planning round starts',()=>{
+ it('resets a draft when the signed-in member changes',()=>{
   const unvoted={...song,votes:[]};
   const view=render(createElement(SongList,{...props,songs:[unvoted]}));
   fireEvent.change(view.container.querySelector('select[name="choice"]')!,{target:{value:'no'}});
   fireEvent.change(view.container.querySelector('textarea[name="reason"]')!,{target:{value:'old draft'}});
-  view.rerender(createElement(SongList,{...props,roundId:'new-round',songs:[unvoted]}));
+  view.rerender(createElement(SongList,{...props,memberId:'next',participants:[{...participants[0],id:'next'}],songs:[unvoted]}));
   expect((view.container.querySelector('select[name="choice"]') as HTMLSelectElement).value).toBe('yes');
   expect((view.container.querySelector('textarea[name="reason"]') as HTMLTextAreaElement).value).toBe('');
  });
- it('does not offer round voting to a newly joined member excluded from the frozen roster',()=>{
-  const view=render(createElement(SongList,{...props,memberId:'new-member'}));
-  expect(view.container.querySelector('select[name="choice"]')).toBeNull();
-  expect(screen.getByText(/새 회차부터/)).toBeTruthy();
+ it('offers immediate voting when a member joins the current roster',()=>{
+  const view=render(createElement(SongList,{...props,memberId:'new-member',participants:[...participants,{...participants[0],id:'new-member'}]}));
+  expect(view.container.querySelector('select[name="choice"]')).not.toBeNull();
  });
  it('does not pair a stale difficulty input with a new expected_version',()=>{
   const view=render(createElement(SongList,props));
