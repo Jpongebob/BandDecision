@@ -48,9 +48,9 @@ const server=createServer(async(req,res)=>{const waitMs=Number(process.env.QA_DE
   if(url.pathname==='/auth/v1/user')return user?send(200,user):send(401,{msg:'invalid session',code:'bad_jwt'});
   if(url.pathname==='/auth/v1/logout'){tokens.delete(bearer);return send(200,{});}
   if(!url.pathname.startsWith('/rest/v1/'))return send(404,{message:'unsupported QA endpoint'});
-  if(!user)return send(401,{message:'unauthenticated'});
-  await db.exec('begin; set local role authenticated;');transaction=true;
-  await db.query("select set_config('request.jwt.claim.sub',$1,true),set_config('request.jwt.claims',$2,true)",[user.id,JSON.stringify({sub:user.id,is_anonymous:true,role:'authenticated'})]);
+  if(!user&&url.pathname!=='/rest/v1/rpc/default_band_entry_context')return send(401,{message:'unauthenticated'});
+  await db.exec(user?'begin; set local role authenticated;':'begin; set local role anon;');transaction=true;
+  await db.query("select set_config('request.jwt.claim.sub',$1,true),set_config('request.jwt.claims',$2,true)",[user?.id??'',JSON.stringify(user?{sub:user.id,is_anonymous:true,role:'authenticated'}:{role:'anon'})]);
   if(url.pathname.startsWith('/rest/v1/rpc/')){
    const fn=url.pathname.split('/').at(-1),keys=Object.keys(body);const result=await db.query('select public.'+ident(fn)+'('+keys.map((k,i)=>ident(k)+'=> $'+(i+1)).join(',')+') as result',keys.map(k=>Array.isArray(body[k])&&k!=='p_song_ids'?JSON.stringify(body[k]):body[k]));
    await db.exec('commit');transaction=false;return send(200,result.rows[0]?.result??null);

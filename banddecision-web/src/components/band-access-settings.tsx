@@ -2,7 +2,7 @@ import { createInviteAction } from '@/app/actions';
 import { Card, CardTitle } from '@/components/ui/card';
 import { ActionForm } from '@/components/action-form';
 import { BandPasswordField, PinField } from '@/components/band-login-fields';
-import { changeMemberPinAction, configureBandLoginAction } from '@/app/band-login-actions';
+import { setDirectBandEntryAction,changeMemberPinAction, configureBandLoginAction } from '@/app/band-login-actions';
 import { createClient } from '@/lib/supabase/server';
 
 type SettingsMember={id:string;user_id:string;profiles:{nickname:string}|{nickname:string}[]|null};
@@ -11,7 +11,7 @@ export async function BandAccessSettings({ bandId, roster }: { bandId: string; r
   if (!db) return null;
   const { data, error } = await db.rpc('band_login_settings');
   if (error) return <Card><CardTitle>간편 접속 설정을 불러오지 못했습니다</CardTitle><p className="mt-2 text-sm">새 인증 마이그레이션 적용 여부와 연결을 확인해 주세요.</p></Card>;
-  const settings = data as { code: string | null; role: string; admin_unlocked: boolean } | null;
+  const settings = data as { code: string | null; role: string; admin_unlocked: boolean; direct_entry_enabled?:boolean } | null;
   if (!settings) return null;
   let members:SettingsMember[]|null=null;
   if(settings.role==='leader'){
@@ -24,6 +24,8 @@ export async function BandAccessSettings({ bandId, roster }: { bandId: string; r
   return <Card className="space-y-5 border-blue-200">
     <div><CardTitle>밴드 코드 접속</CardTitle>{settings.code ? <><p className="mt-3 break-all font-mono text-2xl font-black tracking-widest">{settings.code}</p><p className="mt-2 text-sm text-slate-600">코드와 공용 비밀번호를 멤버들에게 공유하세요. 개인 PIN은 공유하지 마세요.</p></> : <p className="mt-2 text-sm text-slate-600">밴드장이 공용 비밀번호를 설정하면 밴드 코드로 접속할 수 있습니다.</p>}</div>
     {settings.role === 'leader' && <>
+      {settings.code&&<section aria-label="사이트 시작 화면" className="rounded-xl border border-blue-100 bg-blue-50/50 p-4"><h3 className="font-bold">사이트 시작 화면</h3><p className="mt-2 text-sm font-semibold">현재: {settings.direct_entry_enabled?'프로필 선택·PIN 입력':'밴드 코드·공용 비밀번호 입력'}</p><p className="mt-2 text-sm text-slate-600">켜면 사이트 첫 화면에서 우리 밴드 프로필과 개인 PIN으로 바로 로그인합니다. 사이트 방문자는 멤버 목록을 볼 수 있고 새 프로필을 만들 수 있습니다. 개인 PIN 확인은 유지됩니다. 끄면 기존 코드·공용 비밀번호 방식으로 돌아갑니다.</p><ActionForm action={setDirectBandEntryAction} submit={settings.direct_entry_enabled?'프로필 시작 화면 끄기':'프로필 시작 화면 켜기'} className="mt-4 max-w-sm"><input type="hidden" name="enabled" value={settings.direct_entry_enabled?'false':'true'}/></ActionForm></section>}
+
       {settings.code ? <section className="rounded-xl border border-blue-100 bg-blue-50/50 p-4"><h3 className="font-bold">멤버 초대</h3><p className="mt-2 text-sm text-slate-600">링크를 열면 밴드 코드가 자동 입력됩니다. 공용 비밀번호는 따로 전달하세요. 처음 온 멤버는 닉네임·파트·개인 PIN만 만들면 됩니다.</p><ActionForm action={createInviteAction} submit="간편 초대 링크 만들기" className="mt-4"><input type="hidden" name="band_id" value={bandId} /></ActionForm><p className="mt-3 text-xs text-slate-500">이 링크는 여러 멤버가 사용할 수 있습니다. 개인 PIN은 공유하지 마세요.</p></section> : <p className="text-sm text-slate-600">밴드 코드 접속을 먼저 설정하면 간편 초대 링크를 만들 수 있습니다.</p>}
 
       <details><summary className="cursor-pointer text-sm font-semibold">{settings.code ? '공용 비밀번호 변경' : '밴드 코드 접속 활성화'}</summary><ActionForm action={configureBandLoginAction} submit="접속 설정 저장" className="mt-4 max-w-sm"><BandPasswordField /><p className="text-xs text-slate-500">기존 코드 접속 기기는 다시 로그인해야 합니다. 밴드 코드는 유지됩니다.</p></ActionForm></details>

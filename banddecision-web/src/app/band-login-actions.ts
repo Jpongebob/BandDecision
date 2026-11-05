@@ -122,3 +122,25 @@ export async function addTestMembersAction(_: FormState, form: FormData): Promis
  if(failure)return {error:failure};
  redirect('/dashboard');
 }
+
+export async function setDirectBandEntryAction(_:FormState,form:FormData):Promise<FormState>{
+ const parsed=z.enum(['true','false']).safeParse(form.get('enabled'));
+ if(!parsed.success)return{error:'시작 화면 설정을 확인하세요.'};
+ const failure=await execute('set_direct_band_entry',{p_enabled:parsed.data==='true'});if(failure)return failure;
+ refreshIdentity();return{success:parsed.data==='true'?'프로필·PIN 화면으로 바로 시작하도록 설정했습니다.':'밴드 코드·공용 비밀번호 화면으로 시작하도록 설정했습니다.'};
+}
+export async function directMemberPinLoginAction(_:FormState,form:FormData):Promise<FormState>{
+ const parsed=z.object({member:z.uuid(),pin:pinSchema}).safeParse(fields(form));
+ if(!parsed.success)return{error:'내 프로필과 숫자 6자리 PIN을 입력하세요.'};
+ const guest=await guestClient();if(!guest.client)return{error:guest.error};
+ const{data,error}=await guest.client.rpc('direct_member_pin_login',{p_member:parsed.data.member,p_pin:parsed.data.pin});
+ const failure=responseError(error,data);if(failure)return failure;
+ refreshIdentity();redirect('/dashboard');
+}
+export async function directRegisterBandProfileAction(_:FormState,form:FormData):Promise<FormState>{
+ const parsed=profileInputSchema.safeParse(fields(form));if(!parsed.success)return{error:'닉네임·파트·숫자 6자리 PIN을 확인하세요.'};
+ const guest=await guestClient();if(!guest.client)return{error:guest.error};
+ const{data,error}=await guest.client.rpc('direct_register_band_profile',{p_nickname:parsed.data.nickname,p_part:parsed.data.part,p_pin:parsed.data.pin});
+ const failure=responseError(error,data);if(failure)return failure;
+ refreshIdentity();redirect('/dashboard');
+}

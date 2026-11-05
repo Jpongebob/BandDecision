@@ -15,6 +15,8 @@ export const createCodeBandSchema = profileInputSchema.extend({
 });
 
 export const bandLoginErrors: Record<string, string> = {
+  DIRECT_ENTRY_DISABLED:'시작 화면 설정이 변경되었습니다. 밴드 코드로 접속해 주세요.',
+  DIRECT_ENTRY_IN_USE:'다른 밴드가 사이트 시작 화면으로 지정되어 있습니다.',
   BAD_BAND_CREDENTIALS: '밴드 코드 또는 공용 비밀번호를 확인해 주세요.',
   BAD_PIN: '개인 PIN을 확인해 주세요. PIN을 잊었다면 밴드장에게 초기화를 요청하세요.',
   BAND_ACCESS_EXPIRED: '밴드 접속 시간이 만료됐습니다. 밴드 코드부터 다시 입력해 주세요.',

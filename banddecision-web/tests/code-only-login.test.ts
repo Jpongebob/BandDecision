@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-vi.mock('@/lib/supabase/server', () => ({ createClient: async () => ({}), getCurrentUser: async () => null }));
+vi.mock('@/lib/supabase/server', () => ({ createClient: async () => ({rpc:async()=>({data:null,error:null})}), getCurrentUser: async () => null }));
 vi.mock('@/app/actions', () => ({ signOutAction: vi.fn() }));
 vi.mock('@/app/band-login-actions', () => ({ beginBandAccessAction: vi.fn(async () => ({})) }));
 import LoginPage from '../src/app/login/page';

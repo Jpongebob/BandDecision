@@ -1,3 +1,4 @@
+import {loadDefaultBandEntry} from '@/lib/direct-band-entry';
 import { redirect } from 'next/navigation';
 import { bandCodeSchema } from '@/lib/band-login-validation';
 import { createClient, getCurrentUser } from '@/lib/supabase/server';
@@ -9,13 +10,14 @@ import { BandPasswordField,BandCodeField } from '@/components/band-login-fields'
 import { beginBandAccessAction } from '@/app/band-login-actions';
 
 export const instant = false;
-export default async function LoginPage({ searchParams }: { searchParams: Promise<{ code?: string }> }) {
-  const { code } = await searchParams;
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ code?: string;standard?:string }> }) {
+  const { code,standard } = await searchParams;
   const parsedCode = bandCodeSchema.safeParse(code);
   const invitedCode = parsedCode.success ? parsedCode.data : '';
   const db = await createClient();
   const currentUser = db ? await getCurrentUser(db) : null;
   if (currentUser && !invitedCode) redirect('/dashboard');
+  if(db&&!invitedCode&&standard!=='1'&&await loadDefaultBandEntry(db))redirect('/login/member?direct=1');
   return <main className="grid min-h-screen place-items-center bg-[#f5f7fb] px-4 py-10"><Card className="w-full max-w-md p-6 sm:p-8">
     <Link href="/" className="text-xs font-bold tracking-widest text-blue-700">BANDDECISION</Link>
     <CardTitle className="mt-4 text-2xl">우리 밴드로 접속</CardTitle>

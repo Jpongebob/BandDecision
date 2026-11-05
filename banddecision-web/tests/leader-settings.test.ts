@@ -16,7 +16,7 @@ vi.mock('@/lib/supabase/server', () => ({
   }),
 }));
 vi.mock('@/app/actions', () => ({ createInviteAction: vi.fn() }));
-vi.mock('@/app/band-login-actions', () => ({ changeMemberPinAction: vi.fn(), configureBandLoginAction: vi.fn() }));
+vi.mock('@/app/band-login-actions', () => ({ setDirectBandEntryAction: vi.fn(), changeMemberPinAction: vi.fn(), configureBandLoginAction: vi.fn() }));
 vi.mock('@/components/action-form', () => ({ ActionForm: ({ submit, children }: { submit: string; children: React.ReactNode }) => createElement('div', null, children, createElement('button', null, submit)) }));
 import { BandAccessSettings } from '../src/components/band-access-settings';
 afterEach(() => { cleanup(); vi.clearAllMocks(); });

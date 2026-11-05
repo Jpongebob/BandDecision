@@ -16,7 +16,7 @@ vi.mock('@/lib/supabase/server', () => ({
 vi.mock('@/lib/test-band-provision',()=>({prepareTestMembers:mocks.prepare}));
 vi.mock('next/navigation', () => ({ redirect: mocks.redirect }));
 vi.mock('next/cache', () => ({ revalidatePath: mocks.revalidatePath }));
-import { beginBandAccessAction, memberPinLoginAction, registerBandProfileAction, createCodeBandAction, configureBandLoginAction, createTestBandAction } from '../src/app/band-login-actions';
+import { directMemberPinLoginAction,directRegisterBandProfileAction,setDirectBandEntryAction,beginBandAccessAction, memberPinLoginAction, registerBandProfileAction, createCodeBandAction, configureBandLoginAction, createTestBandAction } from '../src/app/band-login-actions';
 
 function form(values: Record<string, string>) {
   const result = new FormData();
@@ -114,3 +114,28 @@ describe('isolated test band creation action', () => {
 
 it('creates a normal band using only a shared password and personal PIN',async()=>{await expect(createCodeBandAction({},form({name:'Our band',nickname:'Me',part:'기타',password:'1234',pin:'001234'}))).rejects.toThrow('redirect:/settings/band');expect(mocks.rpc).toHaveBeenCalledWith('create_code_band',{p_name:'Our band',p_nickname:'Me',p_part:'기타',p_password:'1234',p_pin:'001234'});});
 it('rotates shared password without collecting an administrator PIN',async()=>{expect((await configureBandLoginAction({},form({password:'next1234'}))).success).toBeTruthy();expect(mocks.rpc).toHaveBeenCalledWith('configure_band_login',{p_password:'next1234'});});
+
+describe('optional direct profile start',()=>{
+ it('creates guest identity only on submit and verifies personal PIN through direct RPC',async()=>{
+  mocks.getUser.mockResolvedValue({data:{user:null},error:null});
+  await expect(directMemberPinLoginAction({},form({member:'f3000000-0000-4000-8000-000000000001',pin:' 112 233 '}))).rejects.toThrow('redirect:/dashboard');
+  expect(mocks.signInAnonymously).toHaveBeenCalledOnce();
+  expect(mocks.rpc).toHaveBeenCalledWith('direct_member_pin_login',{p_member:'f3000000-0000-4000-8000-000000000001',p_pin:'112233'});
+ });
+ it('does not request a band grant on malformed PIN input',async()=>{
+  expect((await directMemberPinLoginAction({},form({member:'bad',pin:'123'}))).error).toBeTruthy();expect(mocks.rpc).not.toHaveBeenCalled();
+ });
+ it('handles mode disabled while form was open without redirecting to dashboard',async()=>{
+  mocks.rpc.mockResolvedValue({data:{error:'DIRECT_ENTRY_DISABLED'},error:null});
+  expect((await directMemberPinLoginAction({},form({member:'f3000000-0000-4000-8000-000000000001',pin:'112233'}))).error).toContain('밴드 코드');expect(mocks.redirect).not.toHaveBeenCalled();
+ });
+ it('registers new profile using current configured band only',async()=>{
+  await expect(directRegisterBandProfileAction({},form({nickname:'New',part:'드럼',pin:'246810'}))).rejects.toThrow('redirect:/dashboard');
+  expect(mocks.rpc).toHaveBeenCalledWith('direct_register_band_profile',{p_nickname:'New',p_part:'드럼',p_pin:'246810'});
+ });
+ it('validates on/off state and calls leader-authorized settings RPC',async()=>{
+  expect((await setDirectBandEntryAction({},form({enabled:'yes'}))).error).toBeTruthy();expect(mocks.rpc).not.toHaveBeenCalled();
+  expect((await setDirectBandEntryAction({},form({enabled:'true'}))).success).toBeTruthy();expect(mocks.rpc).toHaveBeenCalledWith('set_direct_band_entry',{p_enabled:true});
+  expect((await setDirectBandEntryAction({},form({enabled:'false'}))).success).toBeTruthy();expect(mocks.rpc).toHaveBeenCalledWith('set_direct_band_entry',{p_enabled:false});
+ });
+});
