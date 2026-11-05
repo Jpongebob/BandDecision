@@ -74,3 +74,6 @@ PASS means only the local scope named below. It does not certify deployed Auth, 
 Additional handoff coverage: 37 SQL assertions and form/action tests cover self/cross-band/inactive/no-PIN rejection, expired admin, PIN distinction, owner-role consistency, former-leader denial, elevation reset and retained snapshots/sessions. Availability workflow has 43 SQL assertions, including the reproduced ambiguous-variable regression.
 
 Rollout: apply only migration 202611050004 after prior files, then redeploy the application. See DEPLOYMENT.md. No production DB or deployment was modified in this run.
+
+## Latest update: immediate leader administration
+Supersedes the earlier elevation prerequisite only; acceptance scope/hosted limitations above remain. Local run: 18 files / 115 tests; 6 migrations / 175 SQL assertions. leader_access.test.sql adds 12 assertions for management and finalization with admin_until=null, role/band restrictions and personal-session expiry. UI tests show leader tools when legacy admin_unlocked=false and no unlock form; members get no leader tools. Previous handoff tests now expect new leaders to administer immediately and obsolete administrator elevation expiry to have no authorization effect. PIN rotation at handoff remains backward compatible.

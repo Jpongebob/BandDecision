@@ -12,7 +12,7 @@ export default function NewCodeBandPage() {
     <ActionForm action={createCodeBandAction} submit="밴드 만들기" className="mt-6">
       <label className="grid gap-1 text-sm font-semibold">밴드명<Input name="name" minLength={2} maxLength={40} required /></label>
       <BandPasswordField /><ProfileFields /><PinField name="admin_pin" label="관리자 PIN (내 PIN과 다른 숫자 6자리)" />
-      <p className="text-xs leading-5 text-slate-500">밴드 코드·공용 비밀번호는 멤버들에게 공유하세요. 내 PIN과 관리자 PIN은 별도로 보관하세요. 관리자 PIN은 멤버 관리와 최종 확정 때 사용합니다.</p>
+      <p className="text-xs leading-5 text-slate-500">밴드 코드·공용 비밀번호는 멤버들에게 공유하세요. 내 PIN과 관리자 PIN은 별도로 보관하세요. 밴드장은 내 PIN으로 로그인하면 별도 잠금 해제 없이 멤버 관리와 최종 확정을 할 수 있습니다.</p>
     </ActionForm>
     <Link href="/login" className="mt-5 inline-block text-sm font-semibold text-blue-700">이미 밴드가 있나요? 접속하기</Link>
   </Card></main>;

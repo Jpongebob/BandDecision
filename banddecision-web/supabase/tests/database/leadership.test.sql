@@ -49,7 +49,7 @@ select throws_ok($$select public.transfer_leadership('30000000-0000-4000-8000-00
 reset role;
 update private.member_sessions set admin_until=now()-interval '1 minute' where session_user_id='30000000-0000-4000-8000-000000000001';
 set local role authenticated;
-select throws_ok($$select public.transfer_leadership('30000000-0000-4000-8000-000000001001','30000000-0000-4000-8000-000000002002','666666')$$,'P0001','FORBIDDEN','expired administrator elevation cannot transfer');
+select ok(private.is_band_leader('30000000-0000-4000-8000-000000001001'),'expired legacy administrator elevation does not remove verified leader rights');
 reset role;
 update private.member_sessions set admin_until=now()+interval '30 minutes' where session_user_id='30000000-0000-4000-8000-000000000001';
 set local role authenticated;
@@ -72,7 +72,7 @@ select is((select count(*)::integer from private.member_sessions where band_id='
 set local role authenticated;
 select set_config('request.jwt.claim.sub','30000000-0000-4000-8000-000000000002',true);
 select set_config('request.jwt.claims','{"sub":"30000000-0000-4000-8000-000000000002","is_anonymous":true}',true);
-select ok(not private.is_band_leader('30000000-0000-4000-8000-000000001001'),'new code leader must enter the new administrator PIN');
+select ok(private.is_band_leader('30000000-0000-4000-8000-000000001001'),'new code leader immediately administers without entering administrator PIN');
 select is(public.unlock_band_admin('987654')->>'error','BAD_PIN','old administrator PIN no longer works');
 select ok((public.unlock_band_admin('666666')->>'ok')::boolean,'new administrator PIN unlocks new leader');
 select ok(private.is_band_leader('30000000-0000-4000-8000-000000001001'),'new leader can administer after unlocking');

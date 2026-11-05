@@ -80,7 +80,7 @@ export async function unlockBandAdminAction(_: FormState, form: FormData): Promi
   const failure = await execute('unlock_band_admin', { p_pin: parsed.data });
   if (failure) return failure;
   refreshIdentity();
-  return { success: '관리자 권한을 30분 동안 사용할 수 있습니다.' };
+  return { success: '밴드장은 로그인 상태에서 별도 관리자 잠금 해제 없이 관리할 수 있습니다.' };
 }
 export async function configureBandLoginAction(_: FormState, form: FormData): Promise<FormState> {
   const parsed = z.object({ password: bandPasswordSchema, admin_pin: pinSchema }).safeParse(fields(form));

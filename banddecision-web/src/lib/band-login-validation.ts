@@ -21,7 +21,7 @@ export const bandLoginErrors: Record<string, string> = {
   BAND_ACCESS_EXPIRED: '밴드 접속 시간이 만료됐습니다. 밴드 코드부터 다시 입력해 주세요.',
   RATE_LIMITED: '입력 시도가 너무 많습니다. 15분 후 다시 시도해 주세요.',
   DUPLICATE_NICKNAME: '이미 사용 중인 닉네임입니다. 기존 프로필을 선택하거나 다른 닉네임을 입력하세요.',
-  FORBIDDEN: '권한이 없습니다. 밴드장은 밴드 관리에서 관리자 PIN 잠금을 해제해 주세요.',
+  FORBIDDEN: '현재 밴드에서 이 작업을 수행할 권한이 없습니다.',
   ALREADY_SIGNED_IN: '이미 로그인 중입니다. 다른 프로필을 사용하려면 먼저 로그아웃하세요.',
   GUEST_SESSION_REQUIRED: '기존 계정에서 로그아웃한 뒤 밴드 코드로 접속해 주세요.',
   UNAUTHENTICATED: '로그인이 필요합니다.',

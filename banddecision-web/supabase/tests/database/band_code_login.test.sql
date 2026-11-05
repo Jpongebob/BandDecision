@@ -59,8 +59,8 @@ select set_config('request.jwt.claim.sub','10000000-0000-4000-8000-000000000004'
 select set_config('request.jwt.claims','{"sub":"10000000-0000-4000-8000-000000000004","role":"authenticated","is_anonymous":true}',true);
 select public.begin_band_access(current_setting('test.code'),'1234');
 select public.member_pin_login(current_setting('test.leader_member')::uuid,'001234');
-select ok(not private.is_band_leader(current_setting('test.band')::uuid),'leader personal PIN does not unlock admin rights');
-select throws_ok($$select public.start_round(current_setting('test.band')::uuid)$$,'P0001','FORBIDDEN','leader management blocked until administrator PIN');
+select ok(private.is_band_leader(current_setting('test.band')::uuid),'verified leader can administer after personal PIN login');
+select lives_ok($$select public.start_round(current_setting('test.band')::uuid)$$,'leader starts round without administrator unlock');
 select is(public.unlock_band_admin('000000')->>'error','BAD_PIN','wrong administrator PIN rejected');
 select ok((public.unlock_band_admin('987654')->>'ok')::boolean,'administrator PIN elevates leader session');
 select ok(private.is_band_leader(current_setting('test.band')::uuid),'leader management now enabled');

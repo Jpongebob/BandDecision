@@ -184,3 +184,20 @@ This section supersedes earlier local-database BLOCKED statements; hosted provid
 2. Push the application changes and redeploy Vercel; use the fixed production domain. No new environment secret is needed.
 3. Retry quick-date submission once, verify saved dates/reasons after refresh, then test handoff with two separate devices. Old leader should see member rights; recipient unlocks with the new administrator PIN.
 4. Measure navigation on the deployed domain using DevTools Network timing for the RSC request and the Vercel/Supabase regions. No quantitative latency improvement is claimed from local synthetic tests.
+
+
+## 2026-11-05 Policy update: leader administration without extra PIN unlock
+This explicit user-requested policy supersedes earlier 30-minute administrator-elevation requirements. A currently logged-in, PIN-verified active band leader may manage members, invite, start rounds and finalize plans immediately. Authentication/session expiry, canonical actor mapping, matching band owner AND active leader role, self-only dates/votes, cross-band RLS and latest-version/finalization validation remain required. No ordinary member gains administrator rights.
+
+Apply ONLY banddecision-web/supabase/migrations/202611050005_leader_without_admin_unlock.sql AFTER the existing migration 004 has succeeded. Do not rerun 001-004. Deploy the matching app changes so the layout banner/unlock form disappear and dashboard, member settings, invitations and finalization use leader role directly. No environment-variable change or data reset is needed. Legacy admin_until/admin_unlocked and administrator PIN storage/RPCs remain for old-client compatibility; admin_until no longer determines authorization. Existing creation/configuration/handoff administrator PIN fields are preserved for compatibility and do not unlock or expire management access.
+
+Verified locally: npm test PASS (18 files/115 tests), npm run test:db PASS (6 migrations/175 SQL assertions), lint PASS, production build PASS (23 routes). New leader_access SQL suite (12 assertions) proves no-extra-unlock finalization/member management, old compatibility flags, member/cross-band denial and expired-personal-session denial. Updated policy-specific tests retain all unrelated denials; new UI tests show tools with legacy admin_unlocked=false and hide them for ordinary members. Standalone typecheck/final build result recorded in final response.
+BLOCKED/unverified: hosted SQL application/deployment, actual two-device Auth/Realtime and production UI/latency. No commit/push or provider change was performed.
+
+Final checks for policy 005: standalone npm.cmd run typecheck PASS; final npm.cmd run build PASS (23 routes); git diff --check PASS. No provider deployment performed.
+
+## 2026-11-05 Continuation: complete leader policy copy
+- Confirmed policy 005 changes remain in the working tree; latest committed change is 69e0612 (004).
+- Corrected stale new-band text claiming administrator PIN is used for management/finalization. Simplified handoff guidance to state immediate signed-in leader access.
+- Supabase/Vercel/gh CLI commands and a local .vercel project link are absent. Hosted SQL execution/deployment remains BLOCKED; no production change, commit or push is claimed.
+Continuation validation: npm.cmd test PASS (18 files / 115 tests); final npm.cmd run build PASS (23 routes, TypeScript passed); git diff --check PASS. SQL was unchanged since the previous 175-assertion PASS, so the DB suite was not repeated for copy-only changes.

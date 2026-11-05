@@ -33,13 +33,16 @@ describe('invitation authentication mode', () => {
   });
   it.each([
     { code: 'AB12CD34EF', role: 'member', admin_unlocked: false },
-    { code: 'AB12CD34EF', role: 'leader', admin_unlocked: false },
-  ])('rejects invitation generation without an elevated leader: %j', async settings => {
+  ])('rejects invitation generation for a non-leader: %j', async settings => {
     setup(settings);
     const result = await createInviteAction({}, form());
     expect(result.error).toBeTruthy();
     expect(result.success).toBeUndefined();
     expect(state.rpc.mock.calls.some(([name]) => name === 'create_invite')).toBe(false);
+  });
+  it('allows the verified band leader without a separate administrator unlock', async () => {
+    setup({ code: 'AB12CD34EF', role: 'leader', admin_unlocked: false });
+    expect(await createInviteAction({}, form())).toEqual({ success: 'https://band.example/login?code=AB12CD34EF' });
   });
   it('rejects a forged band ID even for an elevated leader of another band', async () => {
     const result = await createInviteAction({}, form('20000000-0000-4000-8000-000000000002'));

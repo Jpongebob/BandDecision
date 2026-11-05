@@ -38,3 +38,6 @@ Code-enabled bands use **간편 초대 링크 만들기** under **밴드 관리*
 
 ## Latest workflow/handoff update
 The availability SQL alias bug and safe leadership transfer are fixed in the new 202611050004_workflow_and_leadership.sql; apply it after the existing four migrations and redeploy. Internal screens now include home/parent return controls and loading boundaries. Actual local verification: 113 unit/UI/action tests, 163 PostgreSQL assertions, lint, typecheck and production build passed. See [QA report](QA_REPORT.md), [progress](PROGRESS.md) and [rollout](DEPLOYMENT.md) for limits and instructions.
+
+### Current leader policy (005)
+A signed-in active band leader can immediately manage members, invite, start rounds and finalize plans; no separate administrator PIN unlock or 30-minute window is required. Apply migration 202611050005_leader_without_admin_unlock.sql after 004 and redeploy. Ordinary-member, cross-band and personal-session checks remain. Latest local run: 115 tests and 175 PostgreSQL assertions passed; see PROGRESS.md/DEPLOYMENT.md for rollout and live verification limits.

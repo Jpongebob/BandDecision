@@ -103,3 +103,6 @@ Default onboarding uses band code/shared password followed by member profile/6-d
 
 ## v3.3 workflow and leadership regression
 Implement confirmed same-band leadership handoff with administrator PIN rotation/elevation reset; retain old snapshots and member sessions. Serialize permission-changing operations and finalization, fix ambiguous availability aliases, and test against disposable PostgreSQL. Maintain authenticated identity verification before identity RPC. Include home/parent navigation and loading boundaries. Record live-provider, real concurrency, browser and latency limits separately from SQL/unit results; use QA_REPORT.md and PROGRESS.md.
+
+## v3.4 immediate leader administration
+Per explicit user request, remove the additional administrator-unlock requirement in server role checks, invitation checks and UI. Keep verified personal sessions, active matching owner/leader membership, self-only edits, cross-band denial and version checks. Apply new migration 005 after 004, never rewrite historical migrations. Verify null/expired legacy admin_until still permits leader finalization while expired personal sessions and ordinary members are denied.

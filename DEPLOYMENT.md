@@ -79,3 +79,8 @@ Before rollout: npm ci, npm run lint, npm run typecheck, npm test, npm run test:
 M_ID in 200.js is not identified by the supplied stack. Check the actual script URL in DevTools and test a private window without extensions; provide the complete deployed chunk URL if reproducible. M_ID is absent from this local source/build. Do not change SQL or disable access checks based solely on that console error.
 
 Navigation optimizations preserve user checks and avoid shared-user caches. Actual deployed speed remains unmeasured; inspect RSC/server response duration and Vercel function/Supabase regional distance before changing hosting regions.
+
+
+## Latest policy: no extra administrator unlock (005)
+This supersedes earlier instructions to unlock administrator access before management/finalization. A signed-in active band leader can administer immediately; ordinary members remain restricted. Apply ONLY supabase/migrations/202611050005_leader_without_admin_unlock.sql after 004, then redeploy the UI/server changes. If 004 has not yet been applied, apply 004 first, then 005, each once. Do not rerun older files.
+Existing personal/shared passwords and sessions remain intact. Individual session expiry/revocation still blocks access. Old administrator PIN hashes/fields are retained for compatibility; they no longer expire or gate leader administration. Existing PIN inputs on credential setup/transfer remain compatibility fields. No additional provider setting/environment secret is required. Live deployment and multi-device verification remain outstanding.

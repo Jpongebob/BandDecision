@@ -34,8 +34,8 @@ export async function createInviteAction(_: FormState, form: FormData): Promise<
   if (identityResult.error || settingsResult.error) return { error: '초대 설정을 불러오지 못했습니다. 연결과 인증 마이그레이션 적용 여부를 확인하세요.' };
   const identity = identityResult.data as { band_id?: string } | null;
   const settings = settingsResult.data as { role?: string; admin_unlocked?: boolean; code?: string | null } | null;
-  if (identity?.band_id !== bandId || settings?.role !== 'leader' || !settings.admin_unlocked) {
-    return { error: '멤버 초대는 관리자 PIN 잠금을 해제한 밴드장만 가능합니다.' };
+  if (identity?.band_id !== bandId || settings?.role !== 'leader') {
+    return { error: '멤버 초대는 현재 밴드의 밴드장만 가능합니다.' };
   }
   if (settings.code) {
     const code = bandCodeSchema.safeParse(settings.code);

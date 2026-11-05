@@ -11,7 +11,7 @@ export function LeadershipTransferForm({ bandId, memberId, nickname, codeLoginEn
     <ActionForm action={transferLeaderAction} submit="확인하고 밴드장 권한 넘기기" className="mt-4">
       <input type="hidden" name="band_id" value={bandId} />
       <input type="hidden" name="member_id" value={memberId} />
-      {codeLoginEnabled && <><PinField name="admin_pin" label="새 관리자 PIN (대상 멤버의 개인 PIN과 다른 숫자 6자리)" /><p className="text-xs leading-5 text-slate-600">새 밴드장에게 이 관리자 PIN을 따로 전달하세요. 새 밴드장은 자기 프로필로 로그인한 뒤 이 PIN으로 관리 권한을 해제하고 변경할 수 있습니다.</p></>}
+      {codeLoginEnabled && <><PinField name="admin_pin" label="새 관리자 PIN (대상 멤버의 개인 PIN과 다른 숫자 6자리)" /><p className="text-xs leading-5 text-slate-600">새 밴드장에게 이 관리자 PIN을 따로 전달하세요. 새 밴드장은 자기 프로필로 로그인하면 바로 관리할 수 있습니다. 별도 관리자 잠금 해제는 필요하지 않습니다.</p></>}
       <label className="flex items-start gap-2 text-sm"><input type="checkbox" name="confirm_transfer" value="yes" required className="mt-1" /><span>{nickname} 님에게 권한을 넘기고 내 관리 권한이 해제되는 것을 확인했습니다.</span></label>
     </ActionForm>
   </details>;
