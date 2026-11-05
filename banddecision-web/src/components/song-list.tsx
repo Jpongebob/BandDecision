@@ -26,7 +26,7 @@ export function SongList({
 
   return (
     <div className="space-y-4">
-      {!detailed&&<Card className="p-3 sm:p-4"><details><summary className="cursor-pointer text-sm font-semibold">후보곡 등록</summary>
+      {!detailed&&<Card className="p-3 sm:p-4"><details open><summary className="cursor-pointer text-sm font-semibold">후보곡 등록</summary>
         <p className="mt-1 text-sm text-slate-600">밴드 멤버 누구나 후보곡을 추가할 수 있습니다.</p>
         <ActionForm action={addSongAction} className="mt-4 sm:grid-cols-2">
           <input type="hidden" name="band_id" value={bandId} />
