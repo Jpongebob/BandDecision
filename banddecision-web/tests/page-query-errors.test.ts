@@ -17,9 +17,18 @@ vi.mock('@/components/availability-form',()=>({AvailabilityForm:()=>createElemen
 import SchedulePage from '../src/app/(protected)/schedule/page';
 import PlansPage from '../src/app/(protected)/plans/page';
 import DateRecommendationsPage from '../src/app/(protected)/schedule/recommendations/page';
+import BandSettingsPage from '../src/app/(protected)/settings/band/page';
+import ProfilePage from '../src/app/(protected)/settings/profile/page';
 import Dashboard from '../src/app/(protected)/dashboard/page';
 beforeEach(()=>{state.failure='';});
 describe('server pages refuse partial database reads',()=>{
+ it.each(['band_members','planning_rounds'])('member settings rejects failed %s',async table=>{
+  state.failure=table;await expect(BandSettingsPage({searchParams:Promise.resolve({})})).rejects.toThrow('DATA_LOAD_FAILED');
+ });
+ it('profile read failure cannot become an empty editable nickname',async()=>{
+  state.failure='profiles';await expect(ProfilePage()).rejects.toThrow('DATA_LOAD_FAILED');
+ });
+
  it('does not label an excluded new member as submitted or offer their schedule editor',async()=>{
   const html=renderToStaticMarkup(await SchedulePage());
   expect(html).toContain('새 회차부터');

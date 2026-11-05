@@ -1,0 +1,48 @@
+begin;
+select plan(21);
+insert into auth.users(id,is_anonymous) values
+ ('90000000-0000-4000-8000-000000000001',true),
+ ('90000000-0000-4000-8000-000000000002',true),
+ ('90000000-0000-4000-8000-000000000003',true);
+set local role authenticated;
+select set_config('request.jwt.claim.sub','90000000-0000-4000-8000-000000000001',true);
+select set_config('request.jwt.claims','{"is_anonymous":true}',true);
+select public.create_test_band('Leader','test1234','123456');
+select set_config('test.band',public.current_band_identity()->>'band_id',true);
+select set_config('test.round',(select id::text from public.planning_rounds where band_id=current_setting('test.band')::uuid and status='collecting'),true);
+select set_config('test.song',(select id::text from public.songs where band_id=current_setting('test.band')::uuid and title like '[테스트 A]%'),true);
+select set_config('test.version',(select version::text from public.planning_rounds where id=current_setting('test.round')::uuid),true);
+select lives_ok($$select public.confirm_rehearsal_plan(current_setting('test.round')::uuid,(now() at time zone 'Asia/Seoul')::date,array[current_setting('test.song')::bigint],current_setting('test.version')::bigint,false)$$,'first plan added');
+select set_config('test.first',(select id::text from public.confirmed_plans where band_id=current_setting('test.band')::uuid),true);
+select throws_ok($$select public.confirm_rehearsal_plan(current_setting('test.round')::uuid,(now() at time zone 'Asia/Seoul')::date,array[current_setting('test.song')::bigint],current_setting('test.version')::bigint,false)$$,'P0001','ROUND_STALE','double submission cannot add a second plan with the same version');
+do $$ declare n int; begin for n in 1..4 loop perform public.confirm_rehearsal_plan(current_setting('test.round')::uuid,(now() at time zone 'Asia/Seoul')::date+n+10,array[current_setting('test.song')::bigint],(select version from public.planning_rounds where id=current_setting('test.round')::uuid),true); end loop; end $$;
+select is((select count(*)::int from public.confirmed_plans),5,'all five plans retained');
+select is((select count(*)::int from public.confirmed_plan_members),5,'each has its own member snapshot');
+select is((select count(*)::int from public.confirmed_plan_songs),5,'each has its own song snapshot');
+select throws_ok($$select public.confirm_rehearsal_plan(current_setting('test.round')::uuid,(now() at time zone 'Asia/Seoul')::date+5,array[current_setting('test.song')::bigint],(select version from public.planning_rounds where id=current_setting('test.round')::uuid),false)$$,'P0001','PLAN_LIMIT_REACHED','sixth plan rejected');
+select is((select count(*)::int from public.confirmed_plans),5,'limit failure preserves every existing plan');
+reset role;
+select throws_ok($$insert into public.confirmed_plans(band_id,round_id,rehearsal_date,participant_count,attendee_count,confirmed_by) select band_id,round_id,rehearsal_date+20,participant_count,attendee_count,confirmed_by from public.confirmed_plans limit 1$$,'P0001','PLAN_LIMIT_REACHED','capacity trigger also protects privileged inserts');
+set local role authenticated;
+select set_config('test.code',public.band_login_settings()->>'code',true);
+select set_config('request.jwt.claim.sub','90000000-0000-4000-8000-000000000002',true);
+select public.begin_band_access(current_setting('test.code'),'test1234');
+select public.register_band_profile('Member','기타','246810');
+select is((select count(*)::int from public.confirmed_plans),5,'ordinary member can read all five plans');
+select throws_ok($$select public.delete_rehearsal_plan(current_setting('test.first')::uuid)$$,'P0001','FORBIDDEN','ordinary member cannot delete plans');
+select set_config('request.jwt.claim.sub','90000000-0000-4000-8000-000000000003',true);
+select public.create_code_band('Other band','Other','드럼','test1234','123456','654321');
+select is((select count(*)::int from public.confirmed_plans),0,'other band cannot read plans');
+select throws_ok($$select public.delete_rehearsal_plan(current_setting('test.first')::uuid)$$,'P0001','FORBIDDEN','other leader cannot delete plans');
+select set_config('request.jwt.claim.sub','90000000-0000-4000-8000-000000000001',true);
+select lives_ok($$select public.delete_rehearsal_plan(current_setting('test.first')::uuid)$$,'owner can delete one plan');
+select is((select count(*)::int from public.confirmed_plans),4,'only chosen plan removed');
+select is((select count(*)::int from public.confirmed_plan_members where plan_id=current_setting('test.first')::uuid),0,'deleted plan member snapshots cascade');
+select is((select count(*)::int from public.confirmed_plan_songs where plan_id=current_setting('test.first')::uuid),0,'deleted plan song snapshots cascade');
+select is((select count(*)::int from public.confirmed_plan_songs),4,'other snapshots preserved');
+select throws_ok($$select public.delete_rehearsal_plan(current_setting('test.first')::uuid)$$,'P0001','PLAN_NOT_FOUND','repeat deletion fails safely');
+select lives_ok($$select public.confirm_rehearsal_plan(current_setting('test.round')::uuid,(now() at time zone 'Asia/Seoul')::date+5,array[current_setting('test.song')::bigint],(select version from public.planning_rounds where id=current_setting('test.round')::uuid),false)$$,'can add again after deletion');
+select is((select count(*)::int from public.confirmed_plans),5,'capacity reused');
+select ok(not has_function_privilege('anon','public.delete_rehearsal_plan(uuid)','execute'),'anonymous API role has no delete privilege');
+select * from finish();
+rollback;

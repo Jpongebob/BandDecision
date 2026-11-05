@@ -9,7 +9,9 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "test:db": "node scripts/test-db.mjs"
+    "test:db": "node scripts/test-db.mjs",
+    "test:mobile:gateway": "node scripts/mobile-qa/gateway.mjs",
+    "test:mobile": "node scripts/mobile-qa/browser.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

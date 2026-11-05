@@ -86,3 +86,10 @@ Current run: 17 files / 102 tests, 7 migrations / 191 SQL assertions. Dedicated 
 
 ## Latest update: reproduced bugs / strict inputs (008)
 139 tests across 23 files and 232 SQL assertions across 9 migrations passed; see BUG_AUDIT.md for pre-fix failing results and post-fix evidence. Availability-none/past dates, stale difficulty/version pairing, saved/new-round votes, excluded new members, read failures and malformed RPC inputs are covered. Public Chrome rendering at desktop/mobile widths and retired route 404s were executed; authenticated viewport/Realtime/concurrent connections remain unverified. Account deletion still requires an unimplemented worker. No claim of zero remaining bugs is made.
+
+## Five-member fixture update (009)
+47 new PostgreSQL assertions pass; total 279 across 10 migrations. Tests cover real table membership for five, normal password-grant/PIN registration, duplicate guitar/different skills, A/B/C/D vote conditions, all-five/3-of-5 finalization, ordinary-profile login and denied administration. SDK tests verify isolated Auth creation, resume and provider-limit stop, but no hosted API calls were performed. The initial record alias error was reproduced and corrected before final SQL PASS. TEST_CASES.md now replaces the earlier one-person guide.
+
+
+## v3.9 local mobile workflow and multi-plan update
+AC50 now means retaining up to five independently confirmed plans, denying a sixth and allowing explicit current-leader deletion. Local SQL/UI/action tests pass under the new contract; older replacement-one behavior is retired. Final regression results: 163 unit/component/action tests, 300 SQL assertions across 11 migrations, 157 actual Chrome mobile checks, lint/type/build pass. See MOBILE_QA_REPORT.md for exact sizes, successful check list, reproduced defects and the Auth/REST substitute boundary. Physical phones, Safari, native keyboard, hosted Auth/REST/Realtime, real concurrent connections, deployment and production latency are NOT verified by these results.

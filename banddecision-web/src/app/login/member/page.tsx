@@ -23,7 +23,7 @@ export default async function MemberLoginPage() {
       </ActionForm>
       <p className="mt-4 text-xs text-slate-500">내 프로필을 선택하고 개인 PIN으로 접속하세요. PIN을 잊으면 밴드장에게 초기화를 요청하세요.</p>
     </Card>
-    <details className="rounded-2xl border bg-white p-5"><summary className="cursor-pointer font-bold">처음 참여하나요? 새 프로필 만들기</summary><ActionForm action={registerBandProfileAction} submit="프로필 만들고 참여" className="mt-5"><ProfileFields /></ActionForm><p className="mt-3 text-xs text-slate-500">이미 프로필이 있다면 새로 만들지 말고 위에서 선택하세요. 새 멤버는 다음 기획 회차부터 투표와 일정 제출에 참여합니다.</p></details>
+    <details className="rounded-2xl border bg-white p-5"><summary className="cursor-pointer font-bold">처음 참여하나요? 새 프로필 만들기</summary><ActionForm action={registerBandProfileAction} submit="프로필 만들고 참여" className="mt-5"><ProfileFields /></ActionForm><p className="mt-3 text-xs text-slate-500">이미 프로필이 있다면 새로 만들지 말고 위에서 선택하세요. 새 멤버도 가입하면 바로 일정과 투표에 참여할 수 있습니다.</p></details>
     <form action={signOutAction}><button className="text-sm font-semibold text-blue-700">다른 밴드로 접속</button></form>
   </main>;
 }

@@ -2,11 +2,14 @@ import type { BandSnapshot } from '@/lib/band-context';
 import { cache } from 'react';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
+import { connection } from 'next/server';
 
 export const createClient = cache(async function createClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) return null;
+  // Auth SDK reads the current clock; initialize only inside an actual request.
+  await connection();
   const cookieStore = await cookies();
   return createServerClient(url, key, {
     cookies: {

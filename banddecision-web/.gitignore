@@ -40,3 +40,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Disposable browser QA profiles and screenshots
+/.qa-artifacts/

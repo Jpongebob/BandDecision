@@ -35,7 +35,7 @@
 | 곡 난이도 | 회차 참여자들이 맡는 파트별 1~5, 동일 파트는 하나의 난이도 |
 | 총 부담 | 각 참여 멤버마다 `max(0, 난이도 - 실력)` 합산 |
 | 곡 점수 | `(찬성 인원 × 3) - (총 부담 × 2)` |
-| 확정 | 밴드장만 가능, 서버 재검증, 최신 1건 스냅샷 |
+| 확정 | 밴드장만 가능, 서버 재검증, 최대 5개 독립 스냅샷 |
 | 저장 | Supabase 영구 저장; 밴드 간 데이터 완전 격리 |
 
 ## 1. 역할, 가입 및 밴드 정책
@@ -168,7 +168,7 @@
 - 합주 시간은 MVP에서 **20:00~22:00 고정**(밴드 기본 시간대 기준). 자유 시간 설정은 제외.
 - 확인 화면은 날짜/요일, 시간, 회차 참여 N명, 참석자, 불참자/사유, 선택한 곡, `round.version`을 포함.
 - 최종 확인 단계에서 현재 상태가 바뀌었으면 **자동 확정 금지**, 최신 정보 재조회 후 재확인.
-- 성공 시 밴드별 최신 확정 계획 **1건** 유지. 새 확정 실패·취소 시 이전 확정 계획 불변.
+- 성공 시 밴드별 확정 계획을 최대 **5개** 누적 보관. 6번째는 거절하며, 밴드장이 명시적으로 삭제하면 공간을 재사용한다. 새 확정 실패·취소 시 이전 확정 계획 불변.
 
 ### 5.2 서버 트랜잭션(필수)
 
@@ -178,7 +178,7 @@
 - 같은 회차에 영향을 주는 **모든 쓰기**도 동일 회차 행 잠금을 얻고 version을 증가시켜 TOCTOU 경쟁 상태를 방지한다. 클라이언트가 DB 테이블 직접 UPDATE로 이 버전 규칙을 우회하지 못하도록 DB 함수 또는 동등한 제약/트리거를 적용한다.
 - 회차 상태/참여자 N·현재 자격/전원 일정 제출/날짜 60일 범위 및 지난 날짜 제외/참석자 1명 이상/곡별 전원 투표·찬성 2/3·난이도 완비/선택 ID 중복 없음을 최신 데이터로 재검증한다.
 - 유효한 경우 참석·불참·사유·닉네임·파트와 곡 ID·제목·아티스트를 **독립 스냅샷**으로 저장한다. 실력·난이도·표가 바뀌어도 저장 정보는 변하지 않는다.
-- 기존 계획과 자식 스냅샷을 새 계획으로 교체하는 작업은 **한 트랜잭션**에서 수행. 실패 시 기존 계획 보존.
+- 새 계획과 자식 스냅샷을 **한 트랜잭션**에서 추가한다. 밴드 행 잠금과 DB 트리거로 최대 5개를 보장하며 기존 계획은 보존한다.
 - 스냅샷은 조회용이며 원본 테이블 객체/참조에 의존하지 않는다. 계정 삭제에 따른 개인정보 삭제/가림 정책은 별도 적용.
 
 ## 6. 화면·라우트·반응형 UI
@@ -223,7 +223,7 @@ SQL 마이그레이션은 `supabase/migrations/`에 작성한다. 아래는 최�
 | `songs` | `id bigint generated identity PK`, `band_id`, `title`, `artist`, `created_by`, timestamps |
 | `song_difficulties` | `song_id`, `part_key`, `difficulty smallint check 1..5`, `version integer`, `updated_by uuid`, `updated_at timestamptz`; unique(song_id,part_key) |
 | `song_votes` | `round_id`, `song_id`, `member_id`, `choice yes/no`, `reason nullable`, timestamps; unique(round_id,song_id,member_id) |
-| `confirmed_plans` | `id uuid PK`, `band_id unique`, `round_id`, `rehearsal_date`, `start_time default '20:00'`, `end_time default '22:00'`, `confirmed_by`, `confirmed_at` |
+| `confirmed_plans` | `id uuid PK`, `band_id indexed`, `round_id`, `rehearsal_date`, `start_time default '20:00'`, `end_time default '22:00'`, `confirmed_by`, `confirmed_at` |
 | `confirmed_plan_members` | `plan_id`, `member_id nullable`, `nickname_snapshot`, `part_snapshot`, `attending bool`, `reason_snapshot nullable`; unique(plan_id, member ordinal or stable snapshot key) |
 | `confirmed_plan_songs` | `plan_id`, `song_id nullable`, `title_snapshot`, `artist_snapshot`, `display_order`; unique(plan_id,display_order) |
 
@@ -274,7 +274,7 @@ SQL 마이그레이션은 `supabase/migrations/`에 작성한다. 아래는 최�
 | `cast_vote` | round_id, song_id, choice, reason | 본인 회차 참여, 곡 소속 확인, 투표 upsert, version 증가 | 집계/version |
 | `update_member_skill` | member_id, skill | leader, 밴드 일치, 관련 회차 version 증가 | 갱신 결과 |
 | `update_song_difficulty` | song_id, part, difficulty | leader, 밴드/파트 확인, 관련 회차 version 증가 | 갱신 결과 |
-| `confirm_rehearsal_plan` | round_id, date, unique song_ids, expected_version | leader, 회차 잠금, 최신 자격/추천 재검증, 스냅샷 교체 | 확정 계획/충돌 오류 |
+| `confirm_rehearsal_plan` | round_id, date, unique song_ids, expected_version | leader, 회차 잠금, 최신 자격/추천 재검증, 최대 5개 스냅샷 추가 | 확정 계획/충돌 오류 |
 
 - 직접 SQL 쓰기와 서비스 함수가 혼재해 최신 버전 정책을 우회하는 설계는 금지.
 - 외부 동작이 없거나 실패하면 성공으로 표시하지 않는다.
@@ -400,7 +400,7 @@ banddecision-web/
 | AC47 | 확정 시 expected_version 불일치 | 확정 거절·최신 정보 요구 |
 | AC48 | 확정 시 곡 자격 변경 | 확정 거절·기존 계획 유지 |
 | AC49 | 정상 확정 후 원본 일정/투표 수정 | 스냅샷 불변 |
-| AC50 | 정상 재확정 | 최신 계획 1건으로 교체 |
+| AC50 | 여러 계획 확정 | 최대 5개 보존, 초과 거부, 밴드장만 개별 삭제 |
 | AC51 | 실패한 재확정 | 기존 계획 보존 |
 | AC52 | 모바일 폭과 데스크톱 폭 | 주요 페이지 레이아웃 정상 |
 | AC53 | 새로고침/재로그인 | Supabase 데이터 유지 |
@@ -486,3 +486,11 @@ banddecision-web/
 
 ## v3.7 입력·재조회 오류 처리 보완
 빠른 입력 '없음'은 기존 선택 날짜를 비운다. 지난 날짜는 입력 목록에 추가하지 않는다. 난이도 입력값과 expected_version은 같은 저장 버전 기준이어야 하며 새 회차에서는 이전 투표 초안을 재사용하지 않는다. 회차 고정 명단 밖 신규 멤버는 해당 회차 일정/투표 편집 대신 다음 회차 안내를 보고 후보곡·난이도 편집은 유지한다. 조회 실패를 미가입/빈 일정/미투표/계획 없음/기본 실력으로 바꾸지 않고 오류·재시도를 제공한다. JSON 사유는 문자열이어야 하고 null 투표 선택은 쓰기 전에 INVALID_INPUT으로 거절한다. 실패한 입력은 기존 데이터를 보존한다.
+
+## v3.8 테스트 밴드는 5인 구성
+이전 v3.6의 1인 기본 사례를 확장한다. 생성자 밴드장+일반 멤버 4명(기타 중복·베이스·드럼·보컬), 서로 다른 실력·불가능 날짜·찬반·미투표·난이도 누락을 준비한다. 일반 멤버는 정상 익명 인증 및 비밀번호 게이트/개인 프로필 등록으로 만들고, 밴드장 PIN과 다른 사용자 지정 공통 테스트 PIN으로 로그인한다. 정상 밴드 접근 제어는 유지한다. 기존 기본 1인 테스트 밴드도 명시적 버튼으로 확장할 수 있다. 부분 실패는 슬롯별로 재개하고 완료된 회차를 자동으로 덮어쓰지 않는다. 실제 멤버가 포함된 일반 밴드에 테스트 데이터를 적용하지 않는다.
+
+
+## v3.9 다중 합주 계획 및 모바일 회귀 검사
+확정 계획은 밴드당 최대 5개를 누적한다. 기존 1건은 그대로 보존하고, 날짜순 목록을 홈과 계획 화면에 표시한다. 밴드장만 동의를 거쳐 개별 삭제할 수 있다. 6번째는 서버에서도 거절한다. 확정·삭제 시 회차 버전을 증가시켜 이전 미리보기의 중복 요청을 거절한다. 멤버/파트/회차 변경 이후에도 확정 스냅샷은 유지한다.
+모바일 터치로 로그인·PIN·가입·일정·투표·후보곡·난이도·추천·확정·삭제·양도·멤버 관리·프로필·탈퇴를 로컬 인증 대역과 실제 SQL/RLS/RPC에 연결해 검사한다. 실제 Supabase 플랫폼, 실기기 OS/키보드, Realtime 및 운영 지연시간은 별도 검증 대상이다.

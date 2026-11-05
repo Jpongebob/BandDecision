@@ -1,4 +1,5 @@
 'use server';
+import { prepareTestMembers } from '@/lib/test-band-provision';
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
@@ -105,8 +106,8 @@ export async function changeMemberPinAction(_: FormState, form: FormData): Promi
 
 
 export async function createTestBandAction(_: FormState, form: FormData): Promise<FormState> {
-  const parsed = z.object({ nickname: z.string().trim().min(1).max(30), password: bandPasswordSchema, pin: pinSchema }).safeParse(fields(form));
-  if (!parsed.success) return { error: '닉네임, 4자 이상 공용 비밀번호, 숫자 6자리 개인 PIN을 확인하세요.' };
+  const parsed = z.object({ nickname: z.string().trim().min(1).max(30), password: bandPasswordSchema, pin: pinSchema, member_pin: pinSchema }).refine(data=>data.pin!==data.member_pin).safeParse(fields(form));
+  if (!parsed.success) return { error: '닉네임, 4자 이상 공용 비밀번호, 숫자 6자리 개인 PIN과 다른 테스트 멤버 PIN을 확인하세요.' };
   const guest = await guestClient();
   if (!guest.client) return { error: guest.error };
   const { data, error } = await guest.client.rpc('create_test_band', {
@@ -114,6 +115,18 @@ export async function createTestBandAction(_: FormState, form: FormData): Promis
   });
   const failure = responseError(error, data);
   if (failure) return failure;
+  const setupError=await prepareTestMembers(guest.client,parsed.data.password,parsed.data.member_pin);
   refreshIdentity();
+  if(setupError)redirect('/bands/test?notice=setup_incomplete');
   redirect('/dashboard');
+}
+
+export async function addTestMembersAction(_: FormState, form: FormData): Promise<FormState> {
+ const parsed=z.object({password:bandPasswordSchema,member_pin:pinSchema}).safeParse(fields(form));
+ if(!parsed.success)return {error:'공용 비밀번호와 테스트 멤버용 숫자 6자리 PIN을 입력하세요.'};
+ const client=await createClient();if(!client)return {error:'Supabase 연결 설정이 필요합니다.'};
+ const failure=await prepareTestMembers(client,parsed.data.password,parsed.data.member_pin);
+ refreshIdentity();
+ if(failure)return {error:failure};
+ redirect('/dashboard');
 }

@@ -98,3 +98,11 @@ Hosted creation and latency were not measured by the agent. Existing provider ac
 
 ## Strict input / reproduced bug corrections (008)
 If 007 already succeeded, run ONLY 202611050008_strict_submission_inputs.sql once and deploy the app. This redefines availability/vote RPCs with strict reason type and null-choice validation. Existing data and ACLs are retained. No provider setting/environment secret is added. App corrections include refreshed form-version alignment, none/past dates, no editing for new members outside the round roster, and retryable data errors. Follow BUG_AUDIT.md; full live Auth/Realtime/concurrency checks remain outstanding.
+
+## Five-person fixtures (009)
+After 008, apply ONLY 009_multi_member_test_band (full filename 202611050009_multi_member_test_band.sql) and deploy. Existing exact baseline one-person fixture owners can expand from /bands/test; no need to delete the band. New creation automatically prepares all five. Keep anonymous sign-ins enabled. Four new Auth signup requests are made; provider rate limits are honored, and partial progress resumes without duplicating registered profiles. Public Supabase key only; no service-role/environment change required. Never blanket-delete anonymous anchors. Completed fixture edits and existing confirmed plans are preserved.
+
+
+### 합주 계획 최대 5개 (010)
+009까지 성공한 DB에는 202611050010_multiple_rehearsal_plans.sql만 한 번 실행한 뒤 앱을 재배포하세요. 009가 아직이면 009 → 010 순서로 적용합니다. 기존 SQL을 삭제하거나 다시 실행하지 않습니다. 기존 계획은 보존되며, 홈·합주 계획에서 날짜순으로 모두 확인합니다. 5개가 차면 밴드장만 삭제 동의 후 하나를 지우고 추가할 수 있습니다.
+모바일 검사 범위와 로컬 재실행 방법은 루트 MOBILE_QA_REPORT.md를 참고하세요. 실제 Supabase SQL 적용·Vercel 배포는 이 작업에서 수행하지 않았습니다.

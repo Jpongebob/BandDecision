@@ -45,7 +45,7 @@ BandDecision이라는 밴드 합주 의사결정 **반응형 웹서비스를 처
 
 **Phase 5.** 후보곡 등록, 파트별 난이도, 회차별 멤버 찬반 투표/반대 사유, 곡 추천 자격·부담·점수·정렬 및 UI.
 
-**Phase 6.** 밴드장 날짜/곡 선택, 확인 화면, `expected_version` 기반 경쟁 상태 방지, 서버 원자적 재검증, 확정된 참석자·곡의 독립 스냅샷, 최신 1건 조회, 실시간 변경 반영.
+**Phase 6.** 밴드장 날짜/곡 선택, 확인 화면, `expected_version` 기반 경쟁 상태 방지, 서버 원자적 재검증, 확정된 참석자·곡의 독립 스냅샷, 최대 5개 누적 조회, 실시간 변경 반영.
 
 **Phase 7.** 폼 예외/로딩/빈 상태/반응형 UI/접근성/계정 삭제, 단위·통합 테스트, RLS 테스트 안내, 린트·타입·빌드 검증, README/환경변수·Vercel·Supabase 배포 문서.
 
@@ -115,3 +115,10 @@ Reduce verified identity/member/band query waterfalls without global user caches
 
 ## v3.7 reproduced regression audit
 Keep failure-first regression tests for explicit-none/past dates, refreshed difficulty-version alignment, saved/new-round vote state, roster-excluded new members, partial database read errors and malformed RPC inputs. Fail closed rather than invent empty dates or skill. New migration 008 preserves records and validates before writes. Distinguish real public-browser tests, local PostgreSQL/React tests and unverified hosted Auth/concurrency.
+
+## v3.8 realistic five-member fixtures
+Provision four actual anonymous demo accounts through normal Auth/password/PIN gates; creator stays leader. Support resumable missing-slot setup for existing recognized one-person fixtures. Finalize five-person sample data atomically, restrict to fixture owners and never reseed completed user cases. Verify threshold ceil(2N/3), duplicate parts, different skills, partial attendance and ordinary-profile login/denials; distinguish SDK mocks/local SQL from hosted tests.
+
+
+## v3.9 multiple rehearsal plans and mobile flows
+Keep up to five independent plans per band without replacing old snapshots. Serialize adds/deletes on the band row, enforce capacity in the database, increment round versions, require current leader permission and explicit deletion consent, and display all plans on home/plans. Preserve existing migrations/data. Exercise actual Next browser actions at mobile sizes against disposable SQL with clearly documented Auth/REST substitutes; never label this hosted or physical-device verification.

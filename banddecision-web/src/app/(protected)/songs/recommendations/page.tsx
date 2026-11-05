@@ -1,9 +1,9 @@
+import { loadLivePlanning } from '@/lib/live-planning';
 import { getActiveMember } from '@/lib/band-context';
 import Link from 'next/link';
 import { Card, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { createClient, getCurrentUser } from '@/lib/supabase/server';
-import { loadRoundData, loadSongs } from '@/lib/round-data';
 import { recommendSongs } from '@/services/recommendations';
 
 export default async function SongRecommendationsPage() {
@@ -13,15 +13,11 @@ export default async function SongRecommendationsPage() {
   if (!user) return null;
   const { data: member } = await getActiveMember(db,user.id,user.bandContext);
   if (!member) return <Card><CardTitle>밴드 가입 후 이용할 수 있습니다</CardTitle></Card>;
-  const { data: round, error: roundError } = await db.from('planning_rounds').select('id,start_date,end_date').eq('band_id', member.band_id).in('status', ['collecting', 'ready']).maybeSingle();if(roundError)throw new Error('DATA_LOAD_FAILED');
-  if (!round) return <Card><CardTitle>진행 중 회차가 없습니다</CardTitle></Card>;
-  const today = new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Seoul' });
-  const [data, songs] = await Promise.all([loadRoundData(db, member.band_id, round.id, today), loadSongs(db, member.band_id, round.id)]);
-  if (!data) return null;
-  const ranked = recommendSongs(data.participants, songs);
+  const data=await loadLivePlanning(db,member.band_id);
+  const ranked=recommendSongs(data.members,data.songs);
   return (
     <div className="space-y-4">
-      <div><Link href="/songs" className="text-sm font-semibold text-blue-700">← 합주곡 목록</Link><h1 className="mt-2 text-3xl font-black">곡 추천</h1><p className="mt-2 text-sm text-slate-500">회차 참여자 {data.participants.length}명 · 찬성 {ranked[0]?.requiredYes ?? 0}명 이상 · 점수 = 찬성×3 − 부담×2</p></div>
+      <div><Link href="/songs" className="text-sm font-semibold text-blue-700">← 합주곡 목록</Link><h1 className="mt-2 text-3xl font-black">곡 추천</h1><p className="mt-2 text-sm text-slate-500">현재 멤버 {data.members.length}명 · 찬성 {ranked[0]?.requiredYes ?? 0}명 이상 · 점수 = 찬성×3 − 부담×2</p></div>
       {ranked.map((song, index) => (
         <Card key={song.id} className={song.status === 'eligible' ? 'border-blue-200' : ''}>
           <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-xs font-bold text-blue-700">{song.status === 'eligible' ? `추천 ${index + 1}위` : '추천 보류'}</p><CardTitle className="mt-1">{song.title}</CardTitle><p className="mt-1 text-sm text-slate-500">{song.artist}</p></div>

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
-  rpc: vi.fn(),
+  rpc: vi.fn(), prepare: vi.fn(),
   getUser: vi.fn(),
   signInAnonymously: vi.fn(),
   revalidatePath: vi.fn(),
@@ -13,6 +13,7 @@ vi.mock('@/lib/supabase/server', () => ({
     auth: { getUser: mocks.getUser, signInAnonymously: mocks.signInAnonymously },
   })),
 }));
+vi.mock('@/lib/test-band-provision',()=>({prepareTestMembers:mocks.prepare}));
 vi.mock('next/navigation', () => ({ redirect: mocks.redirect }));
 vi.mock('next/cache', () => ({ revalidatePath: mocks.revalidatePath }));
 import { beginBandAccessAction, memberPinLoginAction, registerBandProfileAction, unlockBandAdminAction, createTestBandAction } from '../src/app/band-login-actions';
@@ -24,6 +25,7 @@ function form(values: Record<string, string>) {
 }
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.prepare.mockResolvedValue(null);
   mocks.getUser.mockResolvedValue({ data: { user: { id: 'device', is_anonymous: true } }, error: null });
   mocks.rpc.mockResolvedValue({ data: { ok: true }, error: null });
   mocks.signInAnonymously.mockResolvedValue({ error: null });
@@ -87,20 +89,29 @@ describe('band login actions', () => {
 
 
 describe('isolated test band creation action', () => {
+ it('rejects a shared demo PIN equal to the leader personal PIN',async()=>{
+  expect((await createTestBandAction({},form({nickname:'Me',password:'test1234',pin:'112233',member_pin:'112233'}))).error).toBeTruthy();
+  expect(mocks.rpc).not.toHaveBeenCalled();
+ });
+ it('retains the created test band and offers resumable setup when provisioning is interrupted',async()=>{
+  mocks.rpc.mockResolvedValue({data:{ok:true},error:null});
+  mocks.prepare.mockResolvedValue('rate limited');
+  await expect(createTestBandAction({},form({nickname:'Me',password:'test1234',pin:'112233',member_pin:'246810'}))).rejects.toThrow('redirect:/bands/test?notice=setup_incomplete');
+ });
  it('validates credentials before starting an anonymous session', async () => {
-   expect((await createTestBandAction({}, form({nickname:'Me',password:'123',pin:'112233'}))).error).toBeTruthy();
+   expect((await createTestBandAction({}, form({nickname:'Me',password:'123',pin:'112233',member_pin:'246810'}))).error).toBeTruthy();
    expect(mocks.rpc).not.toHaveBeenCalled();
    expect(mocks.signInAnonymously).not.toHaveBeenCalled();
  });
  it('uses the transactional fixture RPC then enters the new leader dashboard', async () => {
    mocks.rpc.mockResolvedValue({data:{ok:true,code:'ABCDEF1234'},error:null});
-   await expect(createTestBandAction({},form({nickname:'My test',password:'test1234',pin:'112233'}))).rejects.toThrow('redirect:/dashboard');
+   await expect(createTestBandAction({},form({nickname:'My test',password:'test1234',pin:'112233',member_pin:'246810'}))).rejects.toThrow('redirect:/dashboard');
    expect(mocks.rpc).toHaveBeenCalledWith('create_test_band',{p_nickname:'My test',p_password:'test1234',p_pin:'112233'});
    expect(mocks.revalidatePath).toHaveBeenCalledWith('/','layout');
  });
  it('does not redirect or report success when an existing band blocks fixture creation', async () => {
    mocks.rpc.mockResolvedValue({data:{error:'ALREADY_SIGNED_IN'},error:null});
-   const result=await createTestBandAction({},form({nickname:'My test',password:'test1234',pin:'112233'}));
+   const result=await createTestBandAction({},form({nickname:'My test',password:'test1234',pin:'112233',member_pin:'246810'}));
    expect(result.error).toBeTruthy();
    expect(result.success).toBeUndefined();
    expect(mocks.revalidatePath).not.toHaveBeenCalled();

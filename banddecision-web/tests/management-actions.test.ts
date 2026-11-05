@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+﻿import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   rpc: vi.fn(), signInWithPassword: vi.fn(), signOut: vi.fn(), revalidate: vi.fn(),
   redirect: vi.fn((path: string) => { throw new Error('redirect:' + path); }),
@@ -8,7 +8,7 @@ vi.mock('@/lib/supabase/server', () => ({ createClient: async () => ({
 }) }));
 vi.mock('next/cache', () => ({ revalidatePath: mocks.revalidate }));
 vi.mock('next/navigation', () => ({ redirect: mocks.redirect }));
-import { transferLeaderAction, skillAction, leaveBandAction, submitUnavailableAction, voteAction, confirmPlanAction } from '../src/app/actions';
+import { transferLeaderAction, skillAction, leaveBandAction, submitUnavailableAction, voteAction, confirmPlanAction, deletePlanAction } from '../src/app/actions';
 
 const band = '50000000-0000-4000-8000-000000000001';
 const member = '50000000-0000-4000-8000-000000000002';
@@ -109,4 +109,26 @@ describe('reviewed form boundaries', () => {
     await expect(leaveBandAction()).rejects.toThrow('redirect:/settings/band?notice=leave_failed');
     expect(mocks.signOut).not.toHaveBeenCalled();
   });
+});
+
+
+describe('plan deletion and capacity actions',()=>{
+ it.each([{plan_id:band,confirm_delete:''},{plan_id:'bad',confirm_delete:'yes'}])('requires a valid plan and explicit consent',async fields=>{
+  expect((await deletePlanAction({},form(fields))).error).toBeTruthy();expect(mocks.rpc).not.toHaveBeenCalled();
+ });
+ it('deletes only the chosen plan and refreshes both lists',async()=>{
+  expect((await deletePlanAction({},form({plan_id:band,confirm_delete:'yes'}))).success).toBeTruthy();
+  expect(mocks.rpc).toHaveBeenCalledWith('delete_rehearsal_plan',{p_plan:band});
+  expect(mocks.revalidate).toHaveBeenCalledWith('/plans');expect(mocks.revalidate).toHaveBeenCalledWith('/dashboard');
+ });
+ it('keeps the UI unchanged when deletion is denied',async()=>{
+  mocks.rpc.mockResolvedValue({error:{message:'FORBIDDEN'}});
+  expect((await deletePlanAction({},form({plan_id:band,confirm_delete:'yes'}))).error).toContain('권한');
+  expect(mocks.revalidate).not.toHaveBeenCalled();
+ });
+ it('explains capacity failure without deleting or redirecting',async()=>{
+  mocks.rpc.mockResolvedValue({error:{message:'PLAN_LIMIT_REACHED'}});
+  expect((await confirmPlanAction({},form({round_id:band,date:'2026-11-05',version:'5'},['1']))).error).toContain('5개');
+  expect(mocks.redirect).not.toHaveBeenCalled();expect(mocks.revalidate).not.toHaveBeenCalled();
+ });
 });

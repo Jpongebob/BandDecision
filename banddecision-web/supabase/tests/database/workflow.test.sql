@@ -76,15 +76,15 @@ select public.cast_vote(current_setting('test.round')::uuid,current_setting('tes
 select set_config('request.jwt.claim.sub','40000000-0000-4000-8000-000000000001',true);
 select set_config('request.jwt.claims','{"sub":"40000000-0000-4000-8000-000000000001","is_anonymous":false}',true);
 select lives_ok($$select public.confirm_rehearsal_plan(current_setting('test.round')::uuid,(current_setting('test.today')::date+1),array[current_setting('test.song')::bigint],(select version from public.planning_rounds where id=current_setting('test.round')::uuid),false)$$,'eligible re-finalization succeeds');
-select is((select count(*)::integer from public.confirmed_plans where band_id='40000000-0000-4000-8000-000000001001'),1,'only latest confirmed plan remains');
-select is((select attendee_count from public.confirmed_plans where band_id='40000000-0000-4000-8000-000000001001'),2,'new snapshot reflects updated attendance');
+select is((select count(*)::integer from public.confirmed_plans where band_id='40000000-0000-4000-8000-000000001001'),2,'both confirmed plans remain');
+select is((select attendee_count from public.confirmed_plans where band_id='40000000-0000-4000-8000-000000001001' and rehearsal_date=current_setting('test.today')::date+1),2,'new snapshot reflects updated attendance');
 select set_config('request.jwt.claim.sub','40000000-0000-4000-8000-000000000002',true);
 select set_config('request.jwt.claims','{"sub":"40000000-0000-4000-8000-000000000002","is_anonymous":false}',true);
 select lives_ok($$select public.leave_band()$$,'ordinary member can leave');
 select set_config('request.jwt.claim.sub','40000000-0000-4000-8000-000000000001',true);
 select set_config('request.jwt.claims','{"sub":"40000000-0000-4000-8000-000000000001","is_anonymous":false}',true);
 select is((select status from public.planning_rounds where id=current_setting('test.round')::uuid),'invalidated','participant leaving invalidates active round');
-select is((select count(*)::integer from public.confirmed_plans where band_id='40000000-0000-4000-8000-000000001001'),1,'leaving does not delete an already confirmed snapshot');
+select is((select count(*)::integer from public.confirmed_plans where band_id='40000000-0000-4000-8000-000000001001'),2,'leaving preserves both confirmed snapshots');
 select throws_ok($$select public.confirm_rehearsal_plan(current_setting('test.round')::uuid,current_setting('test.today')::date,array[current_setting('test.song')::bigint],(select version from public.planning_rounds where id=current_setting('test.round')::uuid),true)$$,'P0001','ROUND_INVALID','invalidated round cannot be finalized');
 select * from finish();
 rollback;

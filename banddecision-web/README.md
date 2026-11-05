@@ -39,3 +39,11 @@ Identity RPC now includes verified member/band context, avoiding two follow-up d
 
 ### Regression repairs (008)
 Apply only new 202611050008_strict_submission_inputs.sql after 007, then redeploy. Repaired date-none/past-date entry, refreshed difficulty/vote state, round roster editing and partial-read error handling. Latest evidence: 139 tests, 232 SQL assertions, lint/typecheck and 19-route build passed. Public Chrome rendering/retired-route checks executed; hosted authenticated testing remains unverified. See BUG_AUDIT.md in the repository root.
+
+### Five-member test band (009)
+Apply only new 202611050009_multi_member_test_band.sql after 008 and deploy. A new /bands/test fixture contains you as leader plus four PIN-protected ordinary profiles. Existing original one-person fixture owners can open the same page and use '테스트 멤버 추가하고 5인 회차 준비'. Choose a shared demo PIN different from your own. Use another browser/device to select each demo profile. See TEST_CASES.md; hosted Auth provisioning remains unverified.
+
+
+### 합주 계획 최대 5개 (010)
+009까지 성공한 DB에는 202611050010_multiple_rehearsal_plans.sql만 한 번 실행한 뒤 앱을 재배포하세요. 009가 아직이면 009 → 010 순서로 적용합니다. 기존 SQL을 삭제하거나 다시 실행하지 않습니다. 기존 계획은 보존되며, 홈·합주 계획에서 날짜순으로 모두 확인합니다. 5개가 차면 밴드장만 삭제 동의 후 하나를 지우고 추가할 수 있습니다.
+모바일 검사 범위와 로컬 재실행 방법은 루트 MOBILE_QA_REPORT.md를 참고하세요. 실제 Supabase SQL 적용·Vercel 배포는 이 작업에서 수행하지 않았습니다.
