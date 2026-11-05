@@ -6,6 +6,7 @@ select set_config('request.jwt.claim.sub','f1000000-0000-4000-8000-000000000001'
 select set_config('request.jwt.claims','{"is_anonymous":true}',true);
 select is(public.create_code_band('New band','Leader','기타','1234','112233')->>'ok','true','create without administrator PIN');
 select set_config('test.new.band',public.current_band_identity()->>'band_id',true);
+select public.set_member_skill_enabled(true);
 select set_config('test.new.code',public.band_login_settings()->>'code',true);
 select set_config('test.new.me',public.current_band_identity()->'member'->>'id',true);
 select is((select skill from public.band_members where id=current_setting('test.new.me')::uuid),null::smallint,'new leader skill unassigned');

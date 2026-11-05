@@ -17,7 +17,7 @@ describe('calendar new dates and separate saved rows',()=>{
 
 });
 
-it('rejects overlong calendar ranges without silently saving a truncated prefix',()=>{const view=render(createElement(AvailabilityForm,props));fireEvent.click(screen.getByRole('button',{name:'기간 선택'}));fireEvent.click(screen.getByRole('button',{name:/^2026-11-06 ·/}));for(let n=0;n<13;n++)fireEvent.click(screen.getByRole('button',{name:'다음 달'}));fireEvent.click(screen.getByRole('button',{name:/^2027-12-02 ·/}));expect(screen.getByRole('alert').textContent).toContain('366일');expect(draft(view).map(d=>d.date)).toEqual(['2026-11-06']);expect((screen.getByRole('button',{name:'날짜 저장'}) as HTMLButtonElement).disabled).toBe(true);});
+it('limits month navigation to this month and next month',()=>{const view=render(createElement(AvailabilityForm,props));for(let n=0;n<13;n++)fireEvent.click(screen.getByRole('button',{name:'다음 달'}));expect(screen.getByText('2026년 12월')).toBeTruthy();expect((screen.getByRole('button',{name:'다음 달'}) as HTMLButtonElement).disabled).toBe(true);expect(draft(view)).toEqual([]);});
 
 it('shows current active attendance and previews own additions without double-counting',()=>{
  const view=render(createElement(AvailabilityForm,{...props,unavailable:[...props.unavailable,{memberId:'other',date:'2026-11-06'},{memberId:'other',date:'2026-11-06'},{memberId:'left-member',date:'2026-11-06'}]}));

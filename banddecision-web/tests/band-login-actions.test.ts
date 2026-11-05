@@ -16,7 +16,7 @@ vi.mock('@/lib/supabase/server', () => ({
 vi.mock('@/lib/test-band-provision',()=>({prepareTestMembers:mocks.prepare}));
 vi.mock('next/navigation', () => ({ redirect: mocks.redirect }));
 vi.mock('next/cache', () => ({ revalidatePath: mocks.revalidatePath }));
-import { directMemberPinLoginAction,directRegisterBandProfileAction,setDirectBandEntryAction,beginBandAccessAction, memberPinLoginAction, registerBandProfileAction, createCodeBandAction, configureBandLoginAction, createTestBandAction } from '../src/app/band-login-actions';
+import { setMemberSkillEnabledAction,directMemberPinLoginAction,directRegisterBandProfileAction,setDirectBandEntryAction,beginBandAccessAction, memberPinLoginAction, registerBandProfileAction, createCodeBandAction, configureBandLoginAction, createTestBandAction } from '../src/app/band-login-actions';
 
 function form(values: Record<string, string>) {
   const result = new FormData();
@@ -138,4 +138,9 @@ describe('optional direct profile start',()=>{
   expect((await setDirectBandEntryAction({},form({enabled:'true'}))).success).toBeTruthy();expect(mocks.rpc).toHaveBeenCalledWith('set_direct_band_entry',{p_enabled:true});
   expect((await setDirectBandEntryAction({},form({enabled:'false'}))).success).toBeTruthy();expect(mocks.rpc).toHaveBeenCalledWith('set_direct_band_entry',{p_enabled:false});
  });
+});
+
+it('validates and toggles leader-only skill setting',async()=>{
+ expect((await setMemberSkillEnabledAction({},form({enabled:'bad'}))).error).toBeTruthy();expect(mocks.rpc).not.toHaveBeenCalled();
+ expect((await setMemberSkillEnabledAction({},form({enabled:'true'}))).success).toBeTruthy();expect(mocks.rpc).toHaveBeenCalledWith('set_member_skill_enabled',{p_enabled:true});
 });

@@ -2,10 +2,10 @@ import { cache } from 'react';
 import type { createClient } from '@/lib/supabase/server';
 
 type Database = NonNullable<Awaited<ReturnType<typeof createClient>>>;
-export type BandSnapshot = { actorId: string; member: ActiveMember | null; band: { id: string; name: string } | null };
+export type BandSnapshot = { actorId: string; member: ActiveMember | null; band: { id: string; name: string; skill_enabled?:boolean } | null };
 export type ActiveMember = { id: string; band_id: string; role: string; part_label: string };
 type BandContext =
-  | { status: 'ready'; member: ActiveMember; band: { id: string; name: string } }
+  | { status: 'ready'; member: ActiveMember; band: { id: string; name: string; skill_enabled?:boolean } }
   | { status: 'none' }
   | { status: 'error'; code: string };
 
@@ -33,7 +33,7 @@ export const getBandContext = cache(async function getBandContext(db: Database, 
   if (memberError) return { status: 'error', code: safeCode(memberError.code) };
   if (!member) return { status: 'none' };
   const { data: band, error: bandError } = await db.from('bands')
-    .select('id,name').eq('id', member.band_id).maybeSingle();
+    .select('id,name,skill_enabled').eq('id', member.band_id).maybeSingle();
   if (bandError) return { status: 'error', code: safeCode(bandError.code) };
   if (!band) return { status: 'error', code: 'BAND_NOT_VISIBLE' };
   return { status: 'ready', member, band };

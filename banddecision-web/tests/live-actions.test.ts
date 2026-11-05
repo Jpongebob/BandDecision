@@ -8,7 +8,7 @@ const id='b0000000-0000-4000-8000-000000000001';
 function form(fields:Record<string,string>,songs:string[]=[]){const f=new FormData();Object.entries(fields).forEach(([k,v])=>f.set(k,v));songs.forEach(s=>f.append('song_id',s));return f;}
 beforeEach(()=>{vi.clearAllMocks();mock.rpc.mockResolvedValue({error:null});});
 describe('continuous planning actions',()=>{
- it('creates date-only plans with an empty song array and no round',async()=>{expect((await saveLivePlanAction({},form({band_id:id,date:'2026-12-01',version:'3'}))).success).toBeTruthy();expect(mock.rpc).toHaveBeenCalledWith('save_rehearsal_plan',{p_band:id,p_date:'2026-12-01',p_song_ids:[],p_expected_version:3,p_plan:null,p_expected_plan_version:null,p_ack_partial:false});});
+ it('creates date-only plans with an empty song array and no round',async()=>{expect((await saveLivePlanAction({},form({band_id:id,date:'2026-12-01',version:'3'}))).success).toBeTruthy();expect(mock.rpc).toHaveBeenCalledWith('save_rehearsal_plan',{p_band:id,p_date:'2026-12-01',p_location:null,p_song_ids:[],p_expected_version:3,p_plan:null,p_expected_plan_version:null,p_ack_partial:false});});
  it('edits a specific versioned plan rather than adding a new plan',async()=>{await saveLivePlanAction({},form({band_id:id,date:'2026-12-01',version:'3',plan_id:id,plan_version:'2'},['1']));expect(mock.rpc.mock.calls[0][1]).toMatchObject({p_plan:id,p_expected_plan_version:2,p_song_ids:[1]});});
  it.each(['','-1','x'])('rejects missing or invalid planning version %s',async version=>{expect((await saveLivePlanAction({},form({band_id:id,date:'2026-12-01',version}))).error).toBeTruthy();expect(mock.rpc).not.toHaveBeenCalled();});
  it('rejects duplicate song IDs',async()=>{expect((await saveLivePlanAction({},form({band_id:id,date:'2026-12-01',version:'3'},['1','1']))).error).toBeTruthy();expect(mock.rpc).not.toHaveBeenCalled();});
@@ -42,4 +42,10 @@ it('deletes only after explicit confirmation then returns to songs',async()=>{
 it('does not redirect or refresh after denied song deletion',async()=>{
  mock.rpc.mockResolvedValue({error:{message:'FORBIDDEN'}});
  expect((await deleteBandSongAction({},form({song_id:'12',confirm_delete_song:'yes'}))).error).toBeTruthy();expect(mock.redirect).not.toHaveBeenCalled();expect(mock.refresh).not.toHaveBeenCalled();
+});
+
+it('trims optional rehearsal location and rejects overlong input',async()=>{
+ expect((await saveLivePlanAction({},form({band_id:id,date:'2026-12-01',version:'3',location:'  홍대 합주실  '}))).success).toBeTruthy();
+ expect(mock.rpc).toHaveBeenLastCalledWith('save_rehearsal_plan',expect.objectContaining({p_location:'홍대 합주실'}));
+ mock.rpc.mockClear();expect((await saveLivePlanAction({},form({band_id:id,date:'2026-12-01',version:'3',location:'x'.repeat(201)}))).error).toBeTruthy();expect(mock.rpc).not.toHaveBeenCalled();
 });

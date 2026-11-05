@@ -22,6 +22,9 @@ it('disables other saved dates across months while keeping the date being edited
  fireEvent.click(screen.getByRole('button',{name:'이전 달'}));expect((screen.getByRole('button',{name:'2026-11-28 · 저장됨'}) as HTMLButtonElement).disabled).toBe(true);
  fireEvent.click(screen.getByRole('button',{name:'2026-11-29'}));expect((view.container.querySelector('form input[name=date]') as HTMLInputElement).value).toBe('2026-11-29');
 });
-it('keeps an existing past date selectable while blocking other past dates',()=>{
- const view=render(createElement(SavedDates,{...props,dates:[{date:'2026-10-30'}]}));fireEvent.click(view.container.querySelector('[data-saved-date]')!);fireEvent.click(screen.getByRole('button',{name:'2026-10-30'}));expect((screen.getByRole('button',{name:'2026-10-30 · 기존 날짜'}) as HTMLButtonElement).disabled).toBe(false);expect((screen.getByRole('button',{name:'2026-10-29'}) as HTMLButtonElement).disabled).toBe(true);
+it('preserves an old saved value while limiting the edit picker to current and next month',()=>{
+ const view=render(createElement(SavedDates,{...props,dates:[{date:'2026-10-30'}]}));fireEvent.click(view.container.querySelector('[data-saved-date]')!);fireEvent.click(screen.getByRole('button',{name:'2026-10-30'}));
+ expect((view.container.querySelector('form input[name=date]') as HTMLInputElement).value).toBe('2026-10-30');
+ expect(view.container.querySelector('[data-day="2026-10-30"]')).toBeNull();expect(screen.getByText('2026년 11월')).toBeTruthy();
+ expect((screen.getByRole('button',{name:'이전 달'}) as HTMLButtonElement).disabled).toBe(true);
 });

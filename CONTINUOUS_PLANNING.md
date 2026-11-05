@@ -32,3 +32,9 @@
 ## 2026-11-06 policy extension (015/016)
 - Only today/future Seoul dates count toward the five-plan cap. Past plans are preserved in the archive. New skills are NULL until assigned; existing values are preserved. Missing skills prevent new recommendation-based song choices (but not date-only plans or retained snapshots).
 - A leader may explicitly confirm a candidate as repertoire. Confirmed repertoire is separately listed and may be selected in any rehearsal irrespective of recommendation prerequisites. Unconfirmed candidates retain existing vote/difficulty/skill requirements. Unconfirm returns the song to candidate status, preserving votes and saved plan snapshots; deleting a plan never unconfirms repertoire. Leader-only RPC authorization and band-version checks remain enforced. See migrations015 then016.
+
+
+## 2026-11-06 calendar, optional skill and location update
+- UI pickers/recommendations cover today through the end of next calendar month, with only current/next months visible. Existing out-of-window saved dates and plans are preserved.
+- Member skill defaultoff; when off UI hides skill entries/tasks and recommendation burden/skill-missing gate are disabled. Vote quorum and required song part difficulties still apply. Leader can toggle on without losing stored skill values. Confirmed repertoire remains directly selectable.
+- Rehearsals have optional editable/clearable location(max200 chars). Nearest rehearsal card is first on home and shows date/time/location/songs. Migration019 keeps old7-argument save API and adds8-argument version with location, preserving role/version/cap locks and saved snapshots.

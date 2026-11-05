@@ -144,3 +144,9 @@ export async function directRegisterBandProfileAction(_:FormState,form:FormData)
  const failure=responseError(error,data);if(failure)return failure;
  refreshIdentity();redirect('/dashboard');
 }
+
+export async function setMemberSkillEnabledAction(_:FormState,form:FormData):Promise<FormState>{
+ const parsed=z.enum(['true','false']).safeParse(form.get('enabled'));if(!parsed.success)return{error:'실력 기능 설정을 확인하세요.'};
+ const failure=await execute('set_member_skill_enabled',{p_enabled:parsed.data==='true'});if(failure)return failure;
+ refreshIdentity();return{success:parsed.data==='true'?'멤버 실력 기능을 켰습니다.':'멤버 실력 기능을 껐습니다. 입력한 값은 보관됩니다.'};
+}
