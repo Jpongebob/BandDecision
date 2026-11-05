@@ -30,3 +30,18 @@ describe('confirmed repertoire UI',()=>{
  expect(html).toContain('홍길동님을 내보내겠습니까?');expect(html).toContain('<dialog');expect(html).toContain('취소');expect(html).toContain('name="confirm_remove" value="yes"');
  });
 });
+
+describe('optional song difficulty',()=>{
+ for(const confirmedAt of [null,'2026-11-06'])for(const detailed of [false,true]){
+  it(`hides difficulty with feature off (confirmed=${!!confirmedAt}, detailed=${detailed})`,()=>{
+   const props={bandId:'b',memberId:'m',participants:members,songs:[{...song,confirmedAt,difficulties:{기타:4}}],detailed};
+   const off=renderToStaticMarkup(<SongList {...props}/>);
+   expect(off).not.toContain('파트별 난이도');expect(off).not.toContain('name="difficulty"');expect(off).not.toContain('기타 4');
+   expect(off).toContain('Chosen song');
+   const on=renderToStaticMarkup(<SongList {...props} difficultyEnabled/>);
+   expect(on).toContain('기타 4');
+   if(detailed){expect(on).toContain('파트별 난이도');expect(on).toContain('name="difficulty"');}
+   if(detailed&&!confirmedAt)expect(off).toContain('name="choice"');
+  });
+ }
+});

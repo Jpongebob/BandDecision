@@ -36,5 +36,12 @@
 
 ## 2026-11-06 calendar, optional skill and location update
 - UI pickers/recommendations cover today through the end of next calendar month, with only current/next months visible. Existing out-of-window saved dates and plans are preserved.
-- Member skill defaultoff; when off UI hides skill entries/tasks and recommendation burden/skill-missing gate are disabled. Vote quorum and required song part difficulties still apply. Leader can toggle on without losing stored skill values. Confirmed repertoire remains directly selectable.
+- Member skill defaultoff; when off UI hides skill entries/tasks and recommendation burden/skill-missing gate are disabled. Vote quorum remains required; migration020 below also disables the song difficulty prerequisite while off. Leader can toggle on without losing stored skill values. Confirmed repertoire remains directly selectable.
 - Rehearsals have optional editable/clearable location(max200 chars). Nearest rehearsal card is first on home and shows date/time/location/songs. Migration019 keeps old7-argument save API and adds8-argument version with location, preserving role/version/cap locks and saved snapshots.
+
+
+## 2026-11-06 곡 난이도도 실력 설정과 함께 전환 (020)
+- 기존 **밴드 관리 → 멤버 실력 기능** 스위치를 함께 사용합니다. 기본값은 꺼짐이며, 꺼지면 후보곡·확정곡 목록의 난이도 요약과 곡 상세의 파트별 난이도 입력·수정 이력을 숨깁니다. 투표 수정·취소는 계속 사용할 수 있습니다.
+- 꺼진 동안 후보곡 추천 및 새 계획의 곡 선택에는 실력/난이도 등록을 요구하지 않습니다. 현재 멤버 전원 응답·찬성 정족수는 유지합니다. 켜면 기존 실력·난이도 값과 추천 계산이 복구되며, 데이터는 삭제하지 않습니다.
+- **019 다음에 `202611050020_optional_song_difficulty.sql`을 한 번 실행한 뒤 앱을 재배포하세요.** 화면만 배포하면 추천된 곡의 계획 저장이 구버전 DB 조건에 막힐 수 있습니다. 기존 마이그레이션은 다시 실행하지 않습니다.
+- 확정곡의 추가 투표 생략, 저장된 계획의 곡 기록·장소, 기존 7개 인자 저장 API, 밴드장 권한·버전 검사·다가오는 계획 5개 제한은 유지합니다.

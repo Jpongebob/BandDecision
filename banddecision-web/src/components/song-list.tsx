@@ -14,6 +14,7 @@ export function SongList({
   participants,
   songs,
   detailed=false,
+  difficultyEnabled=false,
   emptyText,
   canManage=false,
   register=true,
@@ -23,6 +24,7 @@ export function SongList({
   participants: Participant[];
   songs: SongInput[];
   detailed?: boolean;
+  difficultyEnabled?: boolean;
   emptyText?:string;
   canManage?:boolean;
   register?:boolean;
@@ -56,9 +58,9 @@ export function SongList({
               {!song.confirmedAt&&<Badge>찬성 {yes} · 반대 {no} · 미응답 {Math.max(0, participants.length - yes - no)}</Badge>}
             </div>
 
-            {!detailed&&<><p className="mt-2 text-xs leading-5 text-slate-500">{parts.map(p=>p.part+' '+(song.difficulties[p.partKey]??'미등록')).join(' · ')}</p><div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs"><span>{song.confirmedAt?'추가 투표 없이 계획에 선택 가능':'내 투표: '+(mine?(mine.choice==='yes'?'찬성':'반대'):'미투표')}</span><Link className="inline-flex min-h-9 items-center rounded-lg bg-blue-50 px-3 font-semibold text-blue-700" href={`/songs/${song.id}`}>{song.confirmedAt?'곡 상세':'곡 상세 · 투표 수정'}</Link></div></>}
+            {!detailed&&<>{difficultyEnabled&&<p className="mt-2 text-xs leading-5 text-slate-500">{parts.map(p=>p.part+' '+(song.difficulties[p.partKey]??'미등록')).join(' · ')}</p>}<div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs"><span>{song.confirmedAt?'추가 투표 없이 계획에 선택 가능':'내 투표: '+(mine?(mine.choice==='yes'?'찬성':'반대'):'미투표')}</span><Link className="inline-flex min-h-9 items-center rounded-lg bg-blue-50 px-3 font-semibold text-blue-700" href={`/songs/${song.id}`}>{song.confirmedAt?'곡 상세':'곡 상세 · 투표 수정'}</Link></div></>}
             {canManage&&(detailed||song.confirmedAt)&&<ActionForm action={setSongConfirmationAction} submit={song.confirmedAt?'확정 목록에서 삭제':'이 곡 확정'} className="mt-3 max-w-md gap-2"><input type="hidden" name="song_id" value={song.id}/><input type="hidden" name="confirmed" value={song.confirmedAt?'false':'true'}/>{detailed&&<p className="text-xs text-slate-500">{song.confirmedAt?'삭제하면 후보 상태로 돌아갑니다. 이미 저장된 합주 계획은 유지됩니다.':'밴드장이 직접 결정한 곡은 추천 조건과 관계없이 합주 계획에 넣을 수 있습니다.'}</p>}</ActionForm>}
-            {detailed&&<details open className="mt-3"><summary className="cursor-pointer text-sm font-semibold">파트별 난이도 <span className="font-normal text-slate-500">{parts.map(p=>p.part+' '+(song.difficulties[p.partKey]??'미등록')).join(' · ')}</span></summary><div className="mt-3">
+            {detailed&&difficultyEnabled&&<details open className="mt-3"><summary className="cursor-pointer text-sm font-semibold">파트별 난이도 <span className="font-normal text-slate-500">{parts.map(p=>p.part+' '+(song.difficulties[p.partKey]??'미등록')).join(' · ')}</span></summary><div className="mt-3">
               {parts.length ? <div className="grid gap-2 sm:grid-cols-2">
                 {parts.map((part) => {
                   const meta = song.difficultyMeta?.[part.partKey];

@@ -9,8 +9,19 @@ import type { Participant, SongInput } from '../src/services/recommendations';
 afterEach(cleanup);
 const participants:Participant[]=[{id:'m',userId:'u',nickname:'Me',part:'기타',partKey:'기타',skill:3}];
 const song:SongInput={id:1,title:'Test',artist:'Band',difficulties:{'기타':2},difficultyMeta:{'기타':{version:1,updatedAt:'2026-11-05T00:00:00Z',updatedBy:'A'}},votes:[{memberId:'m',choice:'yes'}]};
-const props={detailed:true,bandId:'band',memberId:'m',participants,songs:[song]};
+const props={difficultyEnabled:true,detailed:true,bandId:'band',memberId:'m',participants,songs:[song]};
 describe('saved song form refresh consistency',()=>{
+ it('removes difficulty fields while off and restores saved values after enabling again',()=>{
+  const view=render(createElement(SongList,props));
+  expect((view.container.querySelector('select[name="difficulty"]') as HTMLSelectElement).value).toBe('2');
+  view.rerender(createElement(SongList,{...props,difficultyEnabled:false}));
+  expect(view.container.querySelector('select[name="difficulty"]')).toBeNull();
+  expect(view.container.querySelector('select[name="choice"]')).not.toBeNull();
+  view.rerender(createElement(SongList,props));
+  expect((view.container.querySelector('select[name="difficulty"]') as HTMLSelectElement).value).toBe('2');
+  expect((view.container.querySelector('input[name="expected_version"]') as HTMLInputElement).value).toBe('1');
+ });
+
  it('resets a draft when the signed-in member changes',()=>{
   const unvoted={...song,votes:[]};
   const view=render(createElement(SongList,{...props,songs:[unvoted]}));

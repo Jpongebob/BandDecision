@@ -10,3 +10,12 @@ it('disabled skill scoring neither blocks missing skills nor uses retained skill
  expect(recommendSongs(people,songs,false)[0]).toMatchObject({status:'eligible',burden:0,score:3});
  expect(recommendSongs(people,songs,true)[0].status).toBe('skill_pending');
 });
+
+it('disabled feature ignores missing difficulties but preserves vote requirements',()=>{
+ const people=[{id:'m',userId:'u',nickname:'Member',part:'기타',partKey:'기타',skill:3}];
+ const song={id:1,title:'Song',artist:'Artist',difficulties:{},votes:[{memberId:'m',choice:'yes' as const}]};
+ expect(recommendSongs(people,[song],false)[0]).toMatchObject({status:'eligible',burden:0,score:3});
+ expect(recommendSongs(people,[song],true)[0].status).toBe('difficulty_pending');
+ expect(recommendSongs(people,[{...song,votes:[]}],false)[0].status).toBe('waiting_votes');
+ expect(recommendSongs(people,[{...song,votes:[{memberId:'m',choice:'no'}]}],false)[0].status).toBe('insufficient_agree');
+});
