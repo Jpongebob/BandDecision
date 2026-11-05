@@ -5,14 +5,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const state = vi.hoisted(() => ({
   router: { refresh: vi.fn() },
-  event: undefined as (() => void) | undefined,
+  filter: vi.fn(),event: undefined as (() => void) | undefined,
   removeChannel: vi.fn(async () => undefined),
 }));
 vi.mock('next/navigation', () => ({ useRouter: () => state.router }));
 vi.mock('@/lib/supabase/client', () => ({
   createClient: () => {
     const channel = {
-      on: (_type: unknown, _filter: unknown, callback: () => void) => { state.event = callback; return channel; },
+      on: (_type: unknown, _filter: unknown, callback: () => void) => { state.filter(_filter);state.event = callback; return channel; },
       subscribe: () => channel,
     };
     return { channel: () => channel, removeChannel: state.removeChannel };
@@ -37,8 +37,13 @@ afterEach(() => {
 });
 
 describe('Realtime refresh integration', () => {
+  it('subscribes only to the current band revision rather than every child table',()=>{
+    render(createElement(LiveRefresh,{bandId:'our-band'}));
+    expect(state.filter).toHaveBeenCalledExactlyOnceWith({event:'UPDATE',schema:'public',table:'bands',filter:'id=eq.our-band'});
+  });
+
   it('combines database event bursts and cancels pending work on unmount', () => {
-    const view = render(createElement(LiveRefresh));
+    const view = render(createElement(LiveRefresh,{bandId:"our-band"}));
     act(() => { for (let row = 0; row < 30; row++) state.event?.(); vi.advanceTimersByTime(200); });
     expect(state.router.refresh).toHaveBeenCalledOnce();
     act(() => state.event?.());
@@ -48,7 +53,7 @@ describe('Realtime refresh integration', () => {
     expect(state.removeChannel).toHaveBeenCalledOnce();
   });
   it('defers background updates and refreshes once when returning to the page', () => {
-    render(createElement(LiveRefresh));
+    render(createElement(LiveRefresh,{bandId:"our-band"}));
     visible('hidden');
     act(() => { state.event?.(); vi.advanceTimersByTime(1000); });
     expect(state.router.refresh).not.toHaveBeenCalled();

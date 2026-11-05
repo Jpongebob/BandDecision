@@ -10,6 +10,7 @@ const db=new PGlite({extensions:{pgcrypto,pgtap}});
 await db.exec(await readFile(new URL('../test-db-bootstrap.sql',import.meta.url),'utf8'));
 const dir=new URL('../../supabase/migrations/',import.meta.url);
 for(const name of (await readdir(dir)).filter(n=>n.endsWith('.sql')).sort())await db.exec(await readFile(new URL(name,dir),'utf8'));
+let qaRequests={};let qaBytes=0;
 const users=new Map(); const tokens=new Map(); let queue=Promise.resolve();
 const ident=s=>{if(!/^[a-z_][a-z_0-9]*$/.test(s))throw Error('bad identifier');return '"'+s+'"';};
 function token(user){const enc=v=>Buffer.from(JSON.stringify(v)).toString('base64url');const payload=enc({sub:user.id,aud:'authenticated',role:'authenticated',is_anonymous:true,iat:Math.floor(Date.now()/1000),exp:Math.floor(Date.now()/1000)+3600});const raw=enc({alg:'HS256',typ:'JWT'})+'.'+payload;const jwt=raw+'.'+createHmac('sha256','local-qa-only').update(raw).digest('base64url');tokens.set(jwt,user);return jwt;}
@@ -28,10 +29,13 @@ async function selectRows(table,url){
  }
  return {rows,count};
 }
-const server=createServer((req,res)=>{queue=queue.then(async()=>{
+const server=createServer(async(req,res)=>{const waitMs=Number(process.env.QA_DELAY_MS??0);if(waitMs>0&&!req.url.startsWith('/__qa/'))await new Promise(resolve=>setTimeout(resolve,waitMs));queue=queue.then(async()=>{
  const url=new URL(req.url,'http://127.0.0.1:54329');res.setHeader('Access-Control-Allow-Origin','*');res.setHeader('Access-Control-Allow-Headers','*');res.setHeader('Access-Control-Allow-Methods','GET,POST,HEAD,OPTIONS');
- const send=(status,data)=>{res.statusCode=status;res.setHeader('Content-Type','application/json');res.end(req.method==='HEAD'?undefined:JSON.stringify(data));};
+ const send=(status,data)=>{res.statusCode=status;res.setHeader('Content-Type','application/json');const json=JSON.stringify(data);if(!url.pathname.startsWith('/__qa/'))qaBytes+=Buffer.byteLength(json);res.end(req.method==='HEAD'?undefined:json);};
  if(req.method==='OPTIONS')return send(200,{});
+ if(url.pathname==='/__qa/reset'){qaRequests={};qaBytes=0;return send(200,{});}
+ if(url.pathname==='/__qa/metrics')return send(200,{requests:qaRequests,bytes:qaBytes,delayMs:Number(process.env.QA_DELAY_MS??0)});
+ qaRequests[url.pathname]=(qaRequests[url.pathname]??0)+1;
  let body={};try{let raw='';for await(const c of req)raw+=c;if(raw)body=JSON.parse(raw);}catch{return send(400,{message:'invalid JSON'});}
  let transaction=false;
  try{

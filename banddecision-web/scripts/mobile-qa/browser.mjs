@@ -24,7 +24,16 @@ try{
  await writeFile(resolve(artifacts,'session.json'),JSON.stringify({code}));
  const routes=[['/dashboard','반가워요'],['/schedule','불가능한 날짜'],['/schedule/recommendations','추천'],['/songs','후보곡 등록'],['/songs/recommendations','추천'],['/plans','합주 계획'],['/settings/band','멤버와 설정'],['/settings','설정'],['/settings/profile','내 정보'],['/bands/test','5인 테스트 준비']];
  for(const width of (process.env.QA_FAST?[]:[320,390,430,768,844])){await viewport(width,width===844?390:844);for(const [path,text]of routes){await go(path,text);await layout(path);}}
- await workflows({run,go,fill,touchText,wait,assert,layout,viewport,cmd,delay,code,artifacts,writeFile,resolve});
+ if(process.env.QA_BENCHMARK){
+  const measurements=[];
+  for(let pass=0;pass<3;pass++)for(const [path,marker]of [['/schedule','저장된 날짜'],['/schedule/recommendations','날짜 추천'],['/dashboard','반가워요']]){
+   await fetch('http://127.0.0.1:54329/__qa/reset');const query='?qa_bench='+pass+'-'+Date.now();const start=performance.now();
+   await cmd('Page.navigate',{url:'http://127.0.0.1:3101'+path+query});
+   await wait('location.search==='+JSON.stringify(query)+'&&document.readyState==="complete"&&document.body.innerText.includes('+JSON.stringify(marker)+')');
+   const elapsedMs=Math.round(performance.now()-start),metrics=await(await fetch('http://127.0.0.1:54329/__qa/metrics')).json();measurements.push({path,pass,elapsedMs,...metrics});console.log('BENCH',JSON.stringify(measurements.at(-1)));
+  }
+  await writeFile(resolve(artifacts,process.env.QA_BENCHMARK+'.json'),JSON.stringify(measurements,null,2));
+ }else await workflows({run,go,fill,touchText,wait,assert,layout,viewport,cmd,delay,code,artifacts,writeFile,resolve});
  assert(errors.length===0,'no uncaught JavaScript exceptions: '+JSON.stringify(errors));
 }catch(e){console.error('BROWSER FAIL',e.message);if(socket){try{await writeFile(resolve(artifacts,'failure.txt'),await run('document.body.innerText'));const shot=await cmd('Page.captureScreenshot',{format:'png',captureBeyondViewport:true});await writeFile(resolve(artifacts,'failure.png'),Buffer.from(shot.data,'base64'));}catch{}}process.exitCode=1;}
 finally{await writeFile(resolve(artifacts,'report.json'),JSON.stringify({checks,report,errors},null,2));socket?.close();chrome.kill();}

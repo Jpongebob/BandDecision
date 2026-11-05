@@ -2,14 +2,14 @@ import type { BandSnapshot } from '@/lib/band-context';
 import { cache } from 'react';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
-import { connection } from 'next/server';
+import { io } from 'next/cache';
 
 export const createClient = cache(async function createClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) return null;
-  // Auth SDK reads the current clock; initialize only inside an actual request.
-  await connection();
+  // Exclude SDK clock reads from prerendering without forcing navigation-only I/O.
+  await io();
   const cookieStore = await cookies();
   return createServerClient(url, key, {
     cookies: {
@@ -25,10 +25,15 @@ export const createClient = cache(async function createClient() {
   });
 });
 
+// Share only inside the current React server request. Never cache a verified user globally.
+export const getVerifiedAuthUser=cache(async(client:NonNullable<Awaited<ReturnType<typeof createClient>>>)=>{
+ const{data:{user},error}=await client.auth.getUser();return error?null:user;
+});
+
 // Resolve the PIN-verified canonical profile. Raw anonymous Auth IDs are device sessions only.
 export const getCurrentUser = cache(async function getCurrentUser(client: NonNullable<Awaited<ReturnType<typeof createClient>>>) {
-  const { data: { user }, error } = await client.auth.getUser();
-  if (error || !user) return null;
+  const user = await getVerifiedAuthUser(client);
+  if (!user) return null;
   const { data, error: identityError } = await client.rpc('current_band_identity');
   const identity = data as { id: string; nickname: string; band_id: string | null; admin_unlocked: boolean; code_enabled?: boolean; context_version?: number; member?: BandSnapshot['member']; band?: BandSnapshot['band'] } | null;
   if (identityError || !identity) return null;

@@ -5,16 +5,22 @@ import { BandPasswordField, PinField } from '@/components/band-login-fields';
 import { changeMemberPinAction, configureBandLoginAction } from '@/app/band-login-actions';
 import { createClient } from '@/lib/supabase/server';
 
-export async function BandAccessSettings({ bandId }: { bandId: string }) {
+type SettingsMember={id:string;user_id:string;profiles:{nickname:string}|{nickname:string}[]|null};
+export async function BandAccessSettings({ bandId, roster }: { bandId: string; roster?:SettingsMember[] }) {
   const db = await createClient();
   if (!db) return null;
   const { data, error } = await db.rpc('band_login_settings');
   if (error) return <Card><CardTitle>간편 접속 설정을 불러오지 못했습니다</CardTitle><p className="mt-2 text-sm">새 인증 마이그레이션 적용 여부와 연결을 확인해 주세요.</p></Card>;
   const settings = data as { code: string | null; role: string; admin_unlocked: boolean } | null;
   if (!settings) return null;
-  const { data: members } = settings.role === 'leader'
-    ? await db.from('band_members').select('id,user_id,profiles(nickname)').eq('band_id', bandId).eq('status', 'active')
-    : { data: null };
+  let members:SettingsMember[]|null=null;
+  if(settings.role==='leader'){
+    if(roster)members=roster;
+    else {
+      const result=await db.from('band_members').select('id,user_id,profiles(nickname)').eq('band_id',bandId).eq('status','active');
+      if(result.error)throw new Error('DATA_LOAD_FAILED');members=result.data as SettingsMember[]|null;
+    }
+  }
   return <Card className="space-y-5 border-blue-200">
     <div><CardTitle>밴드 코드 접속</CardTitle>{settings.code ? <><p className="mt-3 break-all font-mono text-2xl font-black tracking-widest">{settings.code}</p><p className="mt-2 text-sm text-slate-600">코드와 공용 비밀번호를 멤버들에게 공유하세요. 개인 PIN과 관리자 PIN은 공유하지 마세요.</p></> : <p className="mt-2 text-sm text-slate-600">밴드장이 공용 비밀번호를 설정하면 밴드 코드로 접속할 수 있습니다.</p>}</div>
     {settings.role === 'leader' && <>

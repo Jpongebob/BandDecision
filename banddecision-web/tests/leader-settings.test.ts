@@ -21,6 +21,11 @@ vi.mock('@/components/action-form', () => ({ ActionForm: ({ submit, children }: 
 import { BandAccessSettings } from '../src/components/band-access-settings';
 afterEach(() => { cleanup(); vi.clearAllMocks(); });
 describe('leader settings without administrator elevation', () => {
+  it('reuses the already scoped roster without repeating a database query',async()=>{
+    state.role='leader';render(await BandAccessSettings({bandId:'our-band',roster:[{id:'m',user_id:'u',profiles:{nickname:'Member'}}]}));
+    expect(screen.getByText('Member')).toBeTruthy();expect(state.filter).not.toHaveBeenCalled();
+  });
+
   it('shows leader tools and no unlock form even when the legacy flag is false', async () => {
     state.role = 'leader';
     render(await BandAccessSettings({ bandId: 'our-band' }));

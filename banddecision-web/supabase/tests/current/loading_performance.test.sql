@@ -1,0 +1,15 @@
+begin;select plan(6);
+set local role authenticated;
+select set_config('request.jwt.claim.sub','c1000000-0000-4000-8000-000000000001',true);
+select set_config('request.jwt.claims','{"is_anonymous":true}',true);
+select is(public.band_attendance_context(),public.band_planning_context()-'songs','lightweight attendance matches original context exactly without song data');
+select ok(not (public.band_attendance_context() ? 'songs'),'does not return songs/votes/difficulties');
+select ok(not has_function_privilege('anon','public.band_attendance_context()','execute'),'unauthed role denied');
+reset role;
+insert into auth.users(id,is_anonymous) values('d1000000-0000-4000-8000-000000000001',true);
+set local role authenticated;
+select set_config('request.jwt.claim.sub','d1000000-0000-4000-8000-000000000001',true);
+select is(public.band_attendance_context(),null::jsonb,'unmapped guest cannot read band data');
+select ok(to_regclass('public.band_members_active_band_lookup') is not null,'active-member lookup indexed');
+select ok(to_regclass('public.songs_band_lookup') is not null,'song-band lookup indexed');
+select * from finish();rollback;
