@@ -96,3 +96,19 @@ export async function workflows({run,go,fill,touchText,wait,assert,layout,viewpo
  await logout();await go('/login/member?direct=1','우리 밴드로 접속');assert(await run('!!document.querySelector("input[name=password],input[name=code]")'),'disabled direct start returns to preserved standard login');
 
 }
+
+
+export async function songDeletionWorkflow({run,go,touchText,wait,assert,layout,viewport,cmd,artifacts,writeFile,resolve}){
+ await go('/songs','후보곡 등록');const href=await run('document.querySelector("[data-song-id] a").getAttribute("href")'),id=href.split('/').pop();
+ await go(href,'파트별 난이도');await touchText('이 곡 확정');await wait('document.body.innerText.includes("확정곡에 추가했습니다")');
+ assert(await run('!document.querySelector("select[name=choice]")&&!document.body.innerText.includes("미응답")'),'confirmed detail has no voting requirement');
+ await go('/songs?view=unvoted','미투표 곡');assert(!(await run('!!document.querySelector('+JSON.stringify('[data-song-id="'+id+'"]')+')')),'confirmed song absent from pending-vote list');
+ await go('/plans','합주 날짜 정하기');await run('document.querySelector("input[name=recommended_date]").closest("label").click();document.querySelector("form:has(input[name=band_id]) details").open=true;');
+ await run('document.querySelector('+JSON.stringify('input[name=song_id][value="'+id+'"]')+').click()');await touchText('합주 날짜 확정');await wait('document.querySelectorAll("[data-plan-id]").length===1');assert(true,'confirmed song saved in plan without new votes');
+ await go(href,'곡 삭제');await touchText('곡 삭제');await wait('!!document.querySelector("dialog[open]")');
+ for(const width of [320,390,1280]){await viewport(width,844);await layout('song deletion dialog');await writeFile(resolve(artifacts,'delete-song-'+width+'.png'),Buffer.from((await cmd('Page.captureScreenshot',{format:'png'})).data,'base64'));}await viewport(390,844);
+ assert(await run('document.querySelector("dialog[open]").innerText.includes("[테스트 A]")'),'deletion confirmation identifies target song');
+ await touchText('취소');assert(await run('!document.querySelector("dialog[open]")&&!!document.querySelector("[data-song-id]")'),'cancel keeps song');
+ await touchText('곡 삭제');await touchText('삭제 확인');await wait('location.pathname==="/songs"&&!document.body.innerText.includes("[테스트 A]")');assert(true,'confirmed deletion returns to list and removes song');
+ await go('/plans','합주 계획');assert(await run('document.querySelector("[data-plan-id]").innerText.includes("[테스트 A]")'),'saved plan retains deleted song snapshot');
+}

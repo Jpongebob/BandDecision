@@ -1,8 +1,9 @@
 import {beforeEach,describe,it,expect,vi} from 'vitest';
-const mock=vi.hoisted(()=>({rpc:vi.fn(),refresh:vi.fn()}));
+const mock=vi.hoisted(()=>({rpc:vi.fn(),refresh:vi.fn(),redirect:vi.fn((path:string)=>{throw Error("redirect:"+path);})}));
 vi.mock('@/lib/supabase/server',()=>({createClient:async()=>({rpc:mock.rpc})}));
+vi.mock('next/navigation',()=>({redirect:mock.redirect}));
 vi.mock('next/cache',()=>({revalidatePath:mock.refresh}));
-import {addAvailabilityAction,editAvailabilityAction,deleteAvailabilityAction,saveLivePlanAction,deleteLivePlanAction,liveVoteAction,setSongConfirmationAction,withdrawSongVoteAction} from '../src/app/live-actions';
+import {deleteBandSongAction,addAvailabilityAction,editAvailabilityAction,deleteAvailabilityAction,saveLivePlanAction,deleteLivePlanAction,liveVoteAction,setSongConfirmationAction,withdrawSongVoteAction} from '../src/app/live-actions';
 const id='b0000000-0000-4000-8000-000000000001';
 function form(fields:Record<string,string>,songs:string[]=[]){const f=new FormData();Object.entries(fields).forEach(([k,v])=>f.set(k,v));songs.forEach(s=>f.append('song_id',s));return f;}
 beforeEach(()=>{vi.clearAllMocks();mock.rpc.mockResolvedValue({error:null});});
@@ -30,4 +31,15 @@ it('validates repertoire state and refreshes after explicit confirm/remove',asyn
  expect(mock.rpc).not.toHaveBeenCalled();
  await setSongConfirmationAction({},form({song_id:'2',confirmed:'true'}));expect(mock.rpc).toHaveBeenLastCalledWith('set_song_confirmation',{p_song:2,p_confirmed:true});
  await setSongConfirmationAction({},form({song_id:'2',confirmed:'false'}));expect(mock.rpc).toHaveBeenLastCalledWith('set_song_confirmation',{p_song:2,p_confirmed:false});
+});
+
+it('deletes only after explicit confirmation then returns to songs',async()=>{
+ for(const fields of [{song_id:'1',confirm_delete_song:''},{song_id:'0',confirm_delete_song:'yes'}])expect((await deleteBandSongAction({},form(fields))).error).toBeTruthy();
+ expect(mock.rpc).not.toHaveBeenCalled();
+ await expect(deleteBandSongAction({},form({song_id:'12',confirm_delete_song:'yes'}))).rejects.toThrow('redirect:/songs');
+ expect(mock.rpc).toHaveBeenCalledWith('delete_band_song',{p_song:12});expect(mock.refresh).toHaveBeenCalledWith('/','layout');
+});
+it('does not redirect or refresh after denied song deletion',async()=>{
+ mock.rpc.mockResolvedValue({error:{message:'FORBIDDEN'}});
+ expect((await deleteBandSongAction({},form({song_id:'12',confirm_delete_song:'yes'}))).error).toBeTruthy();expect(mock.redirect).not.toHaveBeenCalled();expect(mock.refresh).not.toHaveBeenCalled();
 });

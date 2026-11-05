@@ -1,5 +1,6 @@
 'use server';
 import {revalidatePath} from 'next/cache';
+import {redirect} from 'next/navigation';
 import {z} from 'zod';
 import {createClient} from '@/lib/supabase/server';
 import type {FormState} from '@/app/actions';
@@ -57,4 +58,12 @@ export async function setSongConfirmationAction(_:FormState,form:FormData):Promi
  const parsed=z.object({song:z.coerce.number().int().positive(),confirmed:z.enum(['true','false'])}).safeParse({song:text(form,'song_id'),confirmed:text(form,'confirmed')});
  if(!parsed.success)return{error:'확정할 곡을 확인하세요.'};
  return execute('set_song_confirmation',{p_song:parsed.data.song,p_confirmed:parsed.data.confirmed==='true'},parsed.data.confirmed==='true'?'확정곡에 추가했습니다. 합주 계획에서 선택할 수 있습니다.':'확정 목록에서 삭제했습니다. 기존 계획과 투표는 유지됩니다.');
+}
+
+export async function deleteBandSongAction(_:FormState,form:FormData):Promise<FormState>{
+ const parsed=z.object({song:z.coerce.number().int().positive(),confirm:z.literal('yes')}).safeParse({song:text(form,'song_id'),confirm:text(form,'confirm_delete_song')});
+ if(!parsed.success)return{error:'삭제할 곡과 확인 내용을 확인하세요.'};
+ const result=await execute('delete_band_song',{p_song:parsed.data.song},'곡을 삭제했습니다.');
+ if(result.error)return result;
+ redirect('/songs');
 }

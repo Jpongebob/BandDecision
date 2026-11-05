@@ -1,3 +1,4 @@
+import {DeleteSongForm} from '@/components/delete-song-form';
 import {SongVoteFields} from '@/components/song-vote-fields';
 import { liveVoteAction as voteAction,withdrawSongVoteAction,setSongConfirmationAction } from '@/app/live-actions';
 import Link from 'next/link';
@@ -52,10 +53,10 @@ export function SongList({
           <Card key={song.id} data-song-id={song.id} className="p-3 sm:p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div><Link href={`/songs/${song.id}`} className="break-all text-base font-bold hover:text-blue-700">{song.title}</Link>{song.confirmedAt&&<span className="ml-2 text-xs font-semibold text-emerald-700">확정곡</span>}<p className="text-sm text-slate-500">{song.artist}</p></div>
-              {<Badge>찬성 {yes} · 반대 {no} · 미응답 {Math.max(0, participants.length - yes - no)}</Badge>}
+              {!song.confirmedAt&&<Badge>찬성 {yes} · 반대 {no} · 미응답 {Math.max(0, participants.length - yes - no)}</Badge>}
             </div>
 
-            {!detailed&&<><p className="mt-2 text-xs leading-5 text-slate-500">{parts.map(p=>p.part+' '+(song.difficulties[p.partKey]??'미등록')).join(' · ')}</p><div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs"><span>내 투표: {mine?(mine.choice==='yes'?'찬성':'반대'):'미투표'}</span><Link className="inline-flex min-h-9 items-center rounded-lg bg-blue-50 px-3 font-semibold text-blue-700" href={`/songs/${song.id}`}>곡 상세 · 투표 수정</Link></div></>}
+            {!detailed&&<><p className="mt-2 text-xs leading-5 text-slate-500">{parts.map(p=>p.part+' '+(song.difficulties[p.partKey]??'미등록')).join(' · ')}</p><div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs"><span>{song.confirmedAt?'추가 투표 없이 계획에 선택 가능':'내 투표: '+(mine?(mine.choice==='yes'?'찬성':'반대'):'미투표')}</span><Link className="inline-flex min-h-9 items-center rounded-lg bg-blue-50 px-3 font-semibold text-blue-700" href={`/songs/${song.id}`}>{song.confirmedAt?'곡 상세':'곡 상세 · 투표 수정'}</Link></div></>}
             {canManage&&(detailed||song.confirmedAt)&&<ActionForm action={setSongConfirmationAction} submit={song.confirmedAt?'확정 목록에서 삭제':'이 곡 확정'} className="mt-3 max-w-md gap-2"><input type="hidden" name="song_id" value={song.id}/><input type="hidden" name="confirmed" value={song.confirmedAt?'false':'true'}/>{detailed&&<p className="text-xs text-slate-500">{song.confirmedAt?'삭제하면 후보 상태로 돌아갑니다. 이미 저장된 합주 계획은 유지됩니다.':'밴드장이 직접 결정한 곡은 추천 조건과 관계없이 합주 계획에 넣을 수 있습니다.'}</p>}</ActionForm>}
             {detailed&&<details open className="mt-3"><summary className="cursor-pointer text-sm font-semibold">파트별 난이도 <span className="font-normal text-slate-500">{parts.map(p=>p.part+' '+(song.difficulties[p.partKey]??'미등록')).join(' · ')}</span></summary><div className="mt-3">
               {parts.length ? <div className="grid gap-2 sm:grid-cols-2">
@@ -72,7 +73,7 @@ export function SongList({
               </div> : <p className="text-sm text-slate-500">등록된 밴드 파트가 없습니다.</p>}
             </div></details>}
 
-            {detailed&&canVote && <div className="mt-3 border-t pt-3"><p className="text-xs text-slate-600">내 투표: {mine?(mine.choice==='yes'?'찬성':'반대'):'미투표'}</p>
+            {detailed&&!song.confirmedAt&&canVote && <div className="mt-3 border-t pt-3"><p className="text-xs text-slate-600">내 투표: {mine?(mine.choice==='yes'?'찬성':'반대'):'미투표'}</p>
               <details open className="mt-2" data-vote-editor><summary className="min-h-9 cursor-pointer text-sm font-semibold text-blue-700">{mine?'투표 수정':'투표하기'}</summary>
               <ActionForm key={memberId} action={voteAction} submit={mine?'투표 수정 저장':'투표 저장'} className="mt-2 max-w-lg gap-3">
                 <input type="hidden" name="song_id" value={song.id}/>
@@ -81,7 +82,9 @@ export function SongList({
               {mine&&<ActionForm action={withdrawSongVoteAction} submit="내 투표 취소" className="mt-3 max-w-lg gap-2"><input type="hidden" name="song_id" value={song.id}/><p className="text-xs text-slate-500">취소하면 미투표 상태로 돌아갑니다.</p></ActionForm>}
               </details></div>}
 
-            {detailed&&song.votes.some((vote) => vote.choice === 'no') && <details className="mt-3 text-sm"><summary className="cursor-pointer font-semibold">반대 사유 보기</summary><ul className="mt-2 space-y-1">{song.votes.filter((vote) => vote.choice === 'no').map((vote) => <li key={vote.memberId} className="text-slate-600">{participants.find((participant) => participant.id === vote.memberId)?.nickname ?? '멤버'}: {vote.reason}</li>)}</ul></details>}
+            {detailed&&song.confirmedAt&&<p className="mt-3 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-800">확정곡입니다. 추가 투표 없이 합주 계획에서 바로 선택할 수 있습니다.</p>}
+            {detailed&&!song.confirmedAt&&song.votes.some((vote) => vote.choice === 'no') && <details className="mt-3 text-sm"><summary className="cursor-pointer font-semibold">반대 사유 보기</summary><ul className="mt-2 space-y-1">{song.votes.filter((vote) => vote.choice === 'no').map((vote) => <li key={vote.memberId} className="text-slate-600">{participants.find((participant) => participant.id === vote.memberId)?.nickname ?? '멤버'}: {vote.reason}</li>)}</ul></details>}
+            {detailed&&canManage&&<DeleteSongForm songId={song.id} title={song.title} artist={song.artist}/>}
           </Card>
         );
       })}

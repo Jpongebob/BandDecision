@@ -1,4 +1,4 @@
-import {workflows} from './workflows.mjs';
+import {songDeletionWorkflow,workflows} from './workflows.mjs';
 import {spawn} from 'node:child_process';
 import {mkdir,writeFile} from 'node:fs/promises';
 import {resolve} from 'node:path';
@@ -22,6 +22,7 @@ try{
  await go('/bands/test','내가 밴드장인 테스트 밴드');await fill('nickname','Mobile QA Leader');await fill('password','qa1234');await fill('pin','112233');await fill('member_pin','246810');await touchText('테스트 밴드 만들고 밴드장으로 접속');await wait('location.pathname==="/dashboard"&&document.body.innerText.includes("Mobile QA Leader")',90000);assert(true,'touch creates five-member fixture via real Next server action');
  await go('/settings/band','멤버와 설정');const code=await run("document.querySelector('.font-mono')?.textContent");assert(/^[A-F0-9]{10}$/.test(code),'band code displayed');await touchText('간편 초대 링크 만들기');await wait('document.querySelector("[role=status]")?.textContent.includes("code=")');assert(await run('document.querySelector("[role=status]").textContent.includes('+JSON.stringify(code)+')'),'reusable code invite generated');await layout('leader settings');
  await writeFile(resolve(artifacts,'session.json'),JSON.stringify({code}));
+ if(process.env.QA_DELETE_SONG){await songDeletionWorkflow({run,go,touchText,wait,assert,layout,viewport,cmd,artifacts,writeFile,resolve});}else{
  const routes=[['/dashboard','반가워요'],['/schedule','불가능한 날짜'],['/schedule/recommendations','추천'],['/songs','후보곡 등록'],['/songs/recommendations','추천'],['/plans','합주 계획'],['/settings/band','멤버와 설정'],['/settings','설정'],['/settings/profile','내 정보'],['/bands/test','5인 테스트 준비']];
  for(const width of (process.env.QA_FAST?[]:[320,390,430,768,844,1280])){await viewport(width,width===844?390:844);for(const [path,text]of routes){await go(path,text);await layout(path);}}
  if(process.env.QA_BENCHMARK){
@@ -34,6 +35,7 @@ try{
   }
   await writeFile(resolve(artifacts,process.env.QA_BENCHMARK+'.json'),JSON.stringify(measurements,null,2));
  }else await workflows({run,go,fill,touchText,wait,assert,layout,viewport,cmd,delay,code,artifacts,writeFile,resolve});
+ }
  assert(errors.length===0,'no uncaught JavaScript exceptions: '+JSON.stringify(errors));
 }catch(e){console.error('BROWSER FAIL',e.message);if(socket){try{await writeFile(resolve(artifacts,'failure.txt'),await run('document.body.innerText'));const shot=await cmd('Page.captureScreenshot',{format:'png',captureBeyondViewport:true});await writeFile(resolve(artifacts,'failure.png'),Buffer.from(shot.data,'base64'));}catch{}}process.exitCode=1;}
 finally{await writeFile(resolve(artifacts,'report.json'),JSON.stringify({checks,report,errors},null,2));socket?.close();chrome.kill();}
