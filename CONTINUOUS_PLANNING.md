@@ -27,3 +27,8 @@
 
 ## 계획 화면의 추천 날짜 자동 표시
 날짜 입력 바로 아래에 참석 가능 인원순 상위 5개를 자동으로 표시합니다. 별도 펼치기나 추천 페이지 이동 없이 선택하면 입력 날짜와 참석 인원이 반영되고 바로 확정할 수 있습니다. 모바일은 작은 2줄, 넓은 화면은 1줄입니다. 이 화면 수정은 SQL 변경 없이 프런트엔드 재배포만 하면 됩니다.
+
+
+## 2026-11-06 policy extension (015/016)
+- Only today/future Seoul dates count toward the five-plan cap. Past plans are preserved in the archive. New skills are NULL until assigned; existing values are preserved. Missing skills prevent new recommendation-based song choices (but not date-only plans or retained snapshots).
+- A leader may explicitly confirm a candidate as repertoire. Confirmed repertoire is separately listed and may be selected in any rehearsal irrespective of recommendation prerequisites. Unconfirmed candidates retain existing vote/difficulty/skill requirements. Unconfirm returns the song to candidate status, preserving votes and saved plan snapshots; deleting a plan never unconfirms repertoire. Leader-only RPC authorization and band-version checks remain enforced. See migrations015 then016.

@@ -7,7 +7,7 @@ const date=z.iso.date(),reason=z.string().trim().max(200).optional();
 const text=(f:FormData,k:string)=>String(f.get(k)??'');
 function failure(message:string):FormState{
  const code=message.match(/[A-Z_]{4,}/)?.[0]??'';
- const messages:Record<string,string>={FORBIDDEN:'이 작업을 수행할 권한이 없습니다.',INVALID_INPUT:'입력 내용을 확인해 주세요.',DATE_ALREADY_SAVED:'이미 저장된 날짜입니다. 저장된 목록에서 수정하세요.',DATE_NOT_FOUND:'이미 삭제된 날짜입니다. 새로고침 후 확인하세요.',PLANNING_STALE:'멤버·일정·투표가 바뀌었습니다. 최신 내용을 확인하고 다시 저장하세요.',PLAN_STALE:'다른 창에서 계획을 수정했습니다. 새로고침 후 확인하세요.',PLAN_NOT_FOUND:'이미 삭제되었거나 찾을 수 없는 계획입니다.',PLAN_LIMIT_REACHED:'계획은 최대 5개입니다. 기존 계획을 삭제한 뒤 추가하세요.',PARTIAL_ACK_REQUIRED:'불참 멤버를 확인하고 부분 참석에 동의해 주세요.',NO_ATTENDEES:'참석 가능한 멤버가 없습니다.',NO_MEMBERS:'활성 멤버가 없습니다.',SONG_NOT_ELIGIBLE:'추가하려는 곡의 투표·난이도 조건이 바뀌었습니다. 날짜만 먼저 저장할 수도 있습니다.',DATE_OUT_OF_RANGE:'지난 날짜로 새 계획을 만들 수 없습니다.',DUPLICATE_CONFLICT:'같은 날짜를 중복으로 입력하지 마세요.'};
+ const messages:Record<string,string>={FORBIDDEN:'이 작업을 수행할 권한이 없습니다.',INVALID_INPUT:'입력 내용을 확인해 주세요.',DATE_ALREADY_SAVED:'이미 저장된 날짜입니다. 저장된 목록에서 수정하세요.',DATE_NOT_FOUND:'이미 삭제된 날짜입니다. 새로고침 후 확인하세요.',PLANNING_STALE:'멤버·일정·투표가 바뀌었습니다. 최신 내용을 확인하고 다시 저장하세요.',PLAN_STALE:'다른 창에서 계획을 수정했습니다. 새로고침 후 확인하세요.',PLAN_NOT_FOUND:'이미 삭제되었거나 찾을 수 없는 계획입니다.',PLAN_LIMIT_REACHED:'예정된 계획은 최대 5개입니다. 예정 계획을 수정하거나 삭제한 뒤 추가하세요.',PARTIAL_ACK_REQUIRED:'불참 멤버를 확인하고 부분 참석에 동의해 주세요.',NO_ATTENDEES:'참석 가능한 멤버가 없습니다.',NO_MEMBERS:'활성 멤버가 없습니다.',SONG_NOT_ELIGIBLE:'추가하려는 곡의 투표·난이도 조건이 바뀌었습니다. 날짜만 먼저 저장할 수도 있습니다.',DATE_OUT_OF_RANGE:'지난 날짜로 새 계획을 만들 수 없습니다.',DUPLICATE_CONFLICT:'같은 날짜를 중복으로 입력하지 마세요.'};
  return{error:messages[code]??'저장하지 못했습니다. 연결 상태를 확인하고 다시 시도하세요.'};
 }
 async function execute(name:string,args:Record<string,unknown>,success:string):Promise<FormState>{
@@ -51,4 +51,10 @@ export async function withdrawSongVoteAction(_:FormState,form:FormData):Promise<
  const parsed=z.coerce.number().int().positive().safeParse(text(form,'song_id'));
  if(!parsed.success)return{error:'취소할 투표의 곡을 확인하세요.'};
  return execute('withdraw_band_song_vote',{p_song:parsed.data},'내 투표를 취소했습니다. 다시 투표할 수 있습니다.');
+}
+
+export async function setSongConfirmationAction(_:FormState,form:FormData):Promise<FormState>{
+ const parsed=z.object({song:z.coerce.number().int().positive(),confirmed:z.enum(['true','false'])}).safeParse({song:text(form,'song_id'),confirmed:text(form,'confirmed')});
+ if(!parsed.success)return{error:'확정할 곡을 확인하세요.'};
+ return execute('set_song_confirmation',{p_song:parsed.data.song,p_confirmed:parsed.data.confirmed==='true'},parsed.data.confirmed==='true'?'확정곡에 추가했습니다. 합주 계획에서 선택할 수 있습니다.':'확정 목록에서 삭제했습니다. 기존 계획과 투표는 유지됩니다.');
 }

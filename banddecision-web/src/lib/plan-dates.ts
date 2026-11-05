@@ -1,0 +1,1 @@
+export function splitPlans<T extends {rehearsal_date:string}>(plans:T[],today:string){return {upcoming:plans.filter(p=>p.rehearsal_date>=today),past:plans.filter(p=>p.rehearsal_date<today).sort((a,b)=>b.rehearsal_date.localeCompare(a.rehearsal_date))};}

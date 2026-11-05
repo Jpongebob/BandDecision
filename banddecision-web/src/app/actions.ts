@@ -5,12 +5,12 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
-import { pinSchema, bandCodeSchema } from '@/lib/band-login-validation';
+import { bandCodeSchema } from '@/lib/band-login-validation';
 
 export type FormState={error?:string;success?:string};
 function value(form:FormData,key:string){return String(form.get(key)??'').trim();}
 function siteOrigin(){const configured=process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/+$/,'');if(configured)return configured;const vercelHost=process.env.VERCEL_URL?.trim();return vercelHost?`https://${vercelHost}`:'http://localhost:3000';}
-function errorText(error:{message:string;code?:string}){const code=error.message.match(/[A-Z_]{4,}/)?.[0]??error.code;const map:Record<string,string>={PLAN_LIMIT_REACHED:'합주 계획은 최대 5개입니다. 기존 계획을 삭제한 뒤 추가해 주세요.',PLAN_NOT_FOUND:'이미 삭제되었거나 찾을 수 없는 계획입니다.',ALREADY_IN_BAND:'이미 활성 밴드에 가입되어 있습니다.',FORBIDDEN:'이 작업을 수행할 권한이 없습니다.',INVITE_INVALID:'초대 링크를 확인해 주세요.',INVITE_USED:'이미 사용한 초대 링크입니다.',INVITE_EXPIRED:'만료된 초대 링크입니다.',INVALID_INPUT:'입력 내용을 확인해 주세요.',ROUND_INVALID:'현재 진행 중인 회차가 없습니다.',ROUND_STALE:'정보가 변경되었습니다. 최신 정보를 확인해 주세요.',SUBMISSIONS_PENDING:'모든 참여자가 일정을 제출해야 합니다.',DATE_OUT_OF_RANGE:'선택할 수 없는 날짜입니다.',NO_ATTENDEES:'참석 가능한 멤버가 없습니다.',PARTIAL_ACK_REQUIRED:'부분 참석 확인이 필요합니다.',DIFFICULTY_STALE:'다른 멤버가 난이도를 수정했습니다. 최신 정보를 불러온 뒤 다시 수정해 주세요.',SONG_NOT_ELIGIBLE:'추천 조건을 충족하지 않는 곡이 있습니다.',TRANSFER_LEADERSHIP_REQUIRED:'밴드장 권한을 먼저 이전해 주세요.',INVALID_TARGET:'현재 밴드의 활성 일반 멤버를 선택해 주세요.',TARGET_PIN_REQUIRED:'대상 멤버의 개인 PIN을 먼저 설정해 주세요.',ADMIN_PIN_REQUIRED:'새 관리자 PIN은 숫자 6자리로 입력해 주세요.',ADMIN_PIN_SAME_AS_PERSONAL:'관리자 PIN은 대상 멤버의 개인 PIN과 다르게 설정해 주세요.',OUTSIDE_ACK_REQUIRED:'회차 밖 날짜 저장 동의가 필요합니다.',DUPLICATE_CONFLICT:'같은 날짜의 사유가 서로 다릅니다. 하나로 정리해 주세요.'};return map[code??'']??'요청을 완료하지 못했습니다. 연결 상태와 서버 설정을 확인하고 다시 시도해 주세요.';}
+function errorText(error:{message:string;code?:string}){const code=error.message.match(/[A-Z_]{4,}/)?.[0]??error.code;const map:Record<string,string>={PLAN_LIMIT_REACHED:'예정된 합주 계획은 최대 5개입니다. 예정 계획을 수정하거나 삭제한 뒤 추가해 주세요.',PLAN_NOT_FOUND:'이미 삭제되었거나 찾을 수 없는 계획입니다.',ALREADY_IN_BAND:'이미 활성 밴드에 가입되어 있습니다.',FORBIDDEN:'이 작업을 수행할 권한이 없습니다.',INVITE_INVALID:'초대 링크를 확인해 주세요.',INVITE_USED:'이미 사용한 초대 링크입니다.',INVITE_EXPIRED:'만료된 초대 링크입니다.',INVALID_INPUT:'입력 내용을 확인해 주세요.',ROUND_INVALID:'현재 진행 중인 회차가 없습니다.',ROUND_STALE:'정보가 변경되었습니다. 최신 정보를 확인해 주세요.',SUBMISSIONS_PENDING:'모든 참여자가 일정을 제출해야 합니다.',DATE_OUT_OF_RANGE:'선택할 수 없는 날짜입니다.',NO_ATTENDEES:'참석 가능한 멤버가 없습니다.',PARTIAL_ACK_REQUIRED:'부분 참석 확인이 필요합니다.',DIFFICULTY_STALE:'다른 멤버가 난이도를 수정했습니다. 최신 정보를 불러온 뒤 다시 수정해 주세요.',SONG_NOT_ELIGIBLE:'추천 조건을 충족하지 않는 곡이 있습니다.',TRANSFER_LEADERSHIP_REQUIRED:'밴드장 권한을 먼저 이전해 주세요.',INVALID_TARGET:'현재 밴드의 활성 일반 멤버를 선택해 주세요.',TARGET_PIN_REQUIRED:'대상 멤버의 개인 PIN을 먼저 설정해 주세요.',OUTSIDE_ACK_REQUIRED:'회차 밖 날짜 저장 동의가 필요합니다.',DUPLICATE_CONFLICT:'같은 날짜의 사유가 서로 다릅니다. 하나로 정리해 주세요.'};return map[code??'']??'요청을 완료하지 못했습니다. 연결 상태와 서버 설정을 확인하고 다시 시도해 주세요.';}
 async function clientOrError(){const client=await createClient();if(!client)return{client:null,error:'Supabase URL과 anon key를 .env.local에 설정해 주세요.'};return{client,error:null};}
 
 export async function signOutAction(){const{client}=await clientOrError();if(client){const{error}=await client.rpc('end_band_session');if(error)throw new Error('로그아웃을 완료하지 못했습니다. 다시 시도해 주세요.');await client.auth.signOut();}redirect('/login');}
@@ -72,35 +72,35 @@ export async function confirmPlanAction(_:FormState,form:FormData):Promise<FormS
  if(rpcError)return{error:errorText(rpcError)};revalidatePath('/plans');revalidatePath('/dashboard');redirect('/plans');
 }
 export async function skillAction(_:FormState,form:FormData):Promise<FormState>{
- const member=value(form,'member_id'),skill=Number(value(form,'skill'));
- if(!z.uuid().safeParse(member).success||!Number.isInteger(skill)||skill<1||skill>5)return{error:'멤버와 실력(1~5)을 확인해 주세요.'};
+ const member=value(form,'member_id'),raw=value(form,'skill'),skill=raw===''?null:Number(raw);
+ if(!z.uuid().safeParse(member).success||(skill!==null&&(!Number.isInteger(skill)||skill<1||skill>5)))return{error:'멤버와 실력(1~5)을 확인해 주세요.'};
  const{client,error}=await clientOrError();if(!client)return{error:error!};
  const{error:rpcError}=await client.rpc('update_member_skill',{p_member:member,p_skill:skill});
- if(rpcError)return{error:errorText(rpcError)};revalidatePath('/settings/band');revalidatePath('/songs/recommendations');revalidatePath('/plans');return{success:'실력을 수정했습니다.'};
+ if(rpcError)return{error:errorText(rpcError)};revalidatePath('/','layout');return{success:'실력을 수정했습니다.'};
 }
-export async function partAction(_:FormState,form:FormData):Promise<FormState>{const{client,error}=await clientOrError();if(!client)return{error:error!};const{error:rpcError}=await client.rpc('update_member_part',{p_member:value(form,'member_id'),p_part:value(form,'part')});if(rpcError)return{error:errorText(rpcError)};revalidatePath('/settings/band');return{success:'파트를 변경했습니다. 추천에 바로 반영됩니다.'};}
+export async function partAction(_:FormState,form:FormData):Promise<FormState>{const{client,error}=await clientOrError();if(!client)return{error:error!};const{error:rpcError}=await client.rpc('update_member_part',{p_member:value(form,'member_id'),p_part:value(form,'part')});if(rpcError)return{error:errorText(rpcError)};revalidatePath('/','layout');return{success:'파트를 변경했습니다. 추천에 바로 반영됩니다.'};}
 export async function transferLeaderAction(_: FormState, form: FormData): Promise<FormState> {
   if (value(form, 'confirm_transfer') !== 'yes') return { error: '밴드장 권한 이양 내용을 확인하고 동의해 주세요.' };
-  const parsed = z.object({ band: z.uuid(), member: z.uuid(), pin: z.union([pinSchema, z.literal('')]) })
-    .safeParse({ band: value(form, 'band_id'), member: value(form, 'member_id'), pin: String(form.get('admin_pin') ?? '') });
-  if (!parsed.success) return { error: '대상 멤버와 관리자 PIN(숫자 6자리)을 확인해 주세요.' };
+  const parsed = z.object({ band: z.uuid(), member: z.uuid() })
+    .safeParse({ band: value(form, 'band_id'), member: value(form, 'member_id') });
+  if (!parsed.success) return { error: '권한을 넘길 대상 멤버를 확인해 주세요.' };
   const { client, error } = await clientOrError();
   if (!client) return { error: error! };
   const { error: rpcError } = await client.rpc('transfer_leadership', {
-    p_band: parsed.data.band, p_member: parsed.data.member, p_admin_pin: parsed.data.pin || null,
+    p_band: parsed.data.band, p_member: parsed.data.member,
   });
   if (rpcError) return { error: errorText(rpcError) };
   revalidatePath('/', 'layout');
   redirect('/settings/band?notice=leadership_transferred');
 }
-export async function removeMemberAction(_:FormState,form:FormData):Promise<FormState>{const{client,error}=await clientOrError();if(!client)return{error:error!};const{error:rpcError}=await client.rpc('remove_member',{p_member:value(form,'member_id')});if(rpcError)return{error:errorText(rpcError)};revalidatePath('/settings/band');revalidatePath('/dashboard');return{success:'멤버를 내보냈습니다.'};}
+export async function removeMemberAction(_:FormState,form:FormData):Promise<FormState>{if(value(form,'confirm_remove')!=='yes'||!z.uuid().safeParse(value(form,'member_id')).success)return{error:'내보낼 멤버와 확인 내용을 확인하세요.'};const{client,error}=await clientOrError();if(!client)return{error:error!};const{error:rpcError}=await client.rpc('remove_member',{p_member:value(form,'member_id')});if(rpcError)return{error:errorText(rpcError)};revalidatePath('/','layout');return{success:'멤버를 내보냈습니다.'};}
 export async function leaveBandAction(){
  const{client}=await clientOrError();if(!client)return;
  const{error}=await client.rpc('leave_band');if(error)redirect('/settings/band?notice=leave_failed');
  await client.auth.signOut();revalidatePath('/','layout');redirect('/login');
 }
 export async function requestDeletionAction(_:FormState):Promise<FormState>{void _;const{client,error}=await clientOrError();if(!client)return{error:error!};const{error:rpcError}=await client.rpc('request_account_deletion');return rpcError?{error:errorText(rpcError)}:{success:'계정 삭제 요청을 접수했습니다. 운영자가 정책에 따라 처리합니다.'};}
-export async function profileAction(_:FormState,form:FormData):Promise<FormState>{const nick=value(form,'nickname');if(nick.length<1||nick.length>30)return{error:'닉네임은 1~30자로 입력해 주세요.'};const{client,error}=await clientOrError();if(!client)return{error:error!};const{error:rpcError}=await client.rpc('update_my_nickname',{p_nickname:nick});if(rpcError)return{error:errorText(rpcError)};revalidatePath('/settings/profile');return{success:'프로필을 저장했습니다.'};}
+export async function profileAction(_:FormState,form:FormData):Promise<FormState>{const nick=value(form,'nickname');if(nick.length<1||nick.length>30)return{error:'닉네임은 1~30자로 입력해 주세요.'};const{client,error}=await clientOrError();if(!client)return{error:error!};const{error:rpcError}=await client.rpc('update_my_nickname',{p_nickname:nick});if(rpcError)return{error:errorText(rpcError)};revalidatePath('/','layout');return{success:'프로필을 저장했습니다.'};}
 
 
 export async function deletePlanAction(_:FormState,form:FormData):Promise<FormState>{

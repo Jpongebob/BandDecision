@@ -1,4 +1,4 @@
-﻿import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   rpc: vi.fn(), signInWithPassword: vi.fn(), signOut: vi.fn(), revalidate: vi.fn(),
   redirect: vi.fn((path: string) => { throw new Error('redirect:' + path); }),
@@ -8,7 +8,7 @@ vi.mock('@/lib/supabase/server', () => ({ createClient: async () => ({
 }) }));
 vi.mock('next/cache', () => ({ revalidatePath: mocks.revalidate }));
 vi.mock('next/navigation', () => ({ redirect: mocks.redirect }));
-import { transferLeaderAction, skillAction, leaveBandAction, submitUnavailableAction, voteAction, confirmPlanAction, deletePlanAction } from '../src/app/actions';
+import { removeMemberAction, transferLeaderAction, skillAction, leaveBandAction, submitUnavailableAction, voteAction, confirmPlanAction, deletePlanAction } from '../src/app/actions';
 
 const band = '50000000-0000-4000-8000-000000000001';
 const member = '50000000-0000-4000-8000-000000000002';
@@ -18,7 +18,7 @@ function form(fields: Record<string, string>, songs: string[] = []) {
   songs.forEach(value => data.append('song_id', value));
   return data;
 }
-const transfer = { band_id: band, member_id: member, admin_pin: '001234', confirm_transfer: 'yes' };
+const transfer = { band_id: band, member_id: member, confirm_transfer: 'yes' };
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.rpc.mockReset().mockResolvedValue({ data: null, error: null });
@@ -30,18 +30,18 @@ describe('leadership handoff actions', () => {
     expect((await transferLeaderAction({}, form({ ...transfer, confirm_transfer: '' }))).error).toBeTruthy();
     expect(mocks.rpc).not.toHaveBeenCalled();
   });
-  it.each([{ member_id: 'not-a-member' }, { band_id: '' }, { admin_pin: '123' }])('rejects malformed handoff fields %j', async invalid => {
+  it.each([{ member_id: 'not-a-member' }, { band_id: '' }])('rejects malformed handoff fields %j', async invalid => {
     expect((await transferLeaderAction({}, form({ ...transfer, ...invalid }))).error).toBeTruthy();
     expect(mocks.rpc).not.toHaveBeenCalled();
   });
   it('preserves PIN leading zeroes, calls the transactional RPC and refreshes the complete app role state', async () => {
     await expect(transferLeaderAction({}, form(transfer))).rejects.toThrow('redirect:/settings/band?notice=leadership_transferred');
-    expect(mocks.rpc).toHaveBeenCalledWith('transfer_leadership', { p_band: band, p_member: member, p_admin_pin: '001234' });
+    expect(mocks.rpc).toHaveBeenCalledWith('transfer_leadership', { p_band: band, p_member: member });
     expect(mocks.revalidate).toHaveBeenCalledWith('/', 'layout');
   });
   it('allows a legacy no-code band to let the database validate a PIN-free handoff', async () => {
     await expect(transferLeaderAction({}, form({ ...transfer, admin_pin: '' }))).rejects.toThrow('redirect:/settings/band?notice=leadership_transferred');
-    expect(mocks.rpc).toHaveBeenCalledWith('transfer_leadership', { p_band: band, p_member: member, p_admin_pin: null });
+    expect(mocks.rpc).toHaveBeenCalledWith('transfer_leadership', { p_band: band, p_member: member });
   });
   it('does not report success or revalidate when the database denies authority', async () => {
     mocks.rpc.mockResolvedValue({ error: { message: 'FORBIDDEN' } });
@@ -59,7 +59,7 @@ describe('leadership handoff actions', () => {
   });
 });
 describe('reviewed form boundaries', () => {
-  it.each(['', '0', '6', '2.5', 'NaN'])('rejects invalid member skill %j before RPC', async skill => {
+  it.each(['0', '6', '2.5', 'NaN'])('rejects invalid member skill %j before RPC', async skill => {
     expect((await skillAction({}, form({ member_id: member, skill }))).error).toBeTruthy();
     expect(mocks.rpc).not.toHaveBeenCalled();
   });
@@ -131,4 +131,11 @@ describe('plan deletion and capacity actions',()=>{
   expect((await confirmPlanAction({},form({round_id:band,date:'2026-11-05',version:'5'},['1']))).error).toContain('5개');
   expect(mocks.redirect).not.toHaveBeenCalled();expect(mocks.revalidate).not.toHaveBeenCalled();
  });
+});
+
+it('member removal requires explicit confirmation and a valid target before RPC',async()=>{
+ for(const fields of [{member_id:member,confirm_remove:''},{member_id:'invalid',confirm_remove:'yes'}])expect((await removeMemberAction({},form(fields))).error).toBeTruthy();
+ expect(mocks.rpc).not.toHaveBeenCalled();
+ expect((await removeMemberAction({},form({member_id:member,confirm_remove:'yes'}))).success).toBeTruthy();
+ expect(mocks.rpc).toHaveBeenCalledWith('remove_member',{p_member:member});
 });

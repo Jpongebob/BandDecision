@@ -16,7 +16,7 @@ vi.mock('@/lib/supabase/server', () => ({
 vi.mock('@/lib/test-band-provision',()=>({prepareTestMembers:mocks.prepare}));
 vi.mock('next/navigation', () => ({ redirect: mocks.redirect }));
 vi.mock('next/cache', () => ({ revalidatePath: mocks.revalidatePath }));
-import { beginBandAccessAction, memberPinLoginAction, registerBandProfileAction, unlockBandAdminAction, createTestBandAction } from '../src/app/band-login-actions';
+import { beginBandAccessAction, memberPinLoginAction, registerBandProfileAction, createCodeBandAction, configureBandLoginAction, createTestBandAction } from '../src/app/band-login-actions';
 
 function form(values: Record<string, string>) {
   const result = new FormData();
@@ -78,13 +78,7 @@ describe('band login actions', () => {
     expect(result.error).toBeTruthy();
     expect(mocks.rpc).not.toHaveBeenCalled();
   });
-  it('does not report administrator unlock success when the DB rejects the PIN', async () => {
-    mocks.rpc.mockResolvedValue({ data: { error: 'BAD_PIN' }, error: null });
-    const result = await unlockBandAdminAction({}, form({ admin_pin: '123456' }));
-    expect(result.error).toBeTruthy();
-    expect(result.success).toBeUndefined();
-    expect(mocks.revalidatePath).not.toHaveBeenCalled();
-  });
+
 });
 
 
@@ -117,3 +111,6 @@ describe('isolated test band creation action', () => {
    expect(mocks.revalidatePath).not.toHaveBeenCalled();
  });
 });
+
+it('creates a normal band using only a shared password and personal PIN',async()=>{await expect(createCodeBandAction({},form({name:'Our band',nickname:'Me',part:'기타',password:'1234',pin:'001234'}))).rejects.toThrow('redirect:/settings/band');expect(mocks.rpc).toHaveBeenCalledWith('create_code_band',{p_name:'Our band',p_nickname:'Me',p_part:'기타',p_password:'1234',p_pin:'001234'});});
+it('rotates shared password without collecting an administrator PIN',async()=>{expect((await configureBandLoginAction({},form({password:'next1234'}))).success).toBeTruthy();expect(mocks.rpc).toHaveBeenCalledWith('configure_band_login',{p_password:'next1234'});});

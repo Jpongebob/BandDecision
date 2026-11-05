@@ -1,5 +1,5 @@
 import {SongVoteFields} from '@/components/song-vote-fields';
-import { liveVoteAction as voteAction,withdrawSongVoteAction } from '@/app/live-actions';
+import { liveVoteAction as voteAction,withdrawSongVoteAction,setSongConfirmationAction } from '@/app/live-actions';
 import Link from 'next/link';
 import { Card, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -13,12 +13,18 @@ export function SongList({
   participants,
   songs,
   detailed=false,
+  emptyText,
+  canManage=false,
+  register=true,
 }: {
   bandId: string;
   memberId: string;
   participants: Participant[];
   songs: SongInput[];
   detailed?: boolean;
+  emptyText?:string;
+  canManage?:boolean;
+  register?:boolean;
 }) {
   const parts = [...new Map(participants.map((participant) => [participant.partKey, participant])).values()];
 
@@ -26,7 +32,7 @@ export function SongList({
 
   return (
     <div className="space-y-4">
-      {!detailed&&<Card className="p-3 sm:p-4"><details open><summary className="cursor-pointer text-sm font-semibold">후보곡 등록</summary>
+      {!detailed&&register&&<Card className="p-3 sm:p-4"><details open><summary className="cursor-pointer text-sm font-semibold">후보곡 등록</summary>
         <p className="mt-1 text-sm text-slate-600">밴드 멤버 누구나 후보곡을 추가할 수 있습니다.</p>
         <ActionForm action={addSongAction} className="mt-4 sm:grid-cols-2">
           <input type="hidden" name="band_id" value={bandId} />
@@ -45,11 +51,12 @@ export function SongList({
         return (
           <Card key={song.id} data-song-id={song.id} className="p-3 sm:p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
-              <div><Link href={`/songs/${song.id}`} className="break-all text-base font-bold hover:text-blue-700">{song.title}</Link><p className="text-sm text-slate-500">{song.artist}</p></div>
+              <div><Link href={`/songs/${song.id}`} className="break-all text-base font-bold hover:text-blue-700">{song.title}</Link>{song.confirmedAt&&<span className="ml-2 text-xs font-semibold text-emerald-700">확정곡</span>}<p className="text-sm text-slate-500">{song.artist}</p></div>
               {<Badge>찬성 {yes} · 반대 {no} · 미응답 {Math.max(0, participants.length - yes - no)}</Badge>}
             </div>
 
             {!detailed&&<><p className="mt-2 text-xs leading-5 text-slate-500">{parts.map(p=>p.part+' '+(song.difficulties[p.partKey]??'미등록')).join(' · ')}</p><div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-xs"><span>내 투표: {mine?(mine.choice==='yes'?'찬성':'반대'):'미투표'}</span><Link className="inline-flex min-h-9 items-center rounded-lg bg-blue-50 px-3 font-semibold text-blue-700" href={`/songs/${song.id}`}>곡 상세 · 투표 수정</Link></div></>}
+            {canManage&&(detailed||song.confirmedAt)&&<ActionForm action={setSongConfirmationAction} submit={song.confirmedAt?'확정 목록에서 삭제':'이 곡 확정'} className="mt-3 max-w-md gap-2"><input type="hidden" name="song_id" value={song.id}/><input type="hidden" name="confirmed" value={song.confirmedAt?'false':'true'}/>{detailed&&<p className="text-xs text-slate-500">{song.confirmedAt?'삭제하면 후보 상태로 돌아갑니다. 이미 저장된 합주 계획은 유지됩니다.':'밴드장이 직접 결정한 곡은 추천 조건과 관계없이 합주 계획에 넣을 수 있습니다.'}</p>}</ActionForm>}
             {detailed&&<details open className="mt-3"><summary className="cursor-pointer text-sm font-semibold">파트별 난이도 <span className="font-normal text-slate-500">{parts.map(p=>p.part+' '+(song.difficulties[p.partKey]??'미등록')).join(' · ')}</span></summary><div className="mt-3">
               {parts.length ? <div className="grid gap-2 sm:grid-cols-2">
                 {parts.map((part) => {
@@ -78,7 +85,7 @@ export function SongList({
           </Card>
         );
       })}
-      {songs.length === 0 && <Card><CardTitle>아직 등록된 후보곡이 없습니다</CardTitle><p className="mt-2 text-sm text-slate-500">위에서 첫 후보곡을 등록할 수 있습니다.</p></Card>}
+      {songs.length === 0 && <Card><CardTitle>{emptyText??'아직 등록된 후보곡이 없습니다'}</CardTitle><p className="mt-2 text-sm text-slate-500">{emptyText?'전체 곡에서 내 투표를 확인하거나 수정할 수 있습니다.':'위에서 첫 후보곡을 등록할 수 있습니다.'}</p></Card>}
     </div>
   );
 }

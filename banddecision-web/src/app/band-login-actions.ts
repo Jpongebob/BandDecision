@@ -52,8 +52,8 @@ export async function createCodeBandAction(_: FormState, form: FormData): Promis
   if (!parsed.success) return { error: parsed.error.issues[0]?.message ?? '입력 내용을 확인하세요.' };
   const guest = await guestClient();
   if (!guest.client) return { error: guest.error };
-  const { name, nickname, part, password, pin, admin_pin } = parsed.data;
-  const { data, error } = await guest.client.rpc('create_code_band', { p_name: name, p_nickname: nickname, p_part: part, p_password: password, p_pin: pin, p_admin_pin: admin_pin });
+  const { name, nickname, part, password, pin } = parsed.data;
+  const { data, error } = await guest.client.rpc('create_code_band', { p_name: name, p_nickname: nickname, p_part: part, p_password: password, p_pin: pin });
   const failure = responseError(error, data);
   if (failure) return failure;
   refreshIdentity();
@@ -75,18 +75,10 @@ export async function registerBandProfileAction(_: FormState, form: FormData): P
   refreshIdentity();
   redirect('/dashboard');
 }
-export async function unlockBandAdminAction(_: FormState, form: FormData): Promise<FormState> {
-  const parsed = pinSchema.safeParse(form.get('admin_pin'));
-  if (!parsed.success) return { error: '관리자 PIN은 숫자 6자리입니다.' };
-  const failure = await execute('unlock_band_admin', { p_pin: parsed.data });
-  if (failure) return failure;
-  refreshIdentity();
-  return { success: '밴드장은 로그인 상태에서 별도 관리자 잠금 해제 없이 관리할 수 있습니다.' };
-}
 export async function configureBandLoginAction(_: FormState, form: FormData): Promise<FormState> {
-  const parsed = z.object({ password: bandPasswordSchema, admin_pin: pinSchema }).safeParse(fields(form));
-  if (!parsed.success) return { error: '공용 비밀번호와 숫자 6자리 관리자 PIN을 확인하세요.' };
-  const failure = await execute('configure_band_login', { p_password: parsed.data.password, p_admin_pin: parsed.data.admin_pin });
+  const parsed = z.object({ password: bandPasswordSchema }).safeParse(fields(form));
+  if (!parsed.success) return { error: '4자 이상 공용 비밀번호를 확인하세요.' };
+  const failure = await execute('configure_band_login', { p_password: parsed.data.password });
   if (failure) return failure;
   refreshIdentity();
   return { success: '밴드 접속 설정을 저장했습니다. 기존 코드 접속 기기는 다시 로그인해야 합니다.' };

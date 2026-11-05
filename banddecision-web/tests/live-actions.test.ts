@@ -2,7 +2,7 @@ import {beforeEach,describe,it,expect,vi} from 'vitest';
 const mock=vi.hoisted(()=>({rpc:vi.fn(),refresh:vi.fn()}));
 vi.mock('@/lib/supabase/server',()=>({createClient:async()=>({rpc:mock.rpc})}));
 vi.mock('next/cache',()=>({revalidatePath:mock.refresh}));
-import {addAvailabilityAction,editAvailabilityAction,deleteAvailabilityAction,saveLivePlanAction,deleteLivePlanAction,liveVoteAction,withdrawSongVoteAction} from '../src/app/live-actions';
+import {addAvailabilityAction,editAvailabilityAction,deleteAvailabilityAction,saveLivePlanAction,deleteLivePlanAction,liveVoteAction,setSongConfirmationAction,withdrawSongVoteAction} from '../src/app/live-actions';
 const id='b0000000-0000-4000-8000-000000000001';
 function form(fields:Record<string,string>,songs:string[]=[]){const f=new FormData();Object.entries(fields).forEach(([k,v])=>f.set(k,v));songs.forEach(s=>f.append('song_id',s));return f;}
 beforeEach(()=>{vi.clearAllMocks();mock.rpc.mockResolvedValue({error:null});});
@@ -24,3 +24,10 @@ describe('continuous planning actions',()=>{
 it('withdraws only the current actor vote and rejects invalid song IDs',async()=>{for(const song_id of ['', 'x','0'])expect((await withdrawSongVoteAction({},form({song_id}))).error).toBeTruthy();expect(mock.rpc).not.toHaveBeenCalled();expect((await withdrawSongVoteAction({},form({song_id:'2',member_id:'someone-else'}))).success).toBeTruthy();expect(mock.rpc).toHaveBeenCalledWith('withdraw_band_song_vote',{p_song:2});});
 
 it('adds and edits dates without a reason field',async()=>{await addAvailabilityAction({},form({dates_json:'[{"date":"2026-12-01"}]'}));expect(mock.rpc).toHaveBeenCalledWith('save_band_unavailability',{p_dates:[{date:'2026-12-01'}]});await editAvailabilityAction({},form({old_date:'2026-12-01',date:'2026-12-02'}));expect(mock.rpc).toHaveBeenCalledWith('update_band_unavailability',{p_date:'2026-12-01',p_new_date:'2026-12-02'});});
+
+it('validates repertoire state and refreshes after explicit confirm/remove',async()=>{
+ for(const fields of [{song_id:'0',confirmed:'true'},{song_id:'1',confirmed:'yes'}])expect((await setSongConfirmationAction({},form(fields))).error).toBeTruthy();
+ expect(mock.rpc).not.toHaveBeenCalled();
+ await setSongConfirmationAction({},form({song_id:'2',confirmed:'true'}));expect(mock.rpc).toHaveBeenLastCalledWith('set_song_confirmation',{p_song:2,p_confirmed:true});
+ await setSongConfirmationAction({},form({song_id:'2',confirmed:'false'}));expect(mock.rpc).toHaveBeenLastCalledWith('set_song_confirmation',{p_song:2,p_confirmed:false});
+});

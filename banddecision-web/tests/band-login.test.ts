@@ -31,9 +31,5 @@ describe('band credentials', () => {
     expect(bandPasswordSchema.safeParse('가'.repeat(25)).success).toBe(false);
     expect(bandPasswordSchema.safeParse('가'.repeat(24)).success).toBe(true);
   });
-  it('requires distinct personal and administrator PINs when creating a band', () => {
-    const fields = { name: '우리 밴드', nickname: '기타', part: '기타', password: 'band-password', pin: '001234', admin_pin: '001234' };
-    expect(createCodeBandSchema.safeParse(fields).success).toBe(false);
-    expect(createCodeBandSchema.safeParse({ ...fields, admin_pin: '567890' }).success).toBe(true);
-  });
+  it('creates a band without collecting an administrator PIN',()=>{expect(createCodeBandSchema.safeParse({name:'우리 밴드',nickname:'기타',part:'기타',password:'1234',pin:'001234'}).success).toBe(true);});
 });

@@ -12,8 +12,7 @@ export const profileInputSchema = z.object({
 export const createCodeBandSchema = profileInputSchema.extend({
   name: z.string().trim().min(2).max(40),
   password: bandPasswordSchema,
-  admin_pin: pinSchema,
-}).refine(data => data.pin !== data.admin_pin, { message: '내 PIN과 관리자 PIN은 다르게 설정해 주세요.' });
+});
 
 export const bandLoginErrors: Record<string, string> = {
   BAD_BAND_CREDENTIALS: '밴드 코드 또는 공용 비밀번호를 확인해 주세요.',
@@ -25,5 +24,5 @@ export const bandLoginErrors: Record<string, string> = {
   ALREADY_SIGNED_IN: '이미 로그인 중입니다. 다른 프로필을 사용하려면 먼저 로그아웃하세요.',
   GUEST_SESSION_REQUIRED: '기존 계정에서 로그아웃한 뒤 밴드 코드로 접속해 주세요.',
   UNAUTHENTICATED: '로그인이 필요합니다.',
-  INVALID_INPUT: '입력 내용을 확인해 주세요. PIN은 숫자 6자리이며 내 PIN과 관리자 PIN은 달라야 합니다.',
+  INVALID_INPUT: '입력 내용을 확인해 주세요. PIN은 숫자 6자리로 입력하세요.',
 };
