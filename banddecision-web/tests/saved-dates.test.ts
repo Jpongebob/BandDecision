@@ -12,3 +12,16 @@ it('sorts and groups compact dates by month without rendering editors per day',(
 it('opens only the selected date with its own edit/delete fields',()=>{const view=render(createElement(SavedDates,props));fireEvent.click(view.container.querySelector('[data-saved-date="2026-12-01"]')!);expect(screen.getByRole('dialog',{name:'저장된 날짜 수정'})).toBeTruthy();expect(view.container.querySelectorAll('form')).toHaveLength(2);expect(view.container.querySelector('input[name=old_date]')?.getAttribute('value')).toBe('2026-12-01');expect(screen.getByRole('button',{name:'날짜 삭제'})).toBeTruthy();});
 it('closing nested date picker leaves the outer edit/delete context intact',()=>{const view=render(createElement(SavedDates,props));fireEvent.click(view.container.querySelector('[data-saved-date]')!);fireEvent.click(screen.getByRole('button',{name:'2026-11-28'}));const inner=screen.getByRole('dialog',{name:'날짜 변경'});fireEvent.click(Array.from(inner.querySelectorAll('button')).find(b=>b.textContent==='닫기')!);fireEvent(inner,new Event('close',{bubbles:true}));expect(view.container.querySelector('input[name=old_date]')?.getAttribute('value')).toBe('2026-11-28');expect(screen.getByRole('dialog',{name:'저장된 날짜 수정'})).toBeTruthy();});
 it('closes the editor after the selected date is deleted or moved by refreshed data',()=>{const view=render(createElement(SavedDates,props));fireEvent.click(view.container.querySelector('[data-saved-date="2026-12-01"]')!);view.rerender(createElement(SavedDates,{...props,dates:[{date:'2026-12-03'}]}));expect(screen.queryByRole('dialog')).toBeNull();expect(view.container.querySelectorAll('[data-saved-date]')).toHaveLength(1);});
+
+it('disables other saved dates across months while keeping the date being edited selectable',()=>{
+ const view=render(createElement(SavedDates,props));fireEvent.click(view.container.querySelector('[data-saved-date="2026-12-01"]')!);fireEvent.click(screen.getByRole('button',{name:'2026-12-01'}));
+ const current=screen.getByRole('button',{name:'2026-12-01 · 기존 날짜'}) as HTMLButtonElement;
+ expect(current.disabled).toBe(false);expect(current.getAttribute('aria-pressed')).toBe('true');
+ const duplicate=screen.getByRole('button',{name:'2026-12-03 · 저장됨'}) as HTMLButtonElement;
+ expect(duplicate.disabled).toBe(true);fireEvent.click(duplicate);expect((view.container.querySelector('form input[name=date]') as HTMLInputElement).value).toBe('2026-12-01');
+ fireEvent.click(screen.getByRole('button',{name:'이전 달'}));expect((screen.getByRole('button',{name:'2026-11-28 · 저장됨'}) as HTMLButtonElement).disabled).toBe(true);
+ fireEvent.click(screen.getByRole('button',{name:'2026-11-29'}));expect((view.container.querySelector('form input[name=date]') as HTMLInputElement).value).toBe('2026-11-29');
+});
+it('keeps an existing past date selectable while blocking other past dates',()=>{
+ const view=render(createElement(SavedDates,{...props,dates:[{date:'2026-10-30'}]}));fireEvent.click(view.container.querySelector('[data-saved-date]')!);fireEvent.click(screen.getByRole('button',{name:'2026-10-30'}));expect((screen.getByRole('button',{name:'2026-10-30 · 기존 날짜'}) as HTMLButtonElement).disabled).toBe(false);expect((screen.getByRole('button',{name:'2026-10-29'}) as HTMLButtonElement).disabled).toBe(true);
+});

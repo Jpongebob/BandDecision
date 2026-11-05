@@ -330,3 +330,8 @@ Final 012 completion: no-QA-environment production build PASS (19 routes); lint/
 - Lint/typecheck PASS; 32 files / 209 tests PASS, including preview counts, duplicate/inactive member handling, refreshed roster, chronological month grouping and nested-dialog lifecycle. Chrome screenshots at 390px and 1280px visually inspected. Final browser count/build recorded below. No new SQL needed; no deployment performed.
 
 Final date-UI verification: 209 unit/component tests PASS; focused Chrome 84 checks PASS, zero uncaught JS exceptions, 320/390/430/768/1280px calendar/tile layouts and modal edit/delete passed. Screenshot compact-saved-dates-390.png / 1280.png visually inspected. Final no-QA-environment production build PASS (19 routes), including the final registration-default-open attribute. Local QA servers stopped. No new migration or hosted changes; redeploy updated app to apply.
+
+
+## 2026-11-05 Saved-date edit calendar duplicate prevention
+- Pass current saved dates into the edit picker; other saved days are disabled and labelled 저장됨, including across month navigation. The original edited day is labelled 기존 날짜 and remains selectable, including a preexisting past day; other past dates stay disabled. A picker-specific hint avoids attendance-only instructions in this calendar. Existing server duplicate checks remain.
+- Lint/typecheck PASS; 32 files / 211 tests PASS, including cross-month duplicate rejection and current-past-date exception. Production build PASS. No SQL change, hosted data change or deployment performed; redeploy the app to apply.
