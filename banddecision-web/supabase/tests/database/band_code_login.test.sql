@@ -78,7 +78,7 @@ select public.member_pin_login(current_setting('test.member')::uuid,'334455');
 select lives_ok($$select public.cast_vote(current_setting('test.round')::uuid,current_setting('test.song')::bigint,'yes',null)$$,'resumed member votes as the canonical round participant');
 select is((select count(*)::integer from public.song_votes where round_id=current_setting('test.round')::uuid and member_id=current_setting('test.member')::uuid),1,'vote belongs to the original member ID');
 select is((select count(*)::integer from public.song_votes where round_id=current_setting('test.round')::uuid and member_id=current_setting('test.leader_member')::uuid),0,'member vote does not modify the leader vote');
-select lives_ok($select public.save_unavailability(current_setting('test.round')::uuid,'[]'::jsonb,false)$,'mapped member submits their own availability');
+select lives_ok($$select public.save_unavailability(current_setting('test.round')::uuid,'[]'::jsonb,false)$$,'mapped member submits their own availability');
 select is((select status from public.round_submissions where round_id=current_setting('test.round')::uuid and member_id=current_setting('test.leader_member')::uuid),'pending','member submission leaves leader availability untouched');
 select public.end_band_session();
 select is(private.actor_id(),null::uuid,'logout revokes device identity immediately');

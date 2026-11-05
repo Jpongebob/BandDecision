@@ -67,3 +67,15 @@ Shared band passwords now accept 4..64 characters (UTF-8 maximum 72 bytes). Pers
 ## Code-based invite rollout
 
 No new SQL is needed for the invite-flow correction. Redeploy the updated app and open the current production domain. In a code-enabled band, unlock admin access and generate a fresh 간편 초대 link under 밴드 관리. The new /login?code=... link pre-fills the band code; send the shared password separately. Previously issued /join/... links remain legacy email invitations and should be replaced for email-free onboarding. Existing profiles select their own PIN; newcomers register nickname, part and PIN after the shared-password gate.
+
+
+## Availability/leadership correction (202611050004)
+After the first four existing migrations have succeeded, run ONLY banddecision-web/supabase/migrations/202611050004_workflow_and_leadership.sql in Supabase SQL Editor, then push/redeploy the app. This fixes column reference x is ambiguous on quick-date submission as well as leadership handoff. Do not rerun earlier migrations; SQL Editor does not automatically reconcile CLI migration history. No new environment variable is required.
+
+Under 밴드 관리, unlock administrator PIN, choose another active member, expand 밴드장 권한 넘기기, enter a new administrator PIN for code bands, and explicitly confirm. The recipient must already have a personal PIN; new admin PIN must differ. All administrator elevations reset, including the new leader's: privately send the new PIN to the recipient. Personal login and shared password remain valid; old leader becomes ordinary. Existing confirmed plans stay intact.
+
+Before rollout: npm ci, npm run lint, npm run typecheck, npm test, npm run test:db, npm run build. test:db is isolated PGlite; never paste test fixtures into production. After rollout verify quick dates, parent/home links, two-device handoff, old-leader denial and new-leader unlock/finalization. Full GoTrue/PostgREST/Realtime/concurrency/viewport tests remain outstanding.
+
+M_ID in 200.js is not identified by the supplied stack. Check the actual script URL in DevTools and test a private window without extensions; provide the complete deployed chunk URL if reproducible. M_ID is absent from this local source/build. Do not change SQL or disable access checks based solely on that console error.
+
+Navigation optimizations preserve user checks and avoid shared-user caches. Actual deployed speed remains unmeasured; inspect RSC/server response duration and Vercel function/Supabase regional distance before changing hosting regions.

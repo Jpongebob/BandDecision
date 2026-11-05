@@ -20,3 +20,9 @@ Passwords and PINs are hashed in the private schema and never returned to the br
 Anonymous Auth users include the permanent anchor IDs referenced by band data. **Do not run blanket anonymous-user cleanup**: deleting an anchor can remove profiles and owned records. Administrator-PIN recovery requires the Supabase project owner; there is no public reset bypass.
 
 Code-enabled bands use **간편 초대 링크 만들기** under **밴드 관리** to share /login?code=... links. These skip email signup, prefill the code, and require the shared password followed by member PIN/profile. Send the shared password separately. Replace previously issued /join/token email invitations with new code links. This correction requires no new SQL.
+
+
+### Regression checks and leadership handoff
+Run npm run test:db for disposable PostgreSQL/pgTAP tests, in addition to npm run lint, npm run typecheck, npm test and npm run build. Current run: 113 unit/action/component tests and 163 SQL assertions pass; see ../QA_REPORT.md and ../PROGRESS.md for scope. Hosted Auth/Realtime/concurrent connections and real device layouts are not covered by the in-memory runner.
+
+Apply only the NEW supabase/migrations/202611050004_workflow_and_leadership.sql after the prior four migrations, then redeploy. It fixes the ambiguous x availability error. 밴드 관리 → administrator unlock → target member → 밴드장 권한 넘기기 requires explicit confirmation and, for code bands, a distinct new 6-digit admin PIN. Share that PIN privately with the recipient, who unlocks administration again. Old leader becomes a member; saved plans are preserved. Internal screens now include home/parent return links and streaming loading states.

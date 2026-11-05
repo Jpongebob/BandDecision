@@ -26,8 +26,8 @@ export const getCurrentUser = cache(async function getCurrentUser(client: NonNul
   const { data: { user }, error } = await client.auth.getUser();
   if (error || !user) return null;
   const { data, error: identityError } = await client.rpc('current_band_identity');
-  const identity = data as { id: string; nickname: string; band_id: string | null; admin_unlocked: boolean } | null;
+  const identity = data as { id: string; nickname: string; band_id: string | null; admin_unlocked: boolean; code_enabled?: boolean } | null;
   if (identityError || !identity) return null;
   return { id: identity.id, email: user.email, nickname: identity.nickname,
-    is_anonymous: user.is_anonymous, adminUnlocked: identity.admin_unlocked };
+    is_anonymous: user.is_anonymous, adminUnlocked: identity.admin_unlocked, codeLoginEnabled: identity.code_enabled ?? Boolean(user.is_anonymous) };
 });

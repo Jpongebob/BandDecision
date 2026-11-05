@@ -35,3 +35,6 @@ Passwords and PINs are hashed in the private schema and never returned to the br
 Anonymous Auth users include the permanent anchor IDs referenced by band data. **Do not run blanket anonymous-user cleanup**: deleting an anchor can remove profiles and owned records. Administrator-PIN recovery requires the Supabase project owner; there is no public reset bypass.
 
 Code-enabled bands use **간편 초대 링크 만들기** under **밴드 관리** to share /login?code=... links. These skip email signup, prefill the code, and require the shared password followed by member PIN/profile. Send the shared password separately. Replace previously issued /join/token email invitations with new code links. This correction requires no new SQL.
+
+## Latest workflow/handoff update
+The availability SQL alias bug and safe leadership transfer are fixed in the new 202611050004_workflow_and_leadership.sql; apply it after the existing four migrations and redeploy. Internal screens now include home/parent return controls and loading boundaries. Actual local verification: 113 unit/UI/action tests, 163 PostgreSQL assertions, lint, typecheck and production build passed. See [QA report](QA_REPORT.md), [progress](PROGRESS.md) and [rollout](DEPLOYMENT.md) for limits and instructions.

@@ -146,3 +146,41 @@ Local production preview is running at http://localhost:3000 (new login at /logi
 - Executed: lint PASS; typecheck PASS; tests PASS (10 files / 60 tests); production build PASS (23 routes); git diff --check PASS. New tests cover 100 event schedules producing one refresh, continuous streams, later batches, cancellation, and actual component background/focus behavior.
 - Evidence is limited to code paths and synthetic refresh counts. Actual deployed latency, Supabase/Vercel regional distance, cold starts and authenticated live workload were NOT measured because provider access/live credentials are unavailable. No latency/percentage improvement claim is made.
 - No SQL, environment-variable or provider-region changes are needed. Push/redeploy and measure the current production domain before adjusting database/function regions.
+
+
+## 2026-11-05 Thorough regression audit, leadership handoff, availability error and navigation
+
+This section supersedes earlier local-database BLOCKED statements; hosted provider/device checks below remain unverified.
+
+### Implemented and reproduced
+- Added 202611050004_workflow_and_leadership.sql without editing any previously applied migration. Reproduced PostgreSQL 42702 ambiguous x in save_unavailability on the original function. Replaced conflicting PL/pgSQL/JSON aliases, deduplicated equal dates, retained atomic validation and outside-round acknowledgment. Actual SQL workflow suite now passes.
+- Leadership transfer is available under 밴드 관리 on another active member's card after administrator unlock. Requires explicit confirmation and, for code-enabled bands, a new 6-digit administrator PIN distinct from the recipient's personal PIN. Recipient must have a personal PIN. Transfer atomically changes owner/roles, resets all admin elevations, and preserves shared password, personal sessions and confirmed plans. Hand the new administrator PIN to the recipient privately.
+- Serialized management, handoff and finalization by band-row lock and fresh authorization checks. Former leaders cannot retain authority after transfer; membership removal/leave invalidates relevant mappings. Single-connection tests verify authority before/after, but do not prove true concurrent races.
+- Hardened action validation, safe internal redirects, generic unexpected-error display, vote ownership/scoring inputs, required-part difficulty validation, and stale confirmation previews. New round/version resets forms; leaving signs out after successful leave.
+- Added home and logical-parent navigation across internal screens, including explicit songs-list return on recommendations. Logical-parent return works on direct URL entry without relying on external browser history.
+- Async protected-layout work now sits inside Suspense, with static navigation/loading fallback. Added destination loading boundaries, request-scoped active-member sharing between layout/pages, and parallel round/member skill reads. Auth getUser still precedes identity RPC and existing security regression remains intact. No shared cross-user caches or skipped authorization.
+- M_ID was absent from src/public and all 20 generated JS chunks. User-provided 200.js stack has no full source URL, so origin remains unknown; no claim that an extension or our application is responsible. Obtain the full source URL from DevTools (chrome-extension:// versus deployed /_next/static/...), compare a private window without extensions, and capture a full URL/stack if it persists. The database x error is a separate reproduced failure.
+
+### Checks actually executed
+- npm.cmd run lint: PASS.
+- npm.cmd run typecheck: PASS.
+- npm.cmd test: PASS, 17 files / 113 tests.
+- npm.cmd run test:db: PASS, five migrations and 163 pgTAP assertions (band-code 47, leadership 37, security 16, member-song 20, workflow 43).
+- npm.cmd run build: PASS, 23 routes. Intermediate build exposed usePathname outside Suspense in a fallback; added the missing boundary and reran successfully.
+- Local production HTTP smoke: /, /login, /bands/new, /songs/recommendations, /schedule/recommendations all 200; recommendation HTML contains /dashboard home link. No .env.local is configured, so protected responses verify fallback/configuration rendering, not authenticated workflows.
+- git diff --check: PASS before final documentation pass; rerun recorded below.
+- npm audit --omit=dev: PASS, zero reported production vulnerabilities. Vitest upgraded from 3.2.4 to 4.1.12, removing two reported Critical development-tool findings. Full development audit retains 16 Moderate findings; no forced incompatible ESLint downgrade was applied.
+- Static bundle check: zero sb_secret_ key literals of at least 20 suffix characters; SDK prefix-validation strings may still contain the literal prefix. No real server key was configured/injected, so this is not a secret-injection penetration test.
+- New disposable test harness: npm run test:db uses PGlite PostgreSQL plus pgTAP/pgcrypto with minimal local auth.uid/auth.jwt fixtures. It runs real SQL/RLS/RPC in an isolated in-memory database, not a production project; no test fixture data is sent to Supabase.
+
+### Remaining / BLOCKED
+- Live Supabase migration, GoTrue anonymous/email HTTP authentication, PostgREST schema reload, WebSocket/Realtime delivery, multiple-device behavior, real concurrent connections, viewport/browser visual checks, actual deployed latency and provider regions: NOT executed, credentials/provider connection absent.
+- Account deletion remains a request record; the actual Auth deletion/anonymization worker is not implemented.
+- No Git commit/push or Vercel deployment was performed. New code and SQL need rollout; prior immutable deployment URLs do not update.
+- See QA_REPORT.md for current AC01–AC60 scope and evidence.
+
+### Rollout
+1. If 001 initial + member permissions + 002 band-code + 003 password-min4 already succeeded, run ONLY banddecision-web/supabase/migrations/202611050004_workflow_and_leadership.sql in Supabase SQL Editor. Do not rerun historical files or test fixtures.
+2. Push the application changes and redeploy Vercel; use the fixed production domain. No new environment secret is needed.
+3. Retry quick-date submission once, verify saved dates/reasons after refresh, then test handoff with two separate devices. Old leader should see member rights; recipient unlocks with the new administrator PIN.
+4. Measure navigation on the deployed domain using DevTools Network timing for the RSC request and the Vercel/Supabase regions. No quantitative latency improvement is claimed from local synthetic tests.

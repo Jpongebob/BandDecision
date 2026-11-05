@@ -9,7 +9,7 @@ describe('date recommendations',()=>{
  it('excludes dates with zero attendees',()=>{const p=participants.slice(0,2);const result=recommendDates({participants:p,submittedIds:p.map(x=>x.id),startDate:'2026-11-04',endDate:'2026-11-04',today:'2026-11-04',unavailable:p.map(x=>({memberId:x.id,date:'2026-11-04',reason:'x'}))});expect(result).toHaveLength(0);});
 });
 describe('song recommendations',()=>{
- const song=(id:number,voteCount:number,yesCount:number):SongInput=>({id,title:`곡${id}`,artist:'밴드',difficulties:{guitar:4},votes:Array.from({length:voteCount},(_,i)=>({memberId:`m${i}`,choice:i<yesCount?'yes':'no'} as const))});
+ const song=(id:number,voteCount:number,yesCount:number):SongInput=>({id,title:`곡${id}`,artist:'밴드',difficulties:{guitar:4},votes:Array.from({length:voteCount},(_,i)=>({memberId:`m${i+1}`,choice:i<yesCount?'yes':'no'} as const))});
  it('uses ceil(2N/3), requires every vote and scores per member burden',()=>{const result=recommendSongs(participants,[song(1,5,4)]);expect(result[0]).toMatchObject({status:'eligible',requiredYes:4,burden:2,score:8});expect(recommendSongs(participants,[song(2,4,4)])[0]?.status).toBe('waiting_votes');expect(recommendSongs(participants,[song(3,5,3)])[0]?.status).toBe('insufficient_agree');});
  it('orders eligible score ties by yes, burden, then id',()=>{const a=song(1,5,4),b=song(2,5,4);a.difficulties.guitar=4;b.difficulties.guitar=4;expect(recommendSongs(participants,[b,a]).map(x=>x.id)).toEqual([1,2]);});
  it('marks missing required part difficulty',()=>{const s=song(1,5,5);s.difficulties={};expect(recommendSongs(participants,[s])[0]?.status).toBe('difficulty_pending');});

@@ -37,7 +37,7 @@ select is((select updated_by::text from public.song_difficulties where song_id=c
 select ok((select updated_at is not null from public.song_difficulties where song_id=current_setting('test.song_id')::bigint and part_key='guitar'),'difficulty records its update time');
 select is((select version from public.song_difficulties where song_id=current_setting('test.song_id')::bigint and part_key='guitar'),1,'new difficulty starts at version one');
 select lives_ok($$select public.update_song_difficulty(current_setting('test.song_id')::bigint,'guitar',5::smallint,1)$$,'ordinary member can edit a difficulty using its current version');
-select is((select difficulty from public.song_difficulties where song_id=current_setting('test.song_id')::bigint and part_key='guitar'),5,'updated difficulty is stored');
+select is((select difficulty::integer from public.song_difficulties where song_id=current_setting('test.song_id')::bigint and part_key='guitar'),5,'updated difficulty is stored');
 select is((select version from public.song_difficulties where song_id=current_setting('test.song_id')::bigint and part_key='guitar'),2,'successful edit advances the difficulty version');
 select throws_ok($$select public.update_song_difficulty(current_setting('test.song_id')::bigint,'guitar',3::smallint,1)$$,'P0001','DIFFICULTY_STALE','stale concurrent edit is rejected');
 select is((select count(*)::integer from public.songs where id=900002),0,'member cannot read another band candidate');
