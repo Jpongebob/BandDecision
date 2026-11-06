@@ -31,6 +31,13 @@ export async function deleteAvailabilityAction(_:FormState,form:FormData):Promis
  const parsed=date.safeParse(text(form,'date'));if(!parsed.success)return{error:'삭제할 날짜를 확인하세요.'};
  return execute('delete_band_availability',{p_date:parsed.data},'날짜를 삭제했습니다.');
 }
+export async function deleteAvailabilityDatesAction(_:FormState,form:FormData):Promise<FormState>{
+ if(text(form,'confirm_delete_dates')!=='yes')return{error:'삭제할 날짜를 확인해 주세요.'};
+ let raw:unknown;try{raw=JSON.parse(text(form,'dates_json'));}catch{return{error:'날짜 목록을 확인해 주세요.'};}
+ const parsed=z.array(date).min(1).max(3660).safeParse(raw);
+ if(!parsed.success||new Set(parsed.data).size!==parsed.data.length)return{error:'삭제할 날짜를 확인해 주세요.'};
+ return execute('delete_band_availability_dates',{p_dates:parsed.data},'선택한 날짜를 삭제했습니다.');
+}
 export async function liveVoteAction(_:FormState,form:FormData):Promise<FormState>{
  const parsed=z.object({song:z.coerce.number().int().positive(),choice:z.enum(['yes','no']),reason:z.string().trim().max(300)}).safeParse({song:text(form,'song_id'),choice:text(form,'choice'),reason:text(form,'reason')});
  if(!parsed.success||parsed.data.choice==='no'&&!parsed.data.reason)return{error:'반대하는 경우 사유를 입력하세요.'};

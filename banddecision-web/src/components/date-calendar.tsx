@@ -2,7 +2,7 @@
 import {twoMonthWindow} from '@/lib/calendar-window';
 import {useId,useRef,useState} from 'react';
 import type {KeyboardEvent} from 'react';
-import {CalendarDays,ChevronLeft,ChevronRight} from 'lucide-react';
+import {CalendarDays,Check,ChevronLeft,ChevronRight} from 'lucide-react';
 
 const pad=(n:number)=>String(n).padStart(2,'0');
 const iso=(d:Date)=>`${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())}`;
@@ -11,11 +11,11 @@ export function dateRange(start:string,end:string){
  for(let time=Date.parse(first+'T00:00:00Z');time<=Date.parse(last+'T00:00:00Z')&&days.length<367;time+=86400000)days.push(iso(new Date(time)));
  return days;
 }
-type Props={today:string;selected:string[];onSelect:(date:string)=>void;onSelectMonth?:(dates:string[])=>void;disabled?:(date:string)=>boolean;readOnly?:(date:string)=>boolean;annotation?:(date:string)=>string;secondaryAnnotation?:(date:string)=>string;annotationLabel?:(date:string)=>string;label?:string};
+type Props={today:string;selected:string[];onSelect:(date:string)=>void;onSelectMonth?:(dates:string[])=>void;disabled?:(date:string)=>boolean;readOnly?:(date:string)=>boolean;saved?:(date:string)=>boolean;annotation?:(date:string)=>string;secondaryAnnotation?:(date:string)=>string;annotationLabel?:(date:string)=>string;label?:string};
 function CalendarNote({text}:{text:string}){
  return <span className="max-w-full text-center text-[10px] leading-tight [overflow-wrap:anywhere]">{text.split(' ').map((word,index)=><span key={index} className="block sm:inline">{index>0&&<span className="hidden sm:inline"> </span>}{word}</span>)}</span>;
 }
-export function DateCalendar({today,selected,onSelect,onSelectMonth,disabled,readOnly,annotation,secondaryAnnotation,annotationLabel,label='날짜 달력'}:Props){
+export function DateCalendar({today,selected,onSelect,onSelectMonth,disabled,readOnly,saved,annotation,secondaryAnnotation,annotationLabel,label='날짜 달력'}:Props){
  const{firstMonth,lastMonth}=twoMonthWindow(today);
  const initial=(selected[0]||today).slice(0,7);
  const[month,setMonth]=useState(initial<firstMonth?firstMonth:initial>lastMonth?lastMonth:initial);const grid=useRef<HTMLDivElement>(null);
@@ -48,7 +48,11 @@ export function DateCalendar({today,selected,onSelect,onSelectMonth,disabled,rea
  return <section data-calendar-month={month} aria-label={label} className="min-w-0 rounded-xl border border-slate-200 bg-white p-2 sm:p-3"><div className="mb-2 flex items-center justify-between gap-2"><button type="button" aria-label="이전 달" onClick={()=>move(-1)} disabled={month<=firstMonth} className="grid size-11 place-items-center rounded-lg hover:bg-slate-100 disabled:opacity-30"><ChevronLeft size={18}/></button><h3 aria-live="polite" className="text-sm font-bold">{year}년 {index+1}월</h3><button type="button" aria-label="다음 달" onClick={()=>move(1)} disabled={month>=lastMonth} className="grid size-11 place-items-center rounded-lg hover:bg-slate-100 disabled:opacity-30"><ChevronRight size={18}/></button></div>
  {onSelectMonth&&<div className="mb-1 flex justify-end"><button type="button" disabled={selectableDays.length===0} aria-pressed={monthSelected} onClick={()=>onSelectMonth(selectableDays)} className="min-h-11 rounded-lg px-3 text-xs font-semibold text-blue-700 transition-colors hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-blue-600 disabled:text-slate-400 disabled:hover:bg-transparent">{index+1}월 {monthSelected?'전체 선택 취소':'전체 선택'}</button></div>}
  <div className="grid grid-cols-7 text-center text-xs text-slate-500" aria-hidden="true">{['일','월','화','수','목','금','토'].map(d=><span key={d} className="py-2">{d}</span>)}</div>
- <div ref={grid} className="grid grid-cols-7 gap-1">{Array.from({length:first.getUTCDay()},(_,i)=><span key={'blank'+i}/>)}{Array.from({length:count},(_,i)=>{const day=month+'-'+pad(i+1),chosen=selected.includes(day),blocked=disabled?.(day)??day<today,note=annotation?.(day),secondary=secondaryAnnotation?.(day),description=annotationLabel?.(day)??[note,secondary].filter(Boolean).join(' · ');return <button type="button" key={day} data-day={day} aria-label={day+(description?' · '+description:'')} aria-pressed={chosen} aria-current={day===today?'date':undefined} disabled={blocked} onKeyDown={e=>keyboard(e,day)} onClick={()=>onSelect(day)} className={'flex min-h-14 min-w-0 flex-col items-center justify-center gap-0.5 rounded-lg border px-0.5 py-1 text-xs transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-blue-600 '+(chosen?'border-blue-600 bg-blue-600 text-white':blocked?'border-transparent bg-slate-50 text-slate-300':readOnly?.(day)?'border-slate-200 bg-slate-50 text-slate-700 hover:border-blue-400 hover:bg-blue-50':'border-slate-100 text-slate-900 hover:border-blue-400 hover:bg-blue-50')}><span className="text-sm font-semibold">{i+1}</span>{note&&<CalendarNote text={note}/>}{secondary&&<CalendarNote text={secondary}/>}</button>;})}</div></section>;
+ <div ref={grid} className="grid grid-cols-7 gap-1">{Array.from({length:first.getUTCDay()},(_,i)=><span key={'blank'+i}/>)}{Array.from({length:count},(_,i)=>{
+  const day=month+'-'+pad(i+1),chosen=selected.includes(day),blocked=disabled?.(day)??day<today,isSaved=saved?.(day)??false,note=annotation?.(day),secondary=secondaryAnnotation?.(day),description=annotationLabel?.(day)??[note,secondary].filter(Boolean).join(' · ');
+  const color=chosen?'border-blue-600 bg-blue-600 text-white':blocked||day<today?'border-transparent bg-slate-100 text-slate-400':isSaved?'border-emerald-400 bg-emerald-100 text-emerald-900 hover:border-emerald-600 hover:bg-emerald-200':readOnly?.(day)?'border-slate-200 bg-slate-50 text-slate-700 hover:border-blue-400 hover:bg-blue-50':'border-slate-300 bg-white text-slate-900 hover:border-blue-400 hover:bg-blue-50';
+  return <button type="button" key={day} data-day={day} aria-label={day+(description?' · '+description:'')} aria-pressed={chosen} aria-current={day===today?'date':undefined} disabled={blocked} onKeyDown={e=>keyboard(e,day)} onClick={()=>onSelect(day)} className={'flex min-h-14 min-w-0 flex-col items-center justify-center gap-0.5 rounded-lg border px-0.5 py-1 text-xs transition-colors focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-blue-600 '+color}><span className="inline-flex items-center justify-center gap-0.5 text-sm font-semibold">{isSaved&&<Check aria-hidden="true" className="size-2.5 shrink-0"/>}{i+1}</span>{note&&<CalendarNote text={note}/>}{secondary&&<CalendarNote text={secondary}/>}</button>;
+ })}</div></section>;
 }
 export function CalendarPicker({value,onChange,today,label,annotation,disabled,hint}:{value:string;onChange:(date:string)=>void;today:string;label:string;annotation?:(date:string)=>string;disabled?:(date:string)=>boolean;hint?:string}){
  const dialog=useRef<HTMLDialogElement>(null),id=useId();const[opened,setOpened]=useState(false);
