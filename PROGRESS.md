@@ -553,3 +553,8 @@ Final date-UI verification: 209 unit/component tests PASS; focused Chrome 84 che
 - 서울 DB 읽기 전용 역할 검증: anon 공개 입장 명단6, anon 일정 쓰기 권한없음, PIN 세션없는 authenticated의 private planning context NULL 확인. PowerShell 구문/리전JSON/diff 공백 검사 완료. CLI가 생성한 supabase/.temp도 Git 제외.
 - 서울 publishable key로 실제 HTTP Auth 설정/공개 입장 RPC/JWKS 확인. 익명 로그인 활성화와 ES256 서명 확인. 임시 익명 계정 SDK signup/getClaims 통과, PIN 미검증 planning/identity NULL 확인 후 표식+UUID가 일치하는 임시 Auth 계정 1개만 정리. 기존/서울 데이터 지문 재비교 통과.
 - 서울 URL/공개 키를 Git 제외 .env.local에 설정. 타입/린트/프로덕션 빌드 모두 통과(19개 경로). Vercel 연결 인증 부재로 실제 배포/환경변수 수정은 실행하지 않음. 소유자 Vercel 설정 교체 후 Preview/PIN 검증과 Production 전환이 남음.
+
+### 2026-11-06 모바일 달력 인원수 말줄임 제거
+- 공용 DateCalendar의 truncate 표시를 제거. 모바일은 '가능'과 '2/6명'을 줄로 나누고 PC는 기존 한 줄 유지. 인원수만 표시하는 계획 달력과 저장 날짜 수정 안내도 글자를 자르지 않도록 자동 줄바꿈. 접근성 설명과 날짜 선택 동작 유지. DB 조회 추가 없음.
+- 실제 컴포넌트를 서버 렌더링하고 이번 Next 빌드 CSS를 사용해 Chrome 320/360/390/430/1280px에서 렌더 확인. 한자리/두자리 참석 수의 말줄임·가로 넘침 없음, 모바일 줄 분리 및 PC 한 줄 유지 확인. 390/1280px 스크린샷 시각 확인. 산출물은 Git 제외 .qa-artifacts에 보관.
+- 타입 검사/린트/프로덕션 빌드 통과. 기존 date-calendar 테스트9개 통과. 실제 휴대기기 및 운영 배포는 수행하지 않음.
