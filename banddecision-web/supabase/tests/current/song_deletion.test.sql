@@ -7,6 +7,8 @@ select set_config('request.jwt.claims','{"is_anonymous":true}',true);
 select public.create_code_band('Delete test','Leader','기타','1234','112233');
 select set_config('test.del.band',public.current_band_identity()->>'band_id',true);
 select set_config('test.del.code',public.band_login_settings()->>'code',true);
+-- Since 023 only members who saved a date attend it: the leader opts in to the plan days used below.
+select public.save_band_availability((select jsonb_agg(jsonb_build_object('date',((now() at time zone 'Asia/Seoul')::date+n)::text)) from generate_series(1,2) n));
 select set_config('test.del.song',public.add_song(current_setting('test.del.band')::uuid,'Delete me','Artist')::text,true);
 select public.set_song_confirmation(current_setting('test.del.song')::bigint,true);
 select public.vote_band_song(current_setting('test.del.song')::bigint,'no','wrong reason');
@@ -22,6 +24,8 @@ select public.delete_band_song(current_setting('test.del.extra')::bigint);
 select set_config('test.del.plan',public.save_rehearsal_plan(current_setting('test.del.band')::uuid,(now() at time zone 'Asia/Seoul')::date+1,array[current_setting('test.del.song')::bigint],(public.band_planning_context()->>'version')::bigint,null,null,false)::text,true);
 select set_config('request.jwt.claim.sub','f4000000-0000-4000-8000-000000000002',true);
 select public.begin_band_access(current_setting('test.del.code'),'1234');select public.register_band_profile('Member','베이스','246810');
+-- The member also attends the edited date, so the later edit stays a full-attendance save.
+select public.save_band_availability(jsonb_build_array(jsonb_build_object('date',((now() at time zone 'Asia/Seoul')::date+2)::text)));
 select throws_ok($$select public.delete_band_song(current_setting('test.del.song')::bigint)$$,'P0001','FORBIDDEN','ordinary member cannot delete');
 select set_config('request.jwt.claim.sub','f4000000-0000-4000-8000-000000000003',true);
 select public.create_code_band('Other band','Other leader','기타','1234','556677');

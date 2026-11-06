@@ -8,6 +8,8 @@ select public.create_code_band('Options','Leader','기타','1234','112233');
 select set_config('opt.band',public.current_band_identity()->>'band_id',true);
 select set_config('opt.me',public.current_band_identity()->'member'->>'id',true);
 select set_config('opt.code',public.band_login_settings()->>'code',true);
+-- Since 023 only members who saved a date attend it: the leader opts in to the plan days used below.
+select public.save_band_availability((select jsonb_agg(jsonb_build_object('date',((now() at time zone 'Asia/Seoul')::date+n)::text)) from generate_series(1,5) n));
 select is(public.band_login_settings()->>'skill_enabled','false','skill feature off by default');
 select is(public.band_home_context()->>'skill_enabled','false','home flag off');
 select is(public.current_band_identity()->'band'->>'skill_enabled','false','identity carries flag without another lookup');

@@ -7,6 +7,8 @@ select set_config('request.jwt.claims','{"is_anonymous":true}',true);
 select public.create_code_band('Repertoire','Leader','기타','1234','112233');
 select set_config('test.rep.band',public.current_band_identity()->>'band_id',true);
 select set_config('test.rep.code',public.band_login_settings()->>'code',true);
+-- Since 023 only members who saved a date attend it: the leader opts in to the plan days used below.
+select public.save_band_availability((select jsonb_agg(jsonb_build_object('date',((now() at time zone 'Asia/Seoul')::date+n)::text)) from generate_series(1,4) n));
 select set_config('test.rep.song',public.add_song(current_setting('test.rep.band')::uuid,'Chosen song','Artist')::text,true);
 select lives_ok($$select public.set_song_confirmation(current_setting('test.rep.song')::bigint,true)$$,'leader can directly decide a repertoire song');
 select ok((public.band_planning_context()->'songs'->0->>'confirmedAt') is not null,'context exposes confirmation');
