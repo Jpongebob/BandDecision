@@ -511,3 +511,8 @@ Final date-UI verification: 209 unit/component tests PASS; focused Chrome 84 che
 - 이번 작업에서 테스트를 추가하거나 실행하지 않았습니다. 기존 단위/페이지 검증용 입력과 기대값 중 새 API/표시에 해당하는 부분만 맞췄습니다. SQL/RLS·브라우저·실기기 동작과 운영 속도는 미검증입니다. 운영 DB 적용·배포·커밋·push는 하지 않았습니다.
 
 검증 결과 (023 최종 변경): `npm.cmd run typecheck`, `npm.cmd run lint`, `npm.cmd run build`, `git diff --check` 모두 종료 코드 0. 프로덕션 빌드 19개 경로 생성 성공. DB SQL 적용 및 런타임/브라우저 테스트는 수행하지 않음.
+
+### 2026-11-06 월 전체 선택 취소
+- 선택 가능한 날짜가 모두 선택되면 버튼을 전체 선택 취소로 표시하고 해당 달의 미저장 선택만 해제. 다른 달과 저장된 날짜 유지.
+- 타입 검사 및 diff 공백 검사 통과. 런타임 테스트 미수행.
+- 023 소스 검토: 실사용 밴드의 기존 unavailable_dates 삭제/변환 없음. 새 화면은 available_dates만 조회하므로 이전 기록은 표시되지 않음. 운영 DB의 실제 보존 여부는 직접 확인하지 않음.
