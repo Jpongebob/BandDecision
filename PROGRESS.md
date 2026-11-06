@@ -554,6 +554,9 @@ Final date-UI verification: 209 unit/component tests PASS; focused Chrome 84 che
 - 서울 publishable key로 실제 HTTP Auth 설정/공개 입장 RPC/JWKS 확인. 익명 로그인 활성화와 ES256 서명 확인. 임시 익명 계정 SDK signup/getClaims 통과, PIN 미검증 planning/identity NULL 확인 후 표식+UUID가 일치하는 임시 Auth 계정 1개만 정리. 기존/서울 데이터 지문 재비교 통과.
 - 서울 URL/공개 키를 Git 제외 .env.local에 설정. 타입/린트/프로덕션 빌드 모두 통과(19개 경로). Vercel 연결 인증 부재로 실제 배포/환경변수 수정은 실행하지 않음. 소유자 Vercel 설정 교체 후 Preview/PIN 검증과 Production 전환이 남음.
 
+### 2026-11-06 다가오는 합주 남은 일수
+- 홈의 가까운 합주 및 이후 합주 날짜 옆에 D-N 배지 표시. 한국 기준 오늘은 seoulToday로 한 번 결정하고 날짜 문자열을 UTC 자정으로 환산해 달력 날짜 차이를 계산. 당일 D-DAY, 접근성 설명 제공. 좁은 화면은 줄바꿈 허용. 추가 DB 조회 및 SQL 변경 없음. 별도 테스트는 실행하지 않음.
+
 ### 2026-11-06 홈 권한 표시 간소화
 - 홈에서 일반 계정의 '멤버' 배지 제거. 밴드장만 '밴드장' 배지 표시. 인원수 및 실제 권한 검증은 유지. DB 변경 없음. 조건부 렌더링 변경만 수행하고 별도 테스트는 실행하지 않음.
 
