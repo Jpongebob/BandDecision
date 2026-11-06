@@ -63,6 +63,6 @@ export function seoulToday(){return new Date().toLocaleDateString('sv-SE',{timeZ
 export async function loadHomeContext(db:SupabaseClient){
  const{data,error}=await db.rpc('band_home_context');
  const nextPlan=z.object({id:z.string(),rehearsal_date:z.iso.date(),location:z.string().nullable(),memo:z.string().nullable(),starts_at:z.string(),ends_at:z.string(),participant_count:z.number().int().nonnegative(),attendee_count:z.number().int().nonnegative(),confirmed_plan_songs:z.array(z.object({title_snapshot:z.string()}))});
- const parsed=z.object({upcoming_plan_count:z.number().int().nonnegative(),next_plan:nextPlan.nullable(),skill_enabled:z.boolean().optional(),member_count:z.number().int().nonnegative(),pending_votes:z.number().int().nonnegative(),unset_skills:z.number().int().nonnegative(),my_skill:z.number().int().min(1).max(5).nullable(),upcoming_available:z.array(z.iso.date())}).safeParse(data);
- if(error||!parsed.success)throw new Error('DATA_LOAD_FAILED');return parsed.data;
+ const parsed=z.object({upcoming_plan_count:z.number().int().nonnegative(),next_plan:nextPlan.nullable(),upcoming_plans:z.array(nextPlan).max(3).optional(),member_count:z.number().int().nonnegative()}).safeParse(data);
+ if(error||!parsed.success)throw new Error('DATA_LOAD_FAILED');return {...parsed.data,upcoming_plans:parsed.data.upcoming_plans??(parsed.data.next_plan?[parsed.data.next_plan]:[])};
 }

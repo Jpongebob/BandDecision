@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { AppShell } from '@/components/app-shell';
 import { createClient, getCurrentUser } from '@/lib/supabase/server';
+import { PendingVoteBadge } from '@/components/pending-vote-badge';
 
 async function ProtectedContent({children}:{children:React.ReactNode}){
  const supabase=await createClient();
@@ -14,7 +15,7 @@ async function ProtectedContent({children}:{children:React.ReactNode}){
  const context=await getBandContext(supabase,user.id,user.bandContext);
  if(context.status==='error')return <AppShell nickname={user.nickname} band="밴드 정보 확인 필요"><BandLoadError code={context.code}/></AppShell>;
  const band=context.status==='ready'?context.band:null;
- return <AppShell nickname={user.nickname} band={band?.name??null} bandId={band?.id??null}>{children}</AppShell>;
+ return <AppShell nickname={user.nickname} band={band?.name??null} bandId={band?.id??null} pendingVoteBadge={band?<Suspense fallback={null}><PendingVoteBadge/></Suspense>:null}>{children}</AppShell>;
 }
 
 export default function ProtectedLayout({children}:{children:React.ReactNode}) {
