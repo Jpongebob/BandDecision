@@ -9,6 +9,8 @@ select set_config('test.band',public.current_band_identity()->>'band_id',true);
 select set_config('test.me',public.current_band_identity()->'member'->>'id',true);
 select set_config('test.code',public.band_login_settings()->>'code',true);
 select set_config('test.day',((now() at time zone 'Asia/Seoul')::date+20)::text,true);
+-- Since 023 only members who saved a date attend it: the leader opts in to the five plan days and test.day.
+select public.save_band_availability((select jsonb_agg(jsonb_build_object('date',((now() at time zone 'Asia/Seoul')::date+n)::text)) from generate_series(10,14) n)||jsonb_build_array(jsonb_build_object('date',current_setting('test.day'))));
 do $$declare n int;begin for n in 10..14 loop perform public.save_rehearsal_plan(current_setting('test.band')::uuid,(now() at time zone 'Asia/Seoul')::date+n,'{}',(public.band_planning_context()->>'version')::bigint,null,null,false);end loop;end $$;
 select is((select count(*)::int from public.confirmed_plans),5,'five date-only plans coexist');
 select set_config('test.plan',(select id::text from public.confirmed_plans order by rehearsal_date limit 1),true);
@@ -17,20 +19,20 @@ select lives_ok($$select public.save_rehearsal_plan(current_setting('test.band')
 select is((select count(*)::int from public.confirmed_plans),5,'editing at capacity preserves all other plans');
 select throws_ok($$select public.save_rehearsal_plan(current_setting('test.band')::uuid,current_setting('test.day')::date,array[999999::bigint],(public.band_planning_context()->>'version')::bigint,current_setting('test.plan')::uuid,2,false)$$,'P0001','SONG_NOT_ELIGIBLE','invalid replacement song rejected');
 select is((select version from public.confirmed_plans where id=current_setting('test.plan')::uuid),2,'failed edit leaves version unchanged');
-select throws_ok($$select public.save_band_unavailability(jsonb_build_array(jsonb_build_object('date',current_setting('test.day'),'reason','valid'),jsonb_build_object('date',(current_setting('test.day')::date+1)::text,'reason',42)))$$,'P0001','INVALID_INPUT','bad bulk reason rejects entire append');
-select is((select count(*)::int from public.unavailable_dates where unavailable_date=current_setting('test.day')::date),0,'bad append does not save first valid row');
-select public.save_band_unavailability(jsonb_build_array(jsonb_build_object('date',current_setting('test.day'),'reason','work'),jsonb_build_object('date',(current_setting('test.day')::date+1)::text,'reason','class')));
-select throws_ok($$select public.update_band_unavailability(current_setting('test.day')::date,current_setting('test.day')::date+1,'overwrite')$$,'P0001','DATE_ALREADY_SAVED','editing onto an existing date cannot overwrite it');
-select is((select reason from public.unavailable_dates where member_id=current_setting('test.me')::uuid and unavailable_date=current_setting('test.day')::date+1),'','conflicting date remains intact without reason');
-select throws_ok($$select public.save_rehearsal_plan(current_setting('test.band')::uuid,current_setting('test.day')::date,'{}',(public.band_planning_context()->>'version')::bigint,current_setting('test.plan')::uuid,2,true)$$,'P0001','NO_ATTENDEES','zero attendees still denied');
-select public.delete_band_unavailability(current_setting('test.day')::date);
+select throws_ok($$select public.save_band_availability(jsonb_build_array(jsonb_build_object('date',(current_setting('test.day')::date+1)::text),jsonb_build_object('date','2026-02-30')))$$,'P0001','INVALID_INPUT','bad bulk entry rejects entire append');
+select is((select count(*)::int from public.available_dates where available_date=current_setting('test.day')::date+1),0,'bad append does not save first valid row');
+select public.save_band_availability(jsonb_build_array(jsonb_build_object('date',(current_setting('test.day')::date+1)::text),jsonb_build_object('date',(current_setting('test.day')::date+2)::text)));
+select throws_ok($$select public.update_band_availability(current_setting('test.day')::date+1,current_setting('test.day')::date+2)$$,'P0001','DATE_ALREADY_SAVED','editing onto an existing date cannot overwrite it');
+select is((select count(*)::int from public.available_dates where member_id=current_setting('test.me')::uuid and available_date in (current_setting('test.day')::date+1,current_setting('test.day')::date+2)),2,'conflicting dates remain intact');
+-- Nobody saved test.day+3, so even an acknowledged partial plan has no attendees.
+select throws_ok($$select public.save_rehearsal_plan(current_setting('test.band')::uuid,current_setting('test.day')::date+3,'{}',(public.band_planning_context()->>'version')::bigint,current_setting('test.plan')::uuid,2,true)$$,'P0001','NO_ATTENDEES','zero attendees still denied');
 select lives_ok($$select public.delete_live_plan(current_setting('test.plan')::uuid,2)$$,'delete frees capacity');
 select lives_ok($$select public.save_rehearsal_plan(current_setting('test.band')::uuid,current_setting('test.day')::date,'{}',(public.band_planning_context()->>'version')::bigint,null,null,false)$$,'create again after deletion');
 select set_config('request.jwt.claim.sub','b1000000-0000-4000-8000-000000000002',true);
 select public.begin_band_access(current_setting('test.code'),'test1234');select public.register_band_profile('Member','guitar','246810');
 select is((select count(*)::int from public.confirmed_plans),5,'member reads all saved plans immediately');
-select throws_ok($$select public.update_band_unavailability(current_setting('test.day')::date+1,current_setting('test.day')::date+2,'stolen')$$,'P0001','DATE_NOT_FOUND','member cannot edit another member date');
-select throws_ok($$select public.delete_band_unavailability(current_setting('test.day')::date+1)$$,'P0001','DATE_NOT_FOUND','member cannot delete another member date');
+select throws_ok($$select public.update_band_availability(current_setting('test.day')::date+1,current_setting('test.day')::date+3)$$,'P0001','DATE_NOT_FOUND','member cannot edit another member date');
+select throws_ok($$select public.delete_band_availability(current_setting('test.day')::date+1)$$,'P0001','DATE_NOT_FOUND','member cannot delete another member date');
 select is(jsonb_array_length(public.band_planning_context()->'members'),2,'live context tracks joined member');
 select public.leave_band();
 select set_config('request.jwt.claim.sub','b1000000-0000-4000-8000-000000000001',true);

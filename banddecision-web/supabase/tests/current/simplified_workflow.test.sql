@@ -11,6 +11,8 @@ select set_config('test.new.code',public.band_login_settings()->>'code',true);
 select set_config('test.new.me',public.current_band_identity()->'member'->>'id',true);
 select is((select skill from public.band_members where id=current_setting('test.new.me')::uuid),null::smallint,'new leader skill unassigned');
 select is(public.band_home_context()->>'unset_skills','1','home counts unset skills');
+-- Since 023 only members who saved a date attend it: the leader opts in to the plan days used below.
+select public.save_band_availability((select jsonb_agg(jsonb_build_object('date',((now() at time zone 'Asia/Seoul')::date+n)::text)) from generate_series(1,7) n));
 select set_config('test.new.first',public.save_rehearsal_plan(current_setting('test.new.band')::uuid,(now() at time zone 'Asia/Seoul')::date+1,'{}',(public.band_planning_context()->>'version')::bigint,null,null,false)::text,true);
 select public.save_rehearsal_plan(current_setting('test.new.band')::uuid,(now() at time zone 'Asia/Seoul')::date+2,'{}',(public.band_planning_context()->>'version')::bigint,null,null,false);
 select public.save_rehearsal_plan(current_setting('test.new.band')::uuid,(now() at time zone 'Asia/Seoul')::date+3,'{}',(public.band_planning_context()->>'version')::bigint,null,null,false);
@@ -39,14 +41,14 @@ select lives_ok($$select public.update_member_skill(current_setting('test.new.me
 select is(public.band_home_context()->>'pending_votes','0','home excludes own submitted votes');
 select public.add_song(current_setting('test.new.band')::uuid,'Pending song','Artist');
 select is(public.band_home_context()->>'pending_votes','1','home counts only unanswered songs');
-select public.save_band_unavailability(jsonb_build_array(jsonb_build_object('date',((now() at time zone 'Asia/Seoul')::date+20)::text)));
-select is(jsonb_array_length(public.band_home_context()->'upcoming_unavailable'),1,'home includes own upcoming unavailable dates');
+select public.save_band_availability(jsonb_build_array(jsonb_build_object('date',((now() at time zone 'Asia/Seoul')::date+20)::text)));
+select ok(public.band_home_context()->'upcoming_available' ? ((now() at time zone 'Asia/Seoul')::date+20)::text,'home includes own upcoming available dates');
 select set_config('request.jwt.claim.sub','f1000000-0000-4000-8000-000000000002',true);
 select public.begin_band_access(current_setting('test.new.code'),'1234');
 select public.register_band_profile('Member','베이스','246810');
 select set_config('test.new.target',public.current_band_identity()->'member'->>'id',true);
 select is(public.band_home_context()->>'pending_votes','2','new member home has independent pending votes');
-select is(jsonb_array_length(public.band_home_context()->'upcoming_unavailable'),0,'home never includes another member dates');
+select is(jsonb_array_length(public.band_home_context()->'upcoming_available'),0,'home never includes another member dates');
 select is(public.band_home_context()->>'unset_skills','2','new member starts unassigned too');
 select throws_ok($$select public.transfer_leadership(current_setting('test.new.band')::uuid,current_setting('test.new.me')::uuid)$$,'P0001','FORBIDDEN','member cannot transfer leadership');
 select set_config('request.jwt.claim.sub','f1000000-0000-4000-8000-000000000001',true);
