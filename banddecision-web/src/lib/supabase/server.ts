@@ -26,8 +26,15 @@ export const createClient = cache(async function createClient() {
 });
 
 // Share only inside the current React server request. Never cache a verified user globally.
+// getClaims() verifies the session JWT signature: locally against the project's cached ES256 JWKS,
+// or via the Auth server when a symmetric secret is used. This removes a blocking Auth round trip
+// from every render. Band access is still re-checked in SQL: private.actor_id() requires an
+// unexpired PIN session row for the device, which logout/PIN change/credential rotation remove.
 export const getVerifiedAuthUser=cache(async(client:NonNullable<Awaited<ReturnType<typeof createClient>>>)=>{
- const{data:{user},error}=await client.auth.getUser();return error?null:user;
+ const{data,error}=await client.auth.getClaims();
+ const sub=data?.claims?.sub;
+ if(error||!sub)return null;
+ return {id:sub,is_anonymous:data.claims.is_anonymous===true};
 });
 
 // Resolve the PIN-verified canonical profile. Raw anonymous Auth IDs are device sessions only.
