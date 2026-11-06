@@ -6,10 +6,10 @@ import { setMemberSkillEnabledAction,setDirectBandEntryAction,changeMemberPinAct
 import { createClient } from '@/lib/supabase/server';
 
 type SettingsMember={id:string;user_id:string;profiles:{nickname:string}|{nickname:string}[]|null};
-export async function BandAccessSettings({ bandId, roster }: { bandId: string; roster?:SettingsMember[] }) {
+export async function BandAccessSettings({ bandId, roster, settingsResult }: { bandId: string; roster?:SettingsMember[]; settingsResult?:{data:unknown;error:unknown} }) {
   const db = await createClient();
   if (!db) return null;
-  const { data, error } = await db.rpc('band_login_settings');
+  const { data, error } = settingsResult??await db.rpc('band_login_settings');
   if (error) return <Card><CardTitle>간편 접속 설정을 불러오지 못했습니다</CardTitle><p className="mt-2 text-sm">새 인증 마이그레이션 적용 여부와 연결을 확인해 주세요.</p></Card>;
   const settings = data as { code: string | null; role: string; admin_unlocked: boolean; skill_enabled?:boolean;direct_entry_enabled?:boolean } | null;
   if (!settings) return null;

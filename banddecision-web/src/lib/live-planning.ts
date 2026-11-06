@@ -33,18 +33,8 @@ export function attendanceRecommendations(data:AttendancePlanning,today:string){
  const{endDate}=twoMonthWindow(today);
  return recommendDates({participants:data.members,unavailable:data.unavailable,submittedIds:data.members.map(m=>m.id),startDate:today,endDate,today});
 }
-export async function loadMemberCount(db:SupabaseClient,bandId:string):Promise<number>{
- const{count,error}=await db.from('band_members').select('id',{count:'exact',head:true}).eq('band_id',bandId).eq('status','active');
- if(error||typeof count!=='number')throw new Error('DATA_LOAD_FAILED');return count;
-}
-export type PlanSummary=Pick<SavedPlan,'id'|'rehearsal_date'|'location'|'memo'|'starts_at'|'ends_at'|'participant_count'|'attendee_count'>&{confirmed_plan_songs:{title_snapshot:string}[]};
-export async function loadPlanSummaries(db:SupabaseClient,bandId:string,today:string):Promise<PlanSummary[]>{
- const{data,error}=await db.from('confirmed_plans').select('id,rehearsal_date,location,memo,starts_at,ends_at,participant_count,attendee_count,confirmed_plan_songs(title_snapshot)').eq('band_id',bandId).gte('rehearsal_date',today).order('rehearsal_date').order('confirmed_at').order('id');
- if(error)throw new Error('DATA_LOAD_FAILED');return (data??[]) as PlanSummary[];
-}
-
-export const loadLivePlanning=cache(async(db:SupabaseClient,bandId:string)=>{
- const{data,error}=await db.rpc('band_planning_context');
+export const loadLivePlanning=cache(async(db:SupabaseClient,bandId:string,scope:'full'|'songs'='full',songId:number|null=null)=>{
+ const{data,error}=await (scope==='songs'?db.rpc('band_song_context',{p_song:songId}):db.rpc('band_planning_context'));
  const parsed=schema.safeParse(data);
  if(error||!parsed.success||parsed.data.band_id!==bandId)throw new Error('DATA_LOAD_FAILED');
  return parsed.data;
@@ -55,7 +45,7 @@ export function liveRecommendations(data:LivePlanning,today:string){
 }
 export type SavedPlan={id:string;version:number;rehearsal_date:string;location?:string|null;memo?:string|null;starts_at:string;ends_at:string;participant_count:number;attendee_count:number;confirmed_plan_members:{id:string;nickname_snapshot:string;part_snapshot:string;attending:boolean;reason_snapshot:string|null}[];confirmed_plan_songs:{id:string;source_song_id:number|null;title_snapshot:string;artist_snapshot:string;display_order:number}[]};
 export async function loadPlans(db:SupabaseClient,bandId:string):Promise<SavedPlan[]>{
- const{data,error}=await db.from('confirmed_plans').select('*,confirmed_plan_members(*),confirmed_plan_songs(*)').eq('band_id',bandId).order('rehearsal_date').order('confirmed_at').order('id');
+ const{data,error}=await db.from('confirmed_plans').select('id,version,rehearsal_date,location,memo,starts_at,ends_at,participant_count,attendee_count,confirmed_plan_members(id,nickname_snapshot,part_snapshot,attending,reason_snapshot),confirmed_plan_songs(id,source_song_id,title_snapshot,artist_snapshot,display_order)').eq('band_id',bandId).order('rehearsal_date').order('confirmed_at').order('id');
  if(error)throw new Error('DATA_LOAD_FAILED');
  return (data??[]) as SavedPlan[];
 }
@@ -63,6 +53,7 @@ export function seoulToday(){return new Date().toLocaleDateString('sv-SE',{timeZ
 
 export async function loadHomeContext(db:SupabaseClient){
  const{data,error}=await db.rpc('band_home_context');
- const parsed=z.object({skill_enabled:z.boolean().optional(),member_count:z.number().int().nonnegative(),pending_votes:z.number().int().nonnegative(),unset_skills:z.number().int().nonnegative(),my_skill:z.number().int().min(1).max(5).nullable(),upcoming_unavailable:z.array(z.iso.date())}).safeParse(data);
+ const nextPlan=z.object({id:z.string(),rehearsal_date:z.iso.date(),location:z.string().nullable(),memo:z.string().nullable(),starts_at:z.string(),ends_at:z.string(),participant_count:z.number().int().nonnegative(),attendee_count:z.number().int().nonnegative(),confirmed_plan_songs:z.array(z.object({title_snapshot:z.string()}))});
+ const parsed=z.object({upcoming_plan_count:z.number().int().nonnegative(),next_plan:nextPlan.nullable(),skill_enabled:z.boolean().optional(),member_count:z.number().int().nonnegative(),pending_votes:z.number().int().nonnegative(),unset_skills:z.number().int().nonnegative(),my_skill:z.number().int().min(1).max(5).nullable(),upcoming_unavailable:z.array(z.iso.date())}).safeParse(data);
  if(error||!parsed.success)throw new Error('DATA_LOAD_FAILED');return parsed.data;
 }

@@ -13,7 +13,7 @@ export default async function SongRecommendationsPage() {
   if (!user) return null;
   const { data: member } = await getActiveMember(db,user.id,user.bandContext);
   if (!member) return <Card><CardTitle>밴드 가입 후 이용할 수 있습니다</CardTitle></Card>;
-  const data=await loadLivePlanning(db,member.band_id);
+  const data=await loadLivePlanning(db,member.band_id,'songs');
   const ranked=recommendSongs(data.members,data.songs.filter(song=>!song.confirmedAt),data.skill_enabled===true);
   return (
     <div className="space-y-4">
