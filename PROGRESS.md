@@ -441,3 +441,9 @@ Final date-UI verification: 209 unit/component tests PASS; focused Chrome 84 che
 - First PC launch request was rejected because automatic approval review timed out before execution; one retry succeeded. No unresolved approval blocker. Initial unit run had2 old tests assuming default-visible difficulty; explicit ON setup restored those tests without removing their assertions. No reproducible application error remained in the exercised scope.
 - Limits: local disposable PGlite/RLS/RPC with simulated Auth/REST, real local Next server actions/cookies and Chrome; hosted Supabase/Auth/Realtime, physical phones/Safari and true multi-connection PostgreSQL concurrency remain unverified.
 - Deploy: apply202611050020_optional_song_difficulty.sql once AFTER019, then redeploy app. Both DB and application changes are required. Existing migrations should not be rerun.
+
+
+## 2026-11-06 로그인 안내 문구 정리
+- 프로필/PIN 로그인 화면에서 기기에 30일 동안 로그인을 유지한다는 안내 문장을 제거했습니다. 로그인 유지 기간 자체는 변경하지 않았습니다.
+- 하단 밴드 코드 접속 링크는 기존 코드·공용 비밀번호 로그인으로 이동하고, 접속 초기화는 현재 기기의 밴드 세션을 종료한 뒤 Auth 로그아웃하는 기존 동작임을 코드로 확인했습니다. 버튼은 유지했습니다.
+- 이번 변경은 문구만 수정했습니다. 추가 테스트는 실행하지 않았으며 SQL 변경은 없습니다.

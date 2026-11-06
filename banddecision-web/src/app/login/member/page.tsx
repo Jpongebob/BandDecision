@@ -19,7 +19,7 @@ export default async function MemberLoginPage({searchParams=Promise.resolve({})}
   const direct=!granted;const context=granted??await loadDefaultBandEntry(db);
   if(!context)redirect('/login?standard=1');
   return <main className="mx-auto min-h-screen max-w-3xl space-y-5 bg-[#f5f7fb] px-4 py-10">
-    <div><h1 className="text-2xl font-black">{context.band_name}</h1><p className="mt-2 text-sm text-slate-600">내 프로필을 선택하고 PIN을 입력하세요. 로그인은 이 기기에 30일 동안 유지됩니다.</p></div>
+    <div><h1 className="text-2xl font-black">{context.band_name}</h1><p className="mt-2 text-sm text-slate-600">내 프로필을 선택하고 PIN을 입력하세요.</p></div>
     <Card><CardTitle>기존 멤버</CardTitle>
       <ActionForm action={direct?directMemberPinLoginAction:memberPinLoginAction} submit="내 프로필로 로그인" className="mt-5">
         <label className="grid gap-1 text-sm font-semibold">내 프로필<select name="member" required defaultValue="" className="min-h-11 w-full rounded-xl border px-3"><option value="" disabled>프로필 선택</option>{context.profiles.map(member => <option key={member.id} value={member.id} disabled={!member.pin_ready}>{member.nickname} · {member.part}{member.role === 'leader' ? ' · 밴드장' : ''}{member.pin_ready ? '' : ' · PIN 설정 필요'}</option>)}</select></label>
