@@ -535,3 +535,10 @@ Final date-UI verification: 209 unit/component tests PASS; focused Chrome 84 che
 ### 2026-11-06 일정 달력 버튼 디자인 정리
 - 날짜 선택 방식은 한 묶음의 탭형 버튼, 월 전체 선택은 우측 소형 보조 버튼으로 정리. 날짜 칸 간격/높이를 통일하고 저장 날짜 글자 대비와 hover/focus 유지. 저장 전 선택/저장됨 범례 추가.
 - 타입 검사, 린트, diff 공백 검사 종료 코드 0. 브라우저 시각 확인/실기기 테스트 미수행. SQL 변경 없음.
+
+### 2026-11-06 서울 이전 도구 D드라이브 설치
+- 사용자 요청에 따라 Docker Desktop을 D:\Apps\Docker에 설치하고 WSL 가상디스크를 D:\DockerData에 생성. docker info로 Linux 엔진 29.9.2 실행 확인.
+- 공식 GitHub 릴리스 Supabase CLI 3.0.0을 D:\Apps\SupabaseCLI에 설치. 공식 체크섬과 SHA256 일치 확인 후 실행 버전 및 db dump --help 확인.
+- 공식 EDB PostgreSQL 17.11 바이너리를 D:\Apps\PostgreSQL17에 압축 해제. psql/pg_dump 버전 실행 확인, 서버 서비스는 생성하지 않음.
+- 위 실행 파일 경로를 기존 항목을 보존하여 사용자 PATH에 추가. 기존 터미널은 다시 열어야 새 PATH 반영.
+- SUPABASE_SEOUL_MIGRATION.md와 읽기 전용 seoul_migration_verify.sql 준비. 백업 폴더 .migration/를 Git 제외. 실제 DB 백업/복원, Supabase 프로젝트 생성, Vercel 전환은 수행하지 않음. 새 프로젝트와 DB 연결 정보가 다음 단계에 필요.

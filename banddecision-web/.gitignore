@@ -41,5 +41,8 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# Supabase region migration dumps may contain credentials and user data
+.migration/
+
 # Disposable browser QA profiles and screenshots
 /.qa-artifacts/
