@@ -3,7 +3,7 @@ import {createElement} from 'react';
 import {renderToStaticMarkup} from 'react-dom/server';
 vi.mock('@/lib/supabase/server',()=>({createClient:async()=>({}),getCurrentUser:async()=>({id:'u'})}));
 vi.mock('@/lib/band-context',()=>({getActiveMember:async()=>({data:{id:'m',band_id:'b'},error:null})}));
-vi.mock('@/lib/live-planning',()=>({loadLivePlanning:async()=>({members:[],songs:[{id:1,title:'Already voted',votes:[{memberId:'m',choice:'yes'}]},{id:2,title:'Only someone else voted',votes:[{memberId:'other',choice:'no'}]},{id:3,title:'Nobody voted',votes:[]},{id:4,title:'Confirmed without votes',confirmedAt:'2026-11-06',votes:[]}]})}));
+vi.mock('@/lib/live-planning',()=>({loadVerifiedPlanningPage:async()=>({member:{id:'m',band_id:'b',role:'member'},data:{members:[],songs:[{id:1,title:'Already voted',votes:[{memberId:'m',choice:'yes'}]},{id:2,title:'Only someone else voted',votes:[{memberId:'other',choice:'no'}]},{id:3,title:'Nobody voted',votes:[]},{id:4,title:'Confirmed without votes',confirmedAt:'2026-11-06',votes:[]}]}})}));
 vi.mock('@/components/song-list',()=>({SongList:({songs}:{songs:{title:string}[]})=>createElement('div',null,songs.map(s=>createElement('span',{key:s.title},s.title)))}));
 import SongsPage from '../src/app/(protected)/songs/page';
 it('home unvoted link excludes own votes but retains songs voted by someone else',async()=>{const html=renderToStaticMarkup(await SongsPage({searchParams:Promise.resolve({view:'unvoted'})}));expect(html).not.toContain('Already voted');expect(html).toContain('Only someone else voted');expect(html).toContain('Nobody voted');expect(html).toContain('2개');expect(html).not.toContain('Confirmed without votes');});

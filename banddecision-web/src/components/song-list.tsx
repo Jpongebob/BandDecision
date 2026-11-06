@@ -54,7 +54,7 @@ export function SongList({
         return (
           <Card key={song.id} data-song-id={song.id} className="p-3 sm:p-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
-              <div><Link href={`/songs/${song.id}`} className="break-all text-base font-bold hover:text-blue-700">{song.title}</Link>{song.confirmedAt&&<span className="ml-2 text-xs font-semibold text-emerald-700">확정곡</span>}<p className="text-sm text-slate-500">{song.artist}</p></div>
+              <div>{detailed?<h1 className="break-all text-base font-bold">{song.title}</h1>:<Link href={`/songs/${song.id}`} className="break-all text-base font-bold hover:text-blue-700">{song.title}</Link>}{song.confirmedAt&&<span className="ml-2 text-xs font-semibold text-emerald-700">확정곡</span>}<p className="text-sm text-slate-500">{song.artist}</p></div>
               {!song.confirmedAt&&<Badge>찬성 {yes} · 반대 {no} · 미응답 {Math.max(0, participants.length - yes - no)}</Badge>}
             </div>
 

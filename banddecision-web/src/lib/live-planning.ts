@@ -1,7 +1,7 @@
+import {cache} from 'react';
 import {twoMonthWindow} from '@/lib/calendar-window';
 import {getCurrentUser,getVerifiedAuthUser} from '@/lib/supabase/server';
 import {getActiveMember} from '@/lib/band-context';
-import { cache } from 'react';
 import { z } from 'zod';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { recommendDates, recommendSongs } from '@/services/recommendations';
@@ -11,20 +11,28 @@ export type LivePlanning=z.infer<typeof schema>;
 const attendanceSchema=schema.omit({songs:true});
 export type AttendancePlanning=z.infer<typeof attendanceSchema>;
 type VerifiedPlanningPage<T>={user:NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>;member:NonNullable<Awaited<ReturnType<typeof getActiveMember>>['data']>;data:T;plans?:SavedPlan[]};
-export function loadVerifiedPlanningPage(db:SupabaseClient,kind?:'full',includePlans?:boolean):Promise<VerifiedPlanningPage<LivePlanning>|null>;
+export function loadVerifiedPlanningPage(db:SupabaseClient,kind:'songs',includePlans?:false,songId?:number):Promise<VerifiedPlanningPage<LivePlanning>|null>;
+export function loadVerifiedPlanningPage(db:SupabaseClient,kind:'full',includePlans:true):Promise<VerifiedPlanningPage<LivePlanning|null>|null>;
+export function loadVerifiedPlanningPage(db:SupabaseClient,kind?:'full',includePlans?:false):Promise<VerifiedPlanningPage<LivePlanning>|null>;
 export function loadVerifiedPlanningPage(db:SupabaseClient,kind:'attendance',includePlans?:boolean):Promise<VerifiedPlanningPage<AttendancePlanning>|null>;
-export async function loadVerifiedPlanningPage(db:SupabaseClient,kind:'attendance'|'full'='full',includePlans=false):Promise<VerifiedPlanningPage<LivePlanning|AttendancePlanning>|null>{
- // Start independent planning data alongside canonical identity only AFTER verified Auth.
+export async function loadVerifiedPlanningPage(db:SupabaseClient,kind:'attendance'|'full'|'songs'='full',includePlans=false,songId:number|null=null):Promise<VerifiedPlanningPage<LivePlanning|AttendancePlanning|null>|null>{
  const verified=await getVerifiedAuthUser(db);if(!verified)return null;
- const contextPromise=(async()=>{
+ const membershipPromise=(async()=>{
   const user=await getCurrentUser(db);if(!user)return null;
   const{data:member,error}=await getActiveMember(db,user.id,user.bandContext);
   if(error)throw new Error('DATA_LOAD_FAILED');if(!member)return null;
-  const plans=includePlans?await loadPlans(db,member.band_id):undefined;
-  return {user,member,plans};
+  return {user,member};
  })();
- const[context,result]=await Promise.all([contextPromise,db.rpc(kind==='attendance'?'band_attendance_context':'band_planning_context')]);
+ const contextPromise=membershipPromise.then(async context=>context?{...context,plans:includePlans?await loadPlans(db,context.member.band_id):undefined}:null);
+ const planningRequest=()=>kind==='songs'?db.rpc('band_song_context',{p_song:songId}):db.rpc(kind==='attendance'?'band_attendance_context':'band_planning_context');
+ // Members only read confirmed snapshots: do not load all votes, dates and difficulties.
+ const planningPromise=includePlans&&kind==='full'
+  ?membershipPromise.then(context=>context?.member.role==='leader'?planningRequest():null)
+  :planningRequest();
+ const[context,result]=await Promise.all([contextPromise,planningPromise]);
  if(!context)return null;
+ if(includePlans&&kind==='full'&&context.member.role!=='leader')return {...context,data:null};
+ if(!result)throw new Error('DATA_LOAD_FAILED');
  const parsed=(kind==='attendance'?attendanceSchema:schema).safeParse(result.data);
  if(result.error||!parsed.success||parsed.data.band_id!==context.member.band_id)throw new Error('DATA_LOAD_FAILED');
  return {...context,data:parsed.data};
@@ -33,6 +41,7 @@ export function attendanceRecommendations(data:AttendancePlanning,today:string){
  const{endDate}=twoMonthWindow(today);
  return recommendDates({participants:data.members,unavailable:data.unavailable,submittedIds:data.members.map(m=>m.id),startDate:today,endDate,today});
 }
+// Compatibility for existing callers; current pages use verified parallel loaders.
 export const loadLivePlanning=cache(async(db:SupabaseClient,bandId:string,scope:'full'|'songs'='full',songId:number|null=null)=>{
  const{data,error}=await (scope==='songs'?db.rpc('band_song_context',{p_song:songId}):db.rpc('band_planning_context'));
  const parsed=schema.safeParse(data);
