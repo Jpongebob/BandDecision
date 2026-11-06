@@ -4,9 +4,9 @@ import {getCurrentUser,getVerifiedAuthUser} from '@/lib/supabase/server';
 import {getActiveMember} from '@/lib/band-context';
 import { z } from 'zod';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { recommendDates, recommendSongs } from '@/services/recommendations';
+import { recommendAvailableDates, recommendSongs } from '@/services/recommendations';
 const participant=z.object({id:z.string(),userId:z.string(),nickname:z.string(),part:z.string(),partKey:z.string(),skill:z.number().int().min(1).max(5).nullable()});
-const schema=z.object({band_id:z.string(),version:z.number().int().nonnegative(),skill_enabled:z.boolean().optional(),members:z.array(participant),unavailable:z.array(z.object({memberId:z.string(),date:z.iso.date(),reason:z.string()})),songs:z.array(z.object({id:z.number().int().positive(),title:z.string(),artist:z.string(),confirmedAt:z.string().nullable().optional(),difficulties:z.record(z.string(),z.number()),difficultyMeta:z.record(z.string(),z.object({version:z.number().int().positive(),updatedAt:z.string(),updatedBy:z.string().nullable()})),votes:z.array(z.object({memberId:z.string(),choice:z.enum(['yes','no']),reason:z.string().nullable()}))}))});
+const schema=z.object({band_id:z.string(),version:z.number().int().nonnegative(),skill_enabled:z.boolean().optional(),members:z.array(participant),available:z.array(z.object({memberId:z.string(),date:z.iso.date()})),songs:z.array(z.object({id:z.number().int().positive(),title:z.string(),artist:z.string(),confirmedAt:z.string().nullable().optional(),difficulties:z.record(z.string(),z.number()),difficultyMeta:z.record(z.string(),z.object({version:z.number().int().positive(),updatedAt:z.string(),updatedBy:z.string().nullable()})),votes:z.array(z.object({memberId:z.string(),choice:z.enum(['yes','no']),reason:z.string().nullable()}))}))});
 export type LivePlanning=z.infer<typeof schema>;
 const attendanceSchema=schema.omit({songs:true});
 export type AttendancePlanning=z.infer<typeof attendanceSchema>;
@@ -39,7 +39,7 @@ export async function loadVerifiedPlanningPage(db:SupabaseClient,kind:'attendanc
 }
 export function attendanceRecommendations(data:AttendancePlanning,today:string){
  const{endDate}=twoMonthWindow(today);
- return recommendDates({participants:data.members,unavailable:data.unavailable,submittedIds:data.members.map(m=>m.id),startDate:today,endDate,today});
+ return recommendAvailableDates({participants:data.members,available:data.available,startDate:today,endDate,today});
 }
 // Compatibility for existing callers; current pages use verified parallel loaders.
 export const loadLivePlanning=cache(async(db:SupabaseClient,bandId:string,scope:'full'|'songs'='full',songId:number|null=null)=>{
@@ -50,7 +50,7 @@ export const loadLivePlanning=cache(async(db:SupabaseClient,bandId:string,scope:
 });
 export function liveRecommendations(data:LivePlanning,today:string){
  const{endDate}=twoMonthWindow(today);
- return {dates:recommendDates({participants:data.members,unavailable:data.unavailable,submittedIds:data.members.map(m=>m.id),startDate:today,endDate,today}),songs:recommendSongs(data.members,data.songs,data.skill_enabled===true)};
+ return {dates:recommendAvailableDates({participants:data.members,available:data.available,startDate:today,endDate,today}),songs:recommendSongs(data.members,data.songs,data.skill_enabled===true)};
 }
 export type SavedPlan={id:string;version:number;rehearsal_date:string;location?:string|null;memo?:string|null;starts_at:string;ends_at:string;participant_count:number;attendee_count:number;confirmed_plan_members:{id:string;nickname_snapshot:string;part_snapshot:string;attending:boolean;reason_snapshot:string|null}[];confirmed_plan_songs:{id:string;source_song_id:number|null;title_snapshot:string;artist_snapshot:string;display_order:number}[]};
 export async function loadPlans(db:SupabaseClient,bandId:string):Promise<SavedPlan[]>{
@@ -63,6 +63,6 @@ export function seoulToday(){return new Date().toLocaleDateString('sv-SE',{timeZ
 export async function loadHomeContext(db:SupabaseClient){
  const{data,error}=await db.rpc('band_home_context');
  const nextPlan=z.object({id:z.string(),rehearsal_date:z.iso.date(),location:z.string().nullable(),memo:z.string().nullable(),starts_at:z.string(),ends_at:z.string(),participant_count:z.number().int().nonnegative(),attendee_count:z.number().int().nonnegative(),confirmed_plan_songs:z.array(z.object({title_snapshot:z.string()}))});
- const parsed=z.object({upcoming_plan_count:z.number().int().nonnegative(),next_plan:nextPlan.nullable(),skill_enabled:z.boolean().optional(),member_count:z.number().int().nonnegative(),pending_votes:z.number().int().nonnegative(),unset_skills:z.number().int().nonnegative(),my_skill:z.number().int().min(1).max(5).nullable(),upcoming_unavailable:z.array(z.iso.date())}).safeParse(data);
+ const parsed=z.object({upcoming_plan_count:z.number().int().nonnegative(),next_plan:nextPlan.nullable(),skill_enabled:z.boolean().optional(),member_count:z.number().int().nonnegative(),pending_votes:z.number().int().nonnegative(),unset_skills:z.number().int().nonnegative(),my_skill:z.number().int().min(1).max(5).nullable(),upcoming_available:z.array(z.iso.date())}).safeParse(data);
  if(error||!parsed.success)throw new Error('DATA_LOAD_FAILED');return parsed.data;
 }

@@ -11,7 +11,7 @@ const song={id:1,title:'Chosen song',artist:'Artist',confirmedAt:'2026-11-06T00:
 describe('confirmed repertoire UI',()=>{
  it('offers explicitly confirmed songs without broadening candidate eligibility',()=>{
  const songs=[song,{...song,id:2,title:'Unconfirmed song',confirmedAt:null}];
- const html=renderToStaticMarkup(<ConfirmPlanForm today="2026-11-06" data={{band_id:'b',version:1,members,unavailable:[],songs}} songs={recommendSongs(members,songs)}/>);
+ const html=renderToStaticMarkup(<ConfirmPlanForm today="2026-11-06" data={{band_id:'b',version:1,members,available:[],songs}} songs={recommendSongs(members,songs)}/>);
  expect(html).toContain('Chosen song');expect(html).not.toContain('Unconfirmed song');expect(html).toContain('확정곡');
  });
  it('shows confirm/remove controls only for leader',()=>{

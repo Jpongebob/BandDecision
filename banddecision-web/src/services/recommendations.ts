@@ -3,6 +3,19 @@ export type Unavailable={memberId:string;date:string;reason:string};
 export type DateRecommendation={date:string;attendanceCount:number;attendees:Participant[];absentees:(Participant&{reason:string})[]};
 export type DateRecommendInput={participants:Participant[];unavailable:Unavailable[];submittedIds:string[];startDate:string;endDate:string;today:string};
 export function recommendDates(input:DateRecommendInput):DateRecommendation[]{const{participants,unavailable,submittedIds,startDate,endDate,today}=input;if(!participants.length||participants.some(p=>!submittedIds.includes(p.id)))return[];const byDate=new Map<string,Map<string,string>>();for(const u of unavailable){const map=byDate.get(u.date)??new Map<string,string>();map.set(u.memberId,u.reason);byDate.set(u.date,map);}const start=startDate>today?startDate:today,from=Date.parse(`${start}T00:00:00Z`),to=Date.parse(`${endDate}T00:00:00Z`),out:DateRecommendation[]=[];for(let ms=from;ms<=to;ms+=86400000){const date=new Date(ms).toISOString().slice(0,10),absent=byDate.get(date)??new Map<string,string>(),absentees=participants.filter(p=>absent.has(p.id)).map(p=>({...p,reason:absent.get(p.id)!})),attendees=participants.filter(p=>!absent.has(p.id));if(attendees.length)out.push({date,attendanceCount:attendees.length,attendees,absentees});}return out.sort((a,b)=>b.attendanceCount-a.attendanceCount||a.date.localeCompare(b.date));}
+export type AvailableDate={memberId:string;date:string};
+export function recommendAvailableDates({participants,available,startDate,endDate,today}:{participants:Participant[];available:AvailableDate[];startDate:string;endDate:string;today:string}):DateRecommendation[]{
+ if(!participants.length)return [];
+ const active=new Set(participants.map(p=>p.id)),byDate=new Map<string,Set<string>>();
+ for(const row of available){if(!active.has(row.memberId))continue;const ids=byDate.get(row.date)??new Set<string>();ids.add(row.memberId);byDate.set(row.date,ids);}
+ const out:DateRecommendation[]=[];
+ for(let ms=Date.parse((startDate>today?startDate:today)+'T00:00:00Z'),last=Date.parse(endDate+'T00:00:00Z');ms<=last;ms+=86400000){
+  const date=new Date(ms).toISOString().slice(0,10),ids=byDate.get(date);if(!ids?.size)continue;
+  const attendees=participants.filter(p=>ids.has(p.id)),absentees=participants.filter(p=>!ids.has(p.id)).map(p=>({...p,reason:''}));
+  out.push({date,attendanceCount:attendees.length,attendees,absentees});
+ }
+ return out.sort((a,b)=>b.attendanceCount-a.attendanceCount||a.date.localeCompare(b.date));
+}
 export type DifficultyMeta={version:number;updatedAt:string;updatedBy:string|null};
 export type SongInput={id:number;title:string;artist:string;confirmedAt?:string|null;difficulties:Record<string,number>;difficultyMeta?:Record<string,DifficultyMeta>;votes:{memberId:string;choice:'yes'|'no';reason?:string|null}[]};
 export type SongRanking=SongInput&{status:'eligible'|'waiting_votes'|'insufficient_agree'|'difficulty_pending'|'skill_pending';yesCount:number;noCount:number;pendingCount:number;burden:number|null;score:number|null;requiredYes:number};

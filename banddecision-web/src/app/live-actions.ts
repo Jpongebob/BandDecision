@@ -4,11 +4,11 @@ import {redirect} from 'next/navigation';
 import {z} from 'zod';
 import {createClient} from '@/lib/supabase/server';
 import type {FormState} from '@/app/actions';
-const date=z.iso.date(),reason=z.string().trim().max(200).optional();
+const date=z.iso.date();
 const text=(f:FormData,k:string)=>String(f.get(k)??'');
 function failure(message:string):FormState{
  const code=message.match(/[A-Z_]{4,}/)?.[0]??'';
- const messages:Record<string,string>={FORBIDDEN:'이 작업을 수행할 권한이 없습니다.',INVALID_INPUT:'입력 내용을 확인해 주세요.',DATE_ALREADY_SAVED:'이미 저장된 날짜입니다. 저장된 목록에서 수정하세요.',DATE_NOT_FOUND:'이미 삭제된 날짜입니다. 새로고침 후 확인하세요.',PLANNING_STALE:'멤버·일정·투표가 바뀌었습니다. 최신 내용을 확인하고 다시 저장하세요.',PLAN_STALE:'다른 창에서 계획을 수정했습니다. 새로고침 후 확인하세요.',PLAN_NOT_FOUND:'이미 삭제되었거나 찾을 수 없는 계획입니다.',PLAN_LIMIT_REACHED:'예정된 계획은 최대 5개입니다. 예정 계획을 수정하거나 삭제한 뒤 추가하세요.',PARTIAL_ACK_REQUIRED:'불참 멤버를 확인하고 부분 참석에 동의해 주세요.',NO_ATTENDEES:'참석 가능한 멤버가 없습니다.',NO_MEMBERS:'활성 멤버가 없습니다.',SONG_NOT_ELIGIBLE:'추가하려는 곡의 투표·난이도 조건이 바뀌었습니다. 날짜만 먼저 저장할 수도 있습니다.',DATE_OUT_OF_RANGE:'지난 날짜로 새 계획을 만들 수 없습니다.',DUPLICATE_CONFLICT:'같은 날짜를 중복으로 입력하지 마세요.'};
+ const messages:Record<string,string>={FORBIDDEN:'이 작업을 수행할 권한이 없습니다.',INVALID_INPUT:'입력 내용을 확인해 주세요.',DATE_ALREADY_SAVED:'이미 저장된 날짜입니다. 저장된 목록에서 수정하세요.',DATE_NOT_FOUND:'이미 삭제된 날짜입니다. 새로고침 후 확인하세요.',PLANNING_STALE:'멤버·일정·투표가 바뀌었습니다. 최신 내용을 확인하고 다시 저장하세요.',PLAN_STALE:'다른 창에서 계획을 수정했습니다. 새로고침 후 확인하세요.',PLAN_NOT_FOUND:'이미 삭제되었거나 찾을 수 없는 계획입니다.',PLAN_LIMIT_REACHED:'예정된 계획은 최대 5개입니다. 예정 계획을 수정하거나 삭제한 뒤 추가하세요.',PARTIAL_ACK_REQUIRED:'참석 제외 멤버를 확인하고 부분 참석에 동의해 주세요.',NO_ATTENDEES:'참석 가능한 멤버가 없습니다.',NO_MEMBERS:'활성 멤버가 없습니다.',SONG_NOT_ELIGIBLE:'추가하려는 곡의 투표·난이도 조건이 바뀌었습니다. 날짜만 먼저 저장할 수도 있습니다.',DATE_OUT_OF_RANGE:'지난 날짜로 새 계획을 만들 수 없습니다.',DUPLICATE_CONFLICT:'같은 날짜를 중복으로 입력하지 마세요.'};
  return{error:messages[code]??'저장하지 못했습니다. 연결 상태를 확인하고 다시 시도하세요.'};
 }
 async function execute(name:string,args:Record<string,unknown>,success:string):Promise<FormState>{
@@ -18,18 +18,18 @@ async function execute(name:string,args:Record<string,unknown>,success:string):P
 }
 export async function addAvailabilityAction(_:FormState,form:FormData):Promise<FormState>{
  let raw:unknown;try{raw=JSON.parse(text(form,'dates_json'));}catch{return{error:'날짜 목록을 확인하세요.'};}
- const parsed=z.array(z.object({date,reason})).min(1).max(366).safeParse(raw);
+ const parsed=z.array(z.object({date})).min(1).max(366).safeParse(raw);
  if(!parsed.success)return{error:'날짜를 선택하세요.'};
- return execute('save_band_unavailability',{p_dates:parsed.data},'날짜를 저장했습니다.');
+ return execute('save_band_availability',{p_dates:parsed.data},'날짜를 저장했습니다.');
 }
 export async function editAvailabilityAction(_:FormState,form:FormData):Promise<FormState>{
- const parsed=z.object({old:date,next:date,reason}).safeParse({old:text(form,'old_date'),next:text(form,'date'),reason:form.has('reason')?text(form,'reason'):undefined});
+ const parsed=z.object({old:date,next:date}).safeParse({old:text(form,'old_date'),next:text(form,'date')});
  if(!parsed.success)return{error:'수정할 날짜를 확인하세요.'};
- return execute('update_band_unavailability',{p_date:parsed.data.old,p_new_date:parsed.data.next,...(parsed.data.reason!==undefined?{p_reason:parsed.data.reason}:{})},'날짜를 수정했습니다.');
+ return execute('update_band_availability',{p_date:parsed.data.old,p_new_date:parsed.data.next},'날짜를 수정했습니다.');
 }
 export async function deleteAvailabilityAction(_:FormState,form:FormData):Promise<FormState>{
  const parsed=date.safeParse(text(form,'date'));if(!parsed.success)return{error:'삭제할 날짜를 확인하세요.'};
- return execute('delete_band_unavailability',{p_date:parsed.data},'날짜를 삭제했습니다.');
+ return execute('delete_band_availability',{p_date:parsed.data},'날짜를 삭제했습니다.');
 }
 export async function liveVoteAction(_:FormState,form:FormData):Promise<FormState>{
  const parsed=z.object({song:z.coerce.number().int().positive(),choice:z.enum(['yes','no']),reason:z.string().trim().max(300)}).safeParse({song:text(form,'song_id'),choice:text(form,'choice'),reason:text(form,'reason')});

@@ -4,7 +4,7 @@ const state=vi.hoisted(()=>({verify:vi.fn(),identity:vi.fn()}));
 vi.mock('@/lib/supabase/server',()=>({getVerifiedAuthUser:state.verify,getCurrentUser:state.identity}));
 vi.mock('@/lib/band-context',()=>({getActiveMember:async()=>({data:{id:'m',band_id:'b',role:'leader'},error:null})}));
 import {loadVerifiedPlanningPage} from '../src/lib/live-planning';
-const data={band_id:'b',version:1,members:[],unavailable:[]};
+const data={band_id:'b',version:1,members:[],available:[]};
 it('does not issue private RPCs before Auth verification completes',async()=>{
  let resolve!:(v:unknown)=>void;state.verify.mockReturnValue(new Promise(r=>{resolve=r;}));state.identity.mockResolvedValue({id:'u'});
  const rpc=vi.fn(async()=>({data,error:null}));const task=loadVerifiedPlanningPage({rpc} as unknown as SupabaseClient,'attendance');
