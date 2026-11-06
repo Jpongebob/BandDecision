@@ -16,7 +16,7 @@ export default async function Dashboard(){
  const context=await getBandContext(db,user.id,user.bandContext);if(context.status==='error')return <BandLoadError code={context.code}/>;
  if(context.status!=='ready')return <Card><CardTitle>우리 밴드로 시작하세요</CardTitle><Link href="/bands/new"><Button className="mt-4">밴드 만들기</Button></Link></Card>;
  const home=await homePromise,[nextPlan,...laterPlans]=home.upcoming_plans,leader=context.member.role==='leader';
- return <div className="space-y-5"><div><p className="text-sm font-semibold text-blue-700">반가워요, {user.nickname}</p><h1 className="mt-1 text-3xl font-black">{context.band.name}</h1><p className="mt-2 text-sm text-slate-500">멤버 {home.member_count}명 · 예정된 합주 {home.upcoming_plan_count}/5개</p><Badge>{leader?'밴드장':'멤버'}</Badge></div>
+ return <div className="space-y-5"><div><p className="text-sm font-semibold text-blue-700">반가워요, {user.nickname}</p><h1 className="mt-1 text-3xl font-black">{context.band.name}</h1><p className="mt-2 text-sm text-slate-500">멤버 {home.member_count}명 · 예정된 합주 {home.upcoming_plan_count}/5개</p>{leader&&<Badge>밴드장</Badge>}</div>
  <Card><CardTitle>다가오는 합주</CardTitle>{nextPlan?<>
  <div className="mt-3 flex flex-col gap-1 sm:flex-row sm:items-baseline sm:gap-3"><p className="text-xl font-bold"><time dateTime={nextPlan.rehearsal_date}>{nextPlan.rehearsal_date} ({weekday(nextPlan.rehearsal_date)})</time></p><p className="text-base font-semibold text-slate-600">{nextPlan.starts_at.slice(0,5)}–{nextPlan.ends_at.slice(0,5)}</p></div>
  {nextPlan.location&&<p className="mt-2 break-words text-sm font-semibold">장소: {nextPlan.location}</p>}<p className="mt-2 text-sm">참석 {nextPlan.attendee_count}/{nextPlan.participant_count}명</p><PlanMemo memo={nextPlan.memo} compact/>
