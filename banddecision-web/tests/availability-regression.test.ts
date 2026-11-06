@@ -22,22 +22,22 @@ it('limits month navigation to this month and next month',()=>{const view=render
 
 it('shows current active attendance and previews own additions without double-counting',()=>{
  const view=render(createElement(AvailabilityForm,{...props,available:[...props.available,{memberId:'other',date:'2026-11-06'},{memberId:'other',date:'2026-11-06'},{memberId:'left-member',date:'2026-11-06'}]}));
- expect(screen.getByRole('button',{name:'2026-11-06 · 참석 가능 1명 · 참석 제외 1명'})).toBeTruthy();
- fireEvent.click(screen.getByRole('button',{name:'2026-11-06 · 참석 가능 1명 · 참석 제외 1명'}));
+ expect(screen.getByRole('button',{name:'2026-11-06 · 참석 가능 1명 · 참석 제외 1명 · 미등록 · 내 참석 제외'})).toBeTruthy();
+ fireEvent.click(screen.getByRole('button',{name:'2026-11-06 · 참석 가능 1명 · 참석 제외 1명 · 미등록 · 내 참석 제외'}));
  expect(screen.getByRole('button',{name:'2026-11-06 · 참석 가능 2명 · 참석 제외 0명 · 선택 중'})).toBeTruthy();
  // A zero-attendance day remains selectable for unavailability, unlike plan confirmation.
  fireEvent.click(screen.getByRole('button',{name:'2026-11-06 · 참석 가능 2명 · 참석 제외 0명 · 선택 중'}));
- expect(screen.getByRole('button',{name:'2026-11-06 · 참석 가능 1명 · 참석 제외 1명'})).toBeTruthy();
- fireEvent.click(screen.getByRole('button',{name:'2026-11-08 · 참석 가능 1명 · 참석 제외 1명 · 저장됨'}));
+ expect(screen.getByRole('button',{name:'2026-11-06 · 참석 가능 1명 · 참석 제외 1명 · 미등록 · 내 참석 제외'})).toBeTruthy();
+ fireEvent.click(screen.getByRole('button',{name:'2026-11-08 · 참석 가능 1명 · 참석 제외 1명 · 저장됨 · 내 가능 날짜'}));
  expect(draft(view)).toEqual([]);
- expect(screen.getByRole('button',{name:'2026-11-08 · 참석 가능 1명 · 참석 제외 1명 · 저장됨'})).toBeTruthy();
+ expect(screen.getByRole('button',{name:'2026-11-08 · 참석 가능 1명 · 참석 제외 1명 · 저장됨 · 내 가능 날짜'})).toBeTruthy();
  expect(view.container.querySelector('[name=reason]')).toBeNull();
 });
-it('updates attendance when refreshed members or dates arrive',()=>{const view=render(createElement(AvailabilityForm,props));view.rerender(createElement(AvailabilityForm,{...props,members:[...props.members,{id:'new',nickname:'New name',part:'보컬'}],available:[...props.available,{memberId:'new',date:'2026-11-10'}]}));expect(screen.getByRole('button',{name:'2026-11-10 · 참석 가능 1명 · 참석 제외 2명'})).toBeTruthy();});
+it('updates attendance when refreshed members or dates arrive',()=>{const view=render(createElement(AvailabilityForm,props));view.rerender(createElement(AvailabilityForm,{...props,members:[...props.members,{id:'new',nickname:'New name',part:'보컬'}],available:[...props.available,{memberId:'new',date:'2026-11-10'}]}));expect(screen.getByRole('button',{name:'2026-11-10 · 참석 가능 1명 · 참석 제외 2명 · 미등록 · 내 참석 제외'})).toBeTruthy();});
 
 it('shows who attends and is absent, including unsaved own selection changes',()=>{
  const view=render(createElement(AvailabilityForm,{...props,available:[...props.available,{memberId:'other',date:'2026-11-06'}]}));
- fireEvent.click(screen.getByRole('button',{name:'2026-11-06 · 참석 가능 1명 · 참석 제외 1명'}));
+ fireEvent.click(screen.getByRole('button',{name:'2026-11-06 · 참석 가능 1명 · 참석 제외 1명 · 미등록 · 내 참석 제외'}));
  const panel=screen.getByRole('region',{name:'날짜별 참석 명단'});
  expect(panel.textContent).toContain('참석 가능 2명');expect(panel.textContent).toContain('My name (나)');expect(panel.textContent).toContain('Other name');
  fireEvent.click(screen.getByRole('button',{name:'2026-11-06 · 참석 가능 2명 · 참석 제외 0명 · 선택 중'}));expect(panel.textContent).toContain('참석 가능 1명');expect(panel.textContent).toContain('참석 제외 1명');expect(view.container.querySelector('[name=reason]')).toBeNull();
