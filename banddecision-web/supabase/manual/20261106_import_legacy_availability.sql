@@ -1,6 +1,6 @@
 -- 운영자 일회성 SQL: 023 적용 후 Supabase SQL Editor에서 실행.
 -- 대상: 아래 밴드와 첨부 데이터에 포함된 활성 멤버 4명만.
--- 실행일(한국 시간)부터 2026-12-31까지 기존 불가능 날짜를 제외하고 등록.
+-- 실행일(한국 시간)부터 멤버별 첨부 기록의 마지막 불가능 날짜까지만 등록 (최대 2026-12-31).
 -- 가능한 날짜를 하나라도 새로 저장한 멤버는 전체 제외하여 본인 입력 보존.
 -- 기존 불가능 날짜, 다른 밴드, 확정 계획은 변경하지 않음.
 begin;
@@ -65,7 +65,7 @@ with legacy(member_id,unavailable_date) as (values
  from targets t
  cross join generate_series(
   ((now() at time zone 'Asia/Seoul')::date)::timestamp,
-  DATE '2026-12-31'::timestamp,interval '1 day') g(day)
+  least(DATE '2026-12-31',(select max(l.unavailable_date) from legacy l where l.member_id=t.id))::timestamp,interval '1 day') g(day)
  where not t.already_registered
  and not exists(select 1 from legacy l where l.member_id=t.id and l.unavailable_date=g.day::date)
  -- 첨부 이후 추가된 기존 불가능 날짜도 제외.
