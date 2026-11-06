@@ -43,6 +43,7 @@ next-env.d.ts
 
 # Supabase region migration dumps may contain credentials and user data
 .migration/
+supabase/.temp/
 
 # Disposable browser QA profiles and screenshots
 /.qa-artifacts/

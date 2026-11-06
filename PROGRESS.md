@@ -542,3 +542,14 @@ Final date-UI verification: 209 unit/component tests PASS; focused Chrome 84 che
 - 공식 EDB PostgreSQL 17.11 바이너리를 D:\Apps\PostgreSQL17에 압축 해제. psql/pg_dump 버전 실행 확인, 서버 서비스는 생성하지 않음.
 - 위 실행 파일 경로를 기존 항목을 보존하여 사용자 PATH에 추가. 기존 터미널은 다시 열어야 새 PATH 반영.
 - SUPABASE_SEOUL_MIGRATION.md와 읽기 전용 seoul_migration_verify.sql 준비. 백업 폴더 .migration/를 Git 제외. 실제 DB 백업/복원, Supabase 프로젝트 생성, Vercel 전환은 수행하지 않음. 새 프로젝트와 DB 연결 정보가 다음 단계에 필요.
+
+### 2026-11-06 서울 Supabase 실제 복원
+- 사용자 제공 프로젝트와 Windows DPAPI 연결 정보를 사용해 기존 뭄바이 ejodiyhxkftgoaryfzrq를 읽기 전용 백업하고 빈 서울 wxtwuyexsjqxpqnxeheq에 복원. 버전은 양측 PostgreSQL 17.11, Vault 비밀/Storage 객체 0 확인.
+- Auth 데이터, public/private 데이터, private.handle_new_user를 호출하는 auth.users 트리거, Realtime 설정 포함. 역할/스키마/데이터와 원본 지문을 Git 제외 .migration/seoul에 저장.
+- 첫 복원은 이미 등록된 Realtime 테이블 중복 오류로 트랜잭션 롤백. 중복 등록을 건너뛰는 SQL로 수정 후 재복원 성공.
+- 새 프로젝트의 추가 기본 테이블 권한(anon/authenticated의 Dxtm)을 발견해 대상 DB에만 원본 ACL을 재적용하고 기본 권한도 일치시킴.
+- 앱 25개 테이블 + Auth users/identities 행 수와 전체 내용 해시 일치. 사용자36, 활성멤버6, 곡7, 가능날짜101, 계획2, 고아 연결0. 함수73/RLS정책21/테이블권한25/트리거12/Realtime10/기본권한3의 해시 일치.
+- vercel.json의 함수 리전을 icn1으로 준비. 아직 commit/push/배포/Production 환경변수 전환 없음. 서울 Auth 익명 로그인 설정/API키/Vercel 전환 및 실제 웹 로그인 검증은 다음 단계.
+- 서울 DB 읽기 전용 역할 검증: anon 공개 입장 명단6, anon 일정 쓰기 권한없음, PIN 세션없는 authenticated의 private planning context NULL 확인. PowerShell 구문/리전JSON/diff 공백 검사 완료. CLI가 생성한 supabase/.temp도 Git 제외.
+- 서울 publishable key로 실제 HTTP Auth 설정/공개 입장 RPC/JWKS 확인. 익명 로그인 활성화와 ES256 서명 확인. 임시 익명 계정 SDK signup/getClaims 통과, PIN 미검증 planning/identity NULL 확인 후 표식+UUID가 일치하는 임시 Auth 계정 1개만 정리. 기존/서울 데이터 지문 재비교 통과.
+- 서울 URL/공개 키를 Git 제외 .env.local에 설정. 타입/린트/프로덕션 빌드 모두 통과(19개 경로). Vercel 연결 인증 부재로 실제 배포/환경변수 수정은 실행하지 않음. 소유자 Vercel 설정 교체 후 Preview/PIN 검증과 Production 전환이 남음.
