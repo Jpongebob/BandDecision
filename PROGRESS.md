@@ -447,3 +447,20 @@ Final date-UI verification: 209 unit/component tests PASS; focused Chrome 84 che
 - 프로필/PIN 로그인 화면에서 기기에 30일 동안 로그인을 유지한다는 안내 문장을 제거했습니다. 로그인 유지 기간 자체는 변경하지 않았습니다.
 - 하단 밴드 코드 접속 링크는 기존 코드·공용 비밀번호 로그인으로 이동하고, 접속 초기화는 현재 기기의 밴드 세션을 종료한 뒤 Auth 로그아웃하는 기존 동작임을 코드로 확인했습니다. 버튼은 유지했습니다.
 - 이번 변경은 문구만 수정했습니다. 추가 테스트는 실행하지 않았으며 SQL 변경은 없습니다.
+
+
+## 2026-11-06 Galaxy/Kakao in-app profile input report
+- User reports Korean nickname entry failure in KakaoTalk in-app browser on Galaxy. Exact symptom/device/WebView version not supplied; no physical reproduction available. Source inspection found no nickname filtering, controlled-value rewriting or key handlers. Root cause is unconfirmed.
+- Compatibility mitigation in shared ProfileFields: explicit text type/inputMode, disable nickname/part autofill, capitalization, autocorrect and spellcheck. Keep native uncontrolled input/composition; no per-keystroke rewriting or IME state hacks. Applies to code/direct registration and band creation.
+- No SQL changes or deployment performed; no tests run for this report. Needs redeploy and retest on the reporting Galaxy/Kakao browser. External browser is a workaround/diagnostic, not proof of root cause.
+
+
+## 2026-11-06 합주 메모 (021)
+- 합주 계획 생성·수정에 선택 메모(최대 2,000자)를 추가했습니다. 예: 지난 합주의 부족한 점, 이번 연습 목표, 준비할 내용. 밴드장만 저장·수정하며 멤버 모두 읽을 수 있습니다. 메모를 비우고 저장하면 삭제됩니다.
+- 계획 목록/지난 계획에서는 줄바꿈을 유지해 전체 메모를 보여주고, 홈의 다가오는 합주에서는 최대 3줄로 미리 보여줍니다. 전체 내용은 합주 계획 전체 보기에서 확인합니다. 입력 내용은 일반 텍스트로 렌더링합니다.
+- **020 다음에 `202611050021_rehearsal_plan_memo.sql`을 한 번 실행한 뒤 앱을 재배포하세요.** 기존 메모는 빈 상태로 시작합니다. 7/8개 인자를 받는 구버전 저장 API는 새 9개 인자 API로 연결되어, 구버전 화면의 수정이 메모를 지우지 않도록 했습니다.
+- 계획 저장은 기존 요청 한 번에 메모를 함께 저장합니다. 별도 메모 조회/저장 요청은 없습니다. 합주 계획 화면의 인증 확인 뒤 추천 자료 조회를 사용자/기존 계획 조회와 병렬화하여 순차 대기를 줄였습니다. 운영 지연시간은 측정하지 않았으므로 속도 개선 수치는 제시하지 않습니다.
+
+- 기존 로그인 입력 호환성 변경은 그대로 보존했습니다. 이번 요청에서 테스트를 추가하거나 실행하지 않았습니다. 기존 테스트의 API 인자/조회 모형만 새 계약과 맞췄습니다. SQL021은 파일만 작성했으며 운영/로컬 DB에 실행하지 않았습니다. 배포·커밋·push도 하지 않았습니다.
+
+- 정적 검증: TypeScript 검사·ESLint·프로덕션 빌드(19개 라우트) 통과. 조회 helper의 반환 타입 오류는 종류별 overload와 명시적 공통 반환 타입으로 수정 후 재확인했습니다. 저장 실패 시 React의 자동 form reset으로 메모/장소 초안이 지워지지 않게 했으며 성공 후에는 계획/밴드 버전 key로 새 저장 상태를 반영합니다.

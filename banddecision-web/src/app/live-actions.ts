@@ -37,10 +37,10 @@ export async function liveVoteAction(_:FormState,form:FormData):Promise<FormStat
  return execute('vote_band_song',{p_song:parsed.data.song,p_choice:parsed.data.choice,p_reason:parsed.data.choice==='no'?parsed.data.reason:null},'투표를 저장했습니다.');
 }
 export async function saveLivePlanAction(_:FormState,form:FormData):Promise<FormState>{
- const parsed=z.object({band:z.uuid(),date,location:z.string().trim().max(200),version:z.coerce.number().int().nonnegative(),plan:z.uuid().nullable(),planVersion:z.number().int().positive().nullable(),songs:z.array(z.number().int().positive())}).safeParse({band:text(form,'band_id'),date:text(form,'date'),location:text(form,'location'),version:text(form,'version')||-1,plan:text(form,'plan_id')||null,planVersion:text(form,'plan_version')?Number(text(form,'plan_version')):null,songs:form.getAll('song_id').map(Number)});
- if(!parsed.success||new Set(parsed.data.songs).size!==parsed.data.songs.length)return{error:'날짜·곡과 최신 정보를 확인하세요.'};
+ const parsed=z.object({band:z.uuid(),date,location:z.string().trim().max(200),memo:z.string().trim().max(2000),version:z.coerce.number().int().nonnegative(),plan:z.uuid().nullable(),planVersion:z.number().int().positive().nullable(),songs:z.array(z.number().int().positive())}).safeParse({band:text(form,'band_id'),date:text(form,'date'),location:text(form,'location'),memo:text(form,'memo'),version:text(form,'version')||-1,plan:text(form,'plan_id')||null,planVersion:text(form,'plan_version')?Number(text(form,'plan_version')):null,songs:form.getAll('song_id').map(Number)});
+ if(!parsed.success||new Set(parsed.data.songs).size!==parsed.data.songs.length)return{error:'날짜·곡·메모 길이와 최신 정보를 확인하세요.'};
  const p=parsed.data;
- return execute('save_rehearsal_plan',{p_band:p.band,p_date:p.date,p_location:p.location||null,p_song_ids:p.songs,p_expected_version:p.version,p_plan:p.plan,p_expected_plan_version:p.planVersion,p_ack_partial:text(form,'ack_partial')==='true'},p.plan?'계획을 수정했습니다.':'합주 날짜를 확정했습니다.');
+ return execute('save_rehearsal_plan',{p_band:p.band,p_date:p.date,p_location:p.location||null,p_memo:p.memo||null,p_song_ids:p.songs,p_expected_version:p.version,p_plan:p.plan,p_expected_plan_version:p.planVersion,p_ack_partial:text(form,'ack_partial')==='true'},p.plan?'계획을 수정했습니다.':'합주 날짜를 확정했습니다.');
 }
 export async function deleteLivePlanAction(_:FormState,form:FormData):Promise<FormState>{
  const parsed=z.object({id:z.uuid(),version:z.coerce.number().int().positive(),confirm:z.literal('yes')}).safeParse({id:text(form,'plan_id'),version:text(form,'plan_version'),confirm:text(form,'confirm_delete')});

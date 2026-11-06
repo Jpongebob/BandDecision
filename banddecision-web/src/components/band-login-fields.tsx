@@ -8,7 +8,7 @@ export function BandPasswordField() {
   return <label className="grid gap-1 text-sm font-semibold">공용 비밀번호 (4자 이상)<Input name="password" type="password" minLength={4} maxLength={64} autoComplete="off" onBlur={e=>{e.currentTarget.value=e.currentTarget.value.trim();}} required /></label>;
 }
 export function ProfileFields() {
-  return <><label className="grid gap-1 text-sm font-semibold">닉네임<Input name="nickname" autoComplete="nickname" maxLength={30} required /></label><label className="grid gap-1 text-sm font-semibold">담당 파트<Input name="part" placeholder="기타, 보컬, 드럼…" maxLength={30} required /></label><PinField /></>;
+  return <><label className="grid gap-1 text-sm font-semibold">닉네임<Input name="nickname" type="text" inputMode="text" autoComplete="off" autoCapitalize="none" autoCorrect="off" spellCheck={false} maxLength={30} required /></label><label className="grid gap-1 text-sm font-semibold">담당 파트<Input name="part" type="text" inputMode="text" autoComplete="off" autoCapitalize="none" autoCorrect="off" spellCheck={false} placeholder="기타, 보컬, 드럼…" maxLength={30} required /></label><PinField /></>;
 }
 
 export function BandCodeField({value=''}:{value?:string}){
