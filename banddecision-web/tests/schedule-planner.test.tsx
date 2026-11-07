@@ -55,6 +55,16 @@ describe('tap once to see, tap again to change',()=>{
   await act(async()=>{fireEvent.click(screen.getByRole('button',{name:'되돌리기'}));});
   expect(save).toHaveBeenLastCalledWith({add:['2026-11-07'],remove:['2026-11-12']});
  });
+ it('judges a quick second tap against the just-saved result before fresh server data arrives',async()=>{
+  render(createElement(SchedulePlanner,props));
+  fireEvent.click(day('2026-11-07'));fireEvent.click(day('2026-11-07'));
+  await act(async()=>{fireEvent.click(saveButton());});
+  expect(save).toHaveBeenCalledWith({add:[],remove:['2026-11-07']});
+  expect(day('2026-11-07').dataset.state).toBe('none');
+  fireEvent.click(day('2026-11-07'));
+  expect(day('2026-11-07').dataset.state).toBe('adding');
+  expect(within(panel()).getByText('1일 추가')).toBeTruthy();
+ });
  it('shows a failed save and keeps the staged changes',async()=>{
   save.mockResolvedValueOnce({ok:false,added:false,removed:false,error:'저장하지 못했습니다.'});
   render(createElement(SchedulePlanner,props));

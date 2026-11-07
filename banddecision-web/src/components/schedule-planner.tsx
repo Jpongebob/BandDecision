@@ -31,7 +31,11 @@ export function SchedulePlanner({today,members,available,memberId,plans}:{today:
  const[leaveHref,setLeaveHref]=useState<string|null>(null),[pending,start]=useTransition();
  const leaveDialog=useRef<HTMLDialogElement>(null),grid=useRef<HTMLDivElement>(null);
  const total=members.length,me=members.find(m=>m.id===memberId);
- const saved=useMemo(()=>new Set(available.filter(r=>r.memberId===memberId).map(r=>r.date)),[available,memberId]);
+ const fromServer=useMemo(()=>new Set(available.filter(r=>r.memberId===memberId).map(r=>r.date)),[available,memberId]);
+ // After a save the server props arrive a moment later; until then show the saved result so a quick second tap
+ // on the same day is judged against the new state (a fresh `available` array replaces this automatically).
+ const[local,setLocal]=useState<{base:typeof available;dates:Set<string>}|null>(null);
+ const saved=local&&local.base===available?local.dates:fromServer;
  const planByDate=useMemo(()=>new Map(plans.map(p=>[p.date,p])),[plans]);
  const others=useMemo(()=>{
   const active=new Set(members.map(m=>m.id)),byDate=new Map<string,Set<string>>(),responded=new Set<string>();
@@ -90,13 +94,14 @@ export function SchedulePlanner({today,members,available,memberId,plans}:{today:
    const result=await saveAvailabilityChanges({add:a,remove:r});
    if(!result.ok){setError(result.error??'저장하지 못했어요.');if(result.added)setAdd([]);return;}
    const parts=[a.length?a.length+'일 추가':'',r.length?r.length+'일 빼기':''].filter(Boolean);
+   setLocal({base:available,dates:new Set([...[...saved].filter(d=>!r.includes(d)),...a])});
    setAdd([]);setRemove([]);setAnchor('');setToast({text:'저장했어요 · '+parts.join(', '),undoAdd:r,undoRemove:a});
    if(next){setLeaveHref(null);router.push(next);}
   });
  }
  function undo(){
   const t=toast;if(!t)return;
-  start(async()=>{const result=await saveAvailabilityChanges({add:t.undoAdd,remove:t.undoRemove});if(!result.ok){setError(result.error??'되돌리지 못했어요.');return;}setToast(null);});
+  start(async()=>{const result=await saveAvailabilityChanges({add:t.undoAdd,remove:t.undoRemove});if(!result.ok){setError(result.error??'되돌리지 못했어요.');return;}setLocal({base:available,dates:new Set([...[...saved].filter(d=>!t.undoRemove.includes(d)),...t.undoAdd])});setToast(null);});
  }
 
  // Details for the focused date.
@@ -117,7 +122,7 @@ export function SchedulePlanner({today,members,available,memberId,plans}:{today:
   const past=day<today,adding=add.includes(day),removing=remove.includes(day),isSaved=saved.has(day),isPlan=planByDate.has(day),n=count(day);
   const tone=past?'border-surface-2 bg-surface-2 text-faint':adding?'border-brand bg-brand text-white':removing?'border-2 border-dashed border-danger-dash bg-danger-bg text-danger':isPlan?'border-plan-line bg-plan-bg text-plan-ink':isSaved?'border-mine-line bg-brand-tint text-mine-ink':'border-line-strong bg-white text-ink';
   const state=past?'지난 날':adding?'추가 예정':removing?'빼기 예정':isSaved?'가능한 날':'아직 안 고름';
-  return <button type="button" key={day} data-day={day} disabled={past||pending} onClick={()=>pick(day)} onKeyDown={e=>keyboard(e,day)} aria-pressed={adding||removing} aria-current={day===today?'date':undefined} aria-label={dayLabel(day).replace(/ \((.)\)/,' $1요일')+', '+(day===today?'오늘, ':'')+(past?'':n+'/'+total+'명 참석, ')+state+(isPlan?', 합주 확정':'')+(day===focus?', 보는 중':'')} className={'relative flex h-11 min-w-0 flex-col items-center justify-center rounded-xl border focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand '+tone+(day===focus&&!past?' shadow-[0_0_0_3px_#101828]':'')}>
+  return <button type="button" key={day} data-day={day} data-state={past?'past':adding?'adding':removing?'removing':isSaved?'saved':'none'} data-plan={isPlan||undefined} disabled={past||pending} onClick={()=>pick(day)} onKeyDown={e=>keyboard(e,day)} aria-pressed={adding||removing} aria-current={day===today?'date':undefined} aria-label={dayLabel(day).replace(/ \((.)\)/,' $1요일')+', '+(day===today?'오늘, ':'')+(past?'':n+'/'+total+'명 참석, ')+state+(isPlan?', 합주 확정':'')+(day===focus?', 보는 중':'')} className={'relative flex h-11 min-w-0 flex-col items-center justify-center rounded-xl border focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand '+tone+(day===focus&&!past?' shadow-[0_0_0_3px_#101828]':'')}>
    {isSaved&&!adding&&!removing&&!isPlan&&<Check aria-hidden="true" strokeWidth={4} className="absolute right-[3px] top-[3px] size-[9px] text-brand-ink"/>}
    {day===today&&<span aria-hidden="true" className={'absolute left-1 top-1 size-1.5 rounded-full '+(adding?'bg-white':'bg-brand')}/>}
    <span className={'text-base font-bold leading-5'+(removing?' line-through':'')+(day===today&&!adding?' text-brand-ink':'')}>{Number(day.slice(8))}</span>
