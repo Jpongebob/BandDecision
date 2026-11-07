@@ -14,11 +14,11 @@ select public.set_song_confirmation(current_setting('test.del.song')::bigint,tru
 select public.vote_band_song(current_setting('test.del.song')::bigint,'no','wrong reason');
 select public.update_song_difficulty(current_setting('test.del.song')::bigint,'기타',3::smallint,0);
 select set_config('test.del.extra',public.add_song(current_setting('test.del.band')::uuid,'No votes needed','Artist')::text,true);
-select is(public.band_home_context()->>'pending_votes','1','unconfirmed song counts as pending');
+select is(public.band_pending_vote_count(),1,'unconfirmed song counts as pending');
 select public.set_song_confirmation(current_setting('test.del.extra')::bigint,true);
-select is(public.band_home_context()->>'pending_votes','0','confirmed song needs no personal vote');
+select is(public.band_pending_vote_count(),0,'confirmed song needs no personal vote');
 select public.set_song_confirmation(current_setting('test.del.extra')::bigint,false);
-select is(public.band_home_context()->>'pending_votes','1','unconfirmed song returns to pending with original votes intact');
+select is(public.band_pending_vote_count(),1,'unconfirmed song returns to pending with original votes intact');
 select public.delete_band_song(current_setting('test.del.extra')::bigint);
 
 select set_config('test.del.plan',public.save_rehearsal_plan(current_setting('test.del.band')::uuid,(now() at time zone 'Asia/Seoul')::date+1,array[current_setting('test.del.song')::bigint],(public.band_planning_context()->>'version')::bigint,null,null,false)::text,true);

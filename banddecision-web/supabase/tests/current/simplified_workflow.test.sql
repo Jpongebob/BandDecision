@@ -10,7 +10,7 @@ select public.set_member_skill_enabled(true);
 select set_config('test.new.code',public.band_login_settings()->>'code',true);
 select set_config('test.new.me',public.current_band_identity()->'member'->>'id',true);
 select is((select skill from public.band_members where id=current_setting('test.new.me')::uuid),null::smallint,'new leader skill unassigned');
-select is(public.band_home_context()->>'unset_skills','1','home counts unset skills');
+select is((select count(*)::int from public.band_members where band_id=current_setting('test.new.band')::uuid and status='active' and skill is null),1,'new band keeps unset skills in member settings');
 -- Since 023 only members who saved a date attend it: the leader opts in to the plan days used below.
 select public.save_band_availability((select jsonb_agg(jsonb_build_object('date',((now() at time zone 'Asia/Seoul')::date+n)::text)) from generate_series(1,7) n));
 select set_config('test.new.first',public.save_rehearsal_plan(current_setting('test.new.band')::uuid,(now() at time zone 'Asia/Seoul')::date+1,'{}',(public.band_planning_context()->>'version')::bigint,null,null,false)::text,true);
@@ -38,18 +38,18 @@ select lives_ok($$select public.update_member_skill(current_setting('test.new.me
 select lives_ok($$select public.save_rehearsal_plan(current_setting('test.new.band')::uuid,(now() at time zone 'Asia/Seoul')::date+2,array[current_setting('test.new.song')::bigint],(public.band_planning_context()->>'version')::bigint,current_setting('test.new.edit')::uuid,1,false)$$,'song becomes selectable after skill set');
 
 select lives_ok($$select public.update_member_skill(current_setting('test.new.me')::uuid,null)$$,'leader can clear skill to unassigned');
-select is(public.band_home_context()->>'pending_votes','0','home excludes own submitted votes');
+select is(public.band_pending_vote_count(),0,'menu count excludes own submitted votes');
 select public.add_song(current_setting('test.new.band')::uuid,'Pending song','Artist');
-select is(public.band_home_context()->>'pending_votes','1','home counts only unanswered songs');
+select is(public.band_pending_vote_count(),1,'menu counts only unanswered songs');
 select public.save_band_availability(jsonb_build_array(jsonb_build_object('date',((now() at time zone 'Asia/Seoul')::date+20)::text)));
-select ok(public.band_home_context()->'upcoming_available' ? ((now() at time zone 'Asia/Seoul')::date+20)::text,'home includes own upcoming available dates');
+select ok(jsonb_array_length(public.band_home_context()->'upcoming_available')=0 and exists(select 1 from public.available_dates where member_id=current_setting('test.new.me')::uuid and available_date=(now() at time zone 'Asia/Seoul')::date+20),'home omits availability payload while saved dates remain in schedule');
 select set_config('request.jwt.claim.sub','f1000000-0000-4000-8000-000000000002',true);
 select public.begin_band_access(current_setting('test.new.code'),'1234');
 select public.register_band_profile('Member','베이스','246810');
 select set_config('test.new.target',public.current_band_identity()->'member'->>'id',true);
-select is(public.band_home_context()->>'pending_votes','2','new member home has independent pending votes');
+select is(public.band_pending_vote_count(),2,'new member menu has independent pending votes');
 select is(jsonb_array_length(public.band_home_context()->'upcoming_available'),0,'home never includes another member dates');
-select is(public.band_home_context()->>'unset_skills','2','new member starts unassigned too');
+select is((select count(*)::int from public.band_members where band_id=current_setting('test.new.band')::uuid and status='active' and skill is null),2,'new member starts unassigned too');
 select throws_ok($$select public.transfer_leadership(current_setting('test.new.band')::uuid,current_setting('test.new.me')::uuid)$$,'P0001','FORBIDDEN','member cannot transfer leadership');
 select set_config('request.jwt.claim.sub','f1000000-0000-4000-8000-000000000001',true);
 select lives_ok($$select public.transfer_leadership(current_setting('test.new.band')::uuid,current_setting('test.new.target')::uuid)$$,'leader handoff needs no administrator PIN');
