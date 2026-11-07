@@ -12,3 +12,13 @@ select to_regprocedure('public.delete_rehearsal_plan(uuid)') is not null
 -- After 011 succeeds, this is true.
 select to_regprocedure('public.band_planning_context()') is not null
  and to_regprocedure('public.save_rehearsal_plan(uuid,date,bigint[],bigint,uuid,integer,boolean)') is not null as "011_applied";
+-- After 026 succeeds, this is true.
+select to_regprocedure('public.change_band_availability(date[],date[])') is not null as "026_applied";
+-- After 027 succeeds, every value is true.
+select
+ to_regprocedure('private.assert_dates_unlocked(uuid,date[])') is not null as "027_date_lock",
+ to_regprocedure('public.set_plan_attendance(uuid,integer,uuid[])') is not null as "027_attendance",
+ to_regprocedure('public.save_rehearsal_plan(uuid,date,bigint[],bigint,uuid,integer,boolean,text,text,time,time)') is not null as "027_plan_time",
+ to_regprocedure('public.update_band_song(bigint,text,text)') is not null as "027_song_edit",
+ exists(select 1 from information_schema.columns where table_schema='public' and table_name='songs' and column_name='edited_at') as "027_edited_at",
+ exists(select 1 from pg_constraint where conrelid='public.band_song_votes'::regclass and conname='band_song_votes_reason_check') as "027_optional_reason";
