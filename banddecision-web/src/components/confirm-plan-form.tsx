@@ -1,66 +1,34 @@
 'use client';
 import {twoMonthWindow} from '@/lib/calendar-window';
-import {useActionState,useEffect,useMemo,useRef,useState} from 'react';
-import {Check,ChevronLeft,ChevronRight} from 'lucide-react';
+import {useActionState,useMemo,useState} from 'react';
 import {saveLivePlanAction} from '@/app/live-actions';
 import type {FormState} from '@/app/actions';
 import type {LivePlanning,SavedPlan} from '@/lib/live-planning';
 import {recommendAvailableDates,type SongRanking} from '@/services/recommendations';
-import {dayLabel,timeRangeLabel} from '@/lib/day-format';
-
-const pad=(n:number)=>String(n).padStart(2,'0');
-// Attendance heat: lighter = fewer people. 1–4 of 6 use dark text, 5–6 white (contrast checked).
-const heat=['bg-[#eef3ff] text-ink','bg-[#dce6fe] text-ink','bg-[#bfd0fb] text-ink','bg-[#93b0f8] text-ink','bg-[#3563de] text-white','bg-[#1e4fd6] text-white'];
-function heatClass(n:number,total:number){if(!total||!n)return 'bg-white text-faint';const r=n/total;return heat[r>=1?5:r>0.8?4:r>0.6?3:r>0.4?2:r>0.2?1:0];}
-const ring='border-2 border-pending bg-white';
-
-// 새 합주 정하기 / 계획 수정: recommended dates, an attendance calendar, songs and memo, then one confirm button.
-export function ConfirmPlanForm({data,songs,today,plan,takenDates=[]}:{data:LivePlanning;songs:SongRanking[];today:string;plan?:SavedPlan;takenDates?:string[]}){
- const[date,setDate]=useState(plan?.rehearsal_date??''),[selected,setSelected]=useState<number[]>(plan?.confirmed_plan_songs.flatMap(s=>s.source_song_id===null?[]:[s.source_song_id])??[]),[partial,setPartial]=useState(false),[asked,setAsked]=useState('');
+import {CalendarPicker} from '@/components/date-calendar';
+import {Button} from '@/components/ui/button';
+export function ConfirmPlanForm({data,songs,today,plan}:{data:LivePlanning;songs:SongRanking[];today:string;plan?:SavedPlan}){
+ const[date,setDate]=useState(plan?.rehearsal_date??''),[selected,setSelected]=useState<number[]>(plan?.confirmed_plan_songs.flatMap(s=>s.source_song_id===null?[]:[s.source_song_id])??[]),[partial,setPartial]=useState(false);
  const[state,save,pending]=useActionState(saveLivePlanAction,{} as FormState);
- const form=useRef<HTMLFormElement>(null);
- useEffect(()=>{if(state.success)form.current?.closest('dialog')?.close();},[state]);
- const{firstMonth,lastMonth,endDate}=twoMonthWindow(today);
- const[month,setMonth]=useState((plan?.rehearsal_date??today).slice(0,7)<firstMonth?firstMonth:(plan?.rehearsal_date??today).slice(0,7));
- const taken=useMemo(()=>new Set(takenDates.filter(d=>d!==plan?.rehearsal_date)),[takenDates,plan?.rehearsal_date]);
- const total=data.members.length;
+ const suggested=useMemo(()=>{
+  const{endDate}=twoMonthWindow(today);
+  return recommendAvailableDates({participants:data.members,available:data.available,startDate:today,endDate,today}).slice(0,5);
+ },[data.members,data.available,today]);
  const availableByDate=useMemo(()=>{const active=new Set(data.members.map(m=>m.id)),byDate=new Map<string,Set<string>>();for(const row of data.available){if(!active.has(row.memberId))continue;const ids=byDate.get(row.date)??new Set<string>();ids.add(row.memberId);byDate.set(row.date,ids);}return byDate;},[data.members,data.available]);
- const silent=useMemo(()=>{const responded=new Set(data.available.filter(r=>r.date>=today&&r.date<=endDate).map(r=>r.memberId));return data.members.filter(m=>!responded.has(m.id));},[data.members,data.available,today,endDate]);
- const suggested=useMemo(()=>recommendAvailableDates({participants:data.members,available:data.available,startDate:today,endDate,today}).filter(item=>!taken.has(item.date)).slice(0,4),[data.members,data.available,today,endDate,taken]);
  function chooseDate(value:string){setDate(value);setPartial(false);}
- const absent=data.members.filter(m=>!availableByDate.get(date)?.has(m.id)),attending=total-absent.length;
+ const absent=data.members.filter(m=>!availableByDate.get(date)?.has(m.id)),attending=data.members.length-absent.length;
  const choices=[...songs.filter(s=>s.confirmedAt||s.status==='eligible').map(s=>({id:s.id,title:s.title,artist:s.artist,confirmed:Boolean(s.confirmedAt)})),...(plan?.confirmed_plan_songs.filter(s=>s.source_song_id!==null&&!songs.some(song=>song.id===s.source_song_id&&(song.confirmedAt||song.status==='eligible'))).map(s=>({id:s.source_song_id!,title:s.title_snapshot,artist:s.artist_snapshot,confirmed:false}))??[])];
- const year=Number(month.slice(0,4)),index=Number(month.slice(5,7))-1,blanks=new Date(Date.UTC(year,index,1)).getUTCDay(),count=new Date(Date.UTC(year,index+1,0)).getUTCDate();
- const days=Array.from({length:count},(_,i)=>month+'-'+pad(i+1));
- const moveMonth=(step:number)=>{const d=new Date(Date.UTC(year,index+step,1)),m=d.getUTCFullYear()+'-'+pad(d.getUTCMonth()+1);if(m>=firstMonth&&m<=lastMonth)setMonth(m);};
- async function askDates(){
-  const text='이번 달·다음 달 합주 가능한 날을 BandDecision 일정에 입력해 주세요!\n'+location.origin+'/schedule';
-  try{if(navigator.share){await navigator.share({title:'날짜 입력 부탁',text});return;}await navigator.clipboard.writeText(text);setAsked('부탁 문구를 복사했어요. 단톡방에 붙여 넣으세요.');}catch(error){if((error as Error)?.name!=='AbortError')setAsked('공유하지 못했어요. 다시 시도해 주세요.');}
- }
- const time=timeRangeLabel(plan?.starts_at??'20:00',plan?.ends_at??'22:00');
- return <form ref={form} action={save} onReset={event=>event.preventDefault()} className="flex flex-col gap-5"><input type="hidden" name="band_id" value={data.band_id}/><input type="hidden" name="version" value={data.version}/><input type="hidden" name="plan_id" value={plan?.id??''}/><input type="hidden" name="plan_version" value={plan?.version??''}/><input type="hidden" name="ack_partial" value={partial?'true':'false'}/><input type="hidden" name="date" value={date}/>
- <fieldset className="min-w-0" aria-label="추천 날짜"><legend className="mb-2.5 text-[17px] font-bold">추천 날짜 <span className="text-base font-medium text-muted">· 참석 인원순</span></legend>
- {suggested.length>0?<div className="grid grid-cols-2 gap-2">{suggested.map(item=>{const on=date===item.date;return <label key={item.date} className="relative min-w-0 cursor-pointer"><input className="peer sr-only" type="radio" name="recommended_date" value={item.date} checked={on} disabled={pending} onChange={()=>chooseDate(item.date)} aria-label={dayLabel(item.date)+' · '+item.attendanceCount+'/'+total+'명 참석'}/><span className={'flex min-h-[88px] flex-col justify-center gap-0.5 rounded-[14px] px-3.5 py-2.5 peer-focus-visible:ring-2 peer-focus-visible:ring-brand '+(on?'border-2 border-ink':'border border-line-strong bg-white')}><span className="text-[17px] font-bold">{dayLabel(item.date)}</span><span className="whitespace-nowrap text-[15px] font-semibold text-ink-2">{item.attendanceCount}/{total}명 참석</span>{silent.length>0&&<span className="whitespace-nowrap text-sm text-muted"><span aria-hidden="true" className={'mb-px mr-1.5 inline-block size-[9px] rounded-full align-middle '+ring}/>미응답 {silent.length}명</span>}</span></label>;})}</div>
- :<p className="text-[15px] text-muted">이번 달·다음 달에 참석할 수 있는 날이 아직 없어요. 멤버들이 가능한 날을 저장하면 추천해요.</p>}</fieldset>
-
- <section aria-label="달력에서 고르기" className="rounded-2xl border border-line p-3"><h3 className="text-base font-bold">달력에서 고르기</h3>
- <div className="mt-1.5 flex items-center justify-center gap-1"><button type="button" aria-label="이전 달" onClick={()=>moveMonth(-1)} disabled={month<=firstMonth} className="grid size-11 place-items-center rounded-xl text-ink-2 disabled:text-line-strong"><ChevronLeft size={22}/></button><span aria-live="polite" className="min-w-32 text-center text-lg font-bold">{year}년 {index+1}월</span><button type="button" aria-label="다음 달" onClick={()=>moveMonth(1)} disabled={month>=lastMonth} className="grid size-11 place-items-center rounded-xl text-ink-2 disabled:text-line-strong"><ChevronRight size={22}/></button></div>
- <div aria-hidden="true" className="mt-1 grid grid-cols-7 gap-1 text-center text-[13px] font-semibold text-muted">{['일','월','화','수','목','금','토'].map((d,i)=><span key={d} className={i===0?'text-danger':i===6?'text-brand-ink':''}>{d}</span>)}</div>
- <div className="mt-1.5 grid grid-cols-7 gap-1">{Array.from({length:blanks},(_,i)=><span key={'b'+i}/>)}{days.map(day=>{const n=availableByDate.get(day)?.size??0,past=day<today&&day!==plan?.rehearsal_date,blocked=past||n===0||day>endDate,on=date===day;return <button type="button" key={day} data-day={day} disabled={blocked||pending} onClick={()=>chooseDate(day)} aria-pressed={on} aria-label={dayLabel(day)+(past?', 지난 날':', '+n+'/'+total+'명 참석')+(taken.has(day)?', 이미 합주 있음':'')} className={'relative flex h-11 flex-col items-center justify-center rounded-xl '+(past?'bg-surface-2 text-faint':heatClass(n,total)+(n===0?' border border-line':''))+(on?' shadow-[0_0_0_3px_#101828]':'')}>
-  {taken.has(day)&&<span aria-hidden="true" className="absolute right-1 top-1 size-[7px] rounded-full bg-plan-dot shadow-[0_0_0_1.5px_#fff]"/>}
-  <span className="text-base font-bold leading-5">{Number(day.slice(8))}</span>{!past&&<span className="text-[13px] font-semibold leading-4 tabular-nums">{n}/{total}</span>}</button>;})}</div>
- {takenDates.length>0&&<p className="mt-2 inline-flex items-center gap-1.5 text-sm text-ink-2"><span aria-hidden="true" className="size-2 rounded-full bg-plan-dot"/>이미 합주 있음</p>}</section>
-
- {silent.length>0&&<div className="flex flex-col gap-2 rounded-xl border border-note-line bg-note-bg px-3.5 py-3"><span className="flex flex-col gap-0.5"><span className="whitespace-nowrap text-base text-ink"><span aria-hidden="true" className={'mb-px mr-1.5 inline-block size-3 rounded-full align-middle '+ring}/><b className="font-bold">미응답 {silent.length}명</b></span><span className="text-[15px] text-ink-2">{silent.map(m=>m.nickname+'('+m.part+')').join(', ')} 님이 아직 날짜를 안 냈어요</span></span><button type="button" onClick={askDates} className="min-h-11 self-start rounded-[10px] border border-line-strong bg-white px-3.5 text-[15px] font-bold text-ink">날짜 입력 부탁하기</button>{asked&&<p role="status" className="text-sm font-semibold text-plan-ink">{asked}</p>}</div>}
-
- {date&&<div className="flex flex-col gap-2 rounded-xl bg-surface-2 px-3.5 py-3"><p className="text-base font-bold">{dayLabel(date)} · {attending}/{total}명 참석</p><p className="text-sm text-muted">시간은 지금 {time}로 정해져 있어요.</p>{absent.length>0&&<><p className="text-[15px] text-ink-2">참석 안 됨: {absent.map(m=>m.nickname).join(', ')}</p><label className="flex min-h-11 items-center gap-2.5 text-base font-semibold"><input type="checkbox" checked={partial} onChange={e=>setPartial(e.target.checked)} className="size-[22px] accent-brand"/>참석 가능한 멤버만으로 진행할게요</label></>}</div>}
-
- <label className="flex flex-col gap-1.5 text-[17px] font-bold"><span>장소 <span className="text-base font-medium text-muted">(선택)</span></span><input name="location" defaultValue={plan?.location??''} maxLength={200} placeholder="합주실 이름 또는 주소" className="min-h-12 w-full rounded-xl border border-line-strong px-3.5 text-base font-normal outline-none focus:border-brand focus:ring-2 focus:ring-brand-tint"/></label>
- <fieldset className="min-w-0"><legend className="mb-2.5 text-[17px] font-bold">곡 <span className="text-base font-medium text-muted">· 선택 · 나중에 넣어도 돼요</span></legend>
- {choices.length?<div className="flex flex-wrap gap-2">{choices.map(s=>{const on=selected.includes(s.id);return <button type="button" key={s.id} data-song-choice={s.id} aria-pressed={on} onClick={()=>setSelected(c=>on?c.filter(id=>id!==s.id):[...c,s.id])} className={'inline-flex min-h-11 max-w-full items-center gap-1.5 rounded-full px-3.5 text-left text-[15px] '+(on?'border border-brand bg-brand-tint font-bold text-brand-ink':'border border-line-strong bg-white font-semibold text-ink-2')}>{on&&<Check size={14} strokeWidth={3} aria-hidden="true"/>}<span className="break-words">{s.title}{s.confirmed&&<span className="font-semibold text-plan-ink"> · 확정곡</span>}</span>{on&&<input type="hidden" name="song_id" value={s.id}/>}</button>;})}</div>
- :<p className="text-[15px] text-muted">확정곡이나 투표를 통과한 곡이 아직 없어요. 날짜만 먼저 정해도 돼요.</p>}</fieldset>
- <label className="flex flex-col gap-1.5 text-[17px] font-bold"><span>합주 메모 <span className="text-base font-medium text-muted">(선택)</span></span><textarea name="memo" defaultValue={plan?.memo??''} maxLength={2000} rows={3} placeholder="이번 연습 목표나 준비할 내용" className="min-h-24 w-full resize-y rounded-xl border border-line-strong px-3.5 py-2.5 text-base font-normal outline-none focus:border-brand focus:ring-2 focus:ring-brand-tint"/></label>
- {state.error&&<p role="alert" className="text-sm font-semibold text-danger">{state.error}</p>}{state.success&&<p role="status" className="text-sm font-semibold text-plan-ink">{state.success}</p>}
- <div className="sticky bottom-0 -mx-5 -mb-6 flex flex-col gap-2 border-t border-line bg-white px-5 pb-6 pt-3"><p className="text-[15px] text-ink-2">{date?dayLabel(date)+' '+time+' · '+attending+'명 참석 · 곡 '+selected.length+'개':'날짜를 골라 주세요'}</p><button disabled={pending||!date||attending===0||absent.length>0&&!partial} className="min-h-[52px] rounded-[14px] bg-brand text-[17px] font-bold text-white disabled:bg-surface-2 disabled:text-faint">{pending?'저장 중…':plan?'계획 수정 저장':'이 날로 확정하기'}</button></div>
- </form>;
+ return <form action={save} onReset={event=>event.preventDefault()} className="space-y-4"><input type="hidden" name="band_id" value={data.band_id}/><input type="hidden" name="version" value={data.version}/><input type="hidden" name="plan_id" value={plan?.id??''}/><input type="hidden" name="plan_version" value={plan?.version??''}/><input type="hidden" name="ack_partial" value={partial?'true':'false'}/>
+ <input type="hidden" name="date" value={date}/><div><p className="text-sm font-semibold">합주 날짜</p><CalendarPicker value={date} onChange={chooseDate} today={today} label="합주 가능한 날짜" annotation={day=>{const n=availableByDate.get(day)?.size??0;return n+'/'+data.members.length+'명';}} disabled={day=>(day<today&&day!==plan?.rehearsal_date)||!(availableByDate.get(day)?.size)}/></div>
+ <label className="block text-sm font-semibold">장소 (선택사항)<input name="location" defaultValue={plan?.location??''} maxLength={200} placeholder="합주실 이름 또는 주소" className="mt-1 min-h-11 w-full rounded-xl border border-slate-300 px-3"/></label>
+ <label className="block text-sm font-semibold">합주 메모 (선택사항)<textarea name="memo" defaultValue={plan?.memo??''} maxLength={2000} rows={3} placeholder="예: 지난 합주에서 후렴 박자가 흔들려서 이번에는 드럼·베이스 리듬부터 맞춰볼 예정" className="mt-1 min-h-24 w-full resize-y rounded-xl border border-slate-300 px-3 py-2 text-sm font-normal"/><span className="mt-1 block text-xs font-normal text-slate-500">이번 연습 목표나 준비할 내용을 적어주세요. 멤버 모두 볼 수 있어요. 최대 2,000자.</span></label>
+ <fieldset className="min-w-0" aria-label="추천 날짜"><legend className="text-sm font-semibold">추천 날짜 <span className="font-normal text-slate-500">· 참석 인원순 상위 5개</span></legend>
+ {suggested.length>0?<div className="mt-2 grid grid-cols-3 gap-1.5 sm:grid-cols-5">{suggested.map(item=>{
+  const weekday=new Intl.DateTimeFormat('ko-KR',{weekday:'short',timeZone:'Asia/Seoul'}).format(new Date(item.date+'T12:00:00+09:00'));
+  return <label key={item.date} className="relative min-w-0 cursor-pointer"><input className="peer sr-only" type="radio" name="recommended_date" value={item.date} checked={date===item.date} disabled={pending} onChange={()=>chooseDate(item.date)} aria-label={item.date+' '+weekday+'요일 · 참석 '+item.attendanceCount+'/'+data.members.length+'명'}/><span className="flex min-h-12 flex-col items-center justify-center rounded-lg border border-slate-200 bg-white px-1 py-1 text-center peer-checked:border-blue-600 peer-checked:bg-blue-50 peer-checked:text-blue-800 peer-focus-visible:ring-2 peer-focus-visible:ring-blue-500 peer-disabled:opacity-50"><span className="text-xs font-semibold">{item.date.slice(5).replace('-','/')} ({weekday})</span><span className="mt-0.5 text-[11px] text-slate-500">참석 {item.attendanceCount}/{data.members.length}명</span></span></label>;
+ })}</div>:<p className="mt-2 text-sm text-slate-500">이번 달·다음 달 중 참석 가능한 추천 날짜가 없습니다. 멤버들이 가능한 날짜를 등록하면 추천합니다.</p>}</fieldset>
+ {date&&<div className="rounded-xl bg-blue-50 p-3 text-sm"><p className="font-semibold">참석 가능 {attending}/{data.members.length}명 · 20:00–22:00</p>{absent.length>0&&<><p className="mt-2 text-amber-900">참석 제외: {absent.map(m=>m.nickname).join(', ')}</p><label className="mt-3 flex items-start gap-2"><input type="checkbox" checked={partial} onChange={e=>setPartial(e.target.checked)}/><span>참석 가능한 멤버만으로 진행합니다.</span></label></>}</div>}
+ <details open={Boolean(plan?.confirmed_plan_songs.length)}><summary className="cursor-pointer text-sm font-semibold">곡 선택 (선택사항){selected.length?' · '+selected.length+'곡':''}</summary><p className="mt-2 text-sm text-slate-500">곡 없이 날짜만 저장할 수 있습니다. 확정곡과 추천 조건을 충족한 곡을 선택할 수 있으며, 나중에 수정에서 추가할 수도 있습니다.</p><div className="mt-3 grid gap-2">{choices.map(s=><label key={s.id} className="flex items-start gap-3 rounded-xl border p-3 text-sm"><input type="checkbox" name="song_id" value={s.id} checked={selected.includes(s.id)} onChange={e=>setSelected(current=>e.target.checked?[...current,s.id]:current.filter(id=>id!==s.id))}/><span><b>{s.title}</b> · {s.artist}{s.confirmed&&<span className="ml-2 text-xs font-semibold text-emerald-700">확정곡</span>}</span></label>)}</div>{choices.length===0&&<p className="mt-3 text-sm text-slate-500">확정곡 또는 추천 조건을 갖춘 곡이 없습니다. 날짜만 먼저 정하세요.</p>}</details>
+ {state.error&&<p role="alert" className="text-sm text-rose-700">{state.error}</p>}{state.success&&<p role="status" className="text-sm text-emerald-700">{state.success}</p>}
+ <Button className="w-full sm:w-auto" disabled={pending||!date||attending===0||absent.length>0&&!partial}>{pending?'저장 중…':plan?'계획 수정 저장':'합주 날짜 확정'}</Button></form>;
 }

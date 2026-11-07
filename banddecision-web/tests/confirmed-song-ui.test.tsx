@@ -16,8 +16,8 @@ describe('confirmed repertoire UI',()=>{
  });
  it('shows confirm/remove controls only for leader',()=>{
  const props={bandId:'b',memberId:'m',participants:members,songs:[song],detailed:true};
- expect(renderToStaticMarkup(<SongList {...props} canManage/>)).toContain('확정 해제');
- expect(renderToStaticMarkup(<SongList {...props}/>)).not.toContain('확정 해제');
+ expect(renderToStaticMarkup(<SongList {...props} canManage/>)).toContain('확정 목록에서 삭제');
+ expect(renderToStaticMarkup(<SongList {...props}/>)).not.toContain('확정 목록에서 삭제');
  expect(renderToStaticMarkup(<SongList {...props}/>)).not.toContain('>곡 삭제<');
  expect(renderToStaticMarkup(<SongList {...props} canManage/>)).toContain('삭제 확인');
  expect(renderToStaticMarkup(<SongList {...props} canManage/>)).not.toContain('name="choice"');

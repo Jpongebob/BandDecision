@@ -1,168 +1,146 @@
-// Redesigned screens (2026-11): tap a date once to see it and again to change it, sheets instead of inline editors.
+// Current continuous-planning browser contract: no rounds, no preview, no mandatory songs.
 export async function workflows({run,go,fill,touchText,wait,assert,layout,viewport,cmd,delay,code,artifacts,writeFile,resolve}){
+ async function calendarDay(day,scope,inline=false){
+  if(!inline)await touch(scope+' button[aria-haspopup=dialog]');
+  const calendar=inline?scope+' [data-calendar-month]':'dialog[open] [data-calendar-month]';
+  for(let n=0;n<36;n++){const month=await run('document.querySelector('+JSON.stringify(calendar)+')?.dataset.calendarMonth');if(month===day.slice(0,7))break;await touch(calendar+' button[aria-label="'+(month<day.slice(0,7)?'다음 달':'이전 달')+'"]');}
+  await touch(calendar+' button[data-day="'+day+'"]');
+ }
  async function set(selector,value){
+  if(selector.endsWith(' input[name=date]')){const scope=selector.slice(0,-' input[name=date]'.length);await calendarDay(value,scope);return;}
   await run(`(()=>{const e=document.querySelector(${JSON.stringify(selector)});if(!e)throw Error('missing '+${JSON.stringify(selector)});const proto=e.tagName==='TEXTAREA'?HTMLTextAreaElement.prototype:e.tagName==='SELECT'?HTMLSelectElement.prototype:HTMLInputElement.prototype;Object.getOwnPropertyDescriptor(proto,'value').set.call(e,${JSON.stringify(value)});e.dispatchEvent(new Event(e.tagName==='SELECT'?'change':'input',{bubbles:true}));})()`);
  }
  async function touch(selector){await run("document.querySelectorAll('nextjs-portal').forEach(e=>e.style.display='none')");const p=await run(`(()=>{const e=document.querySelector(${JSON.stringify(selector)});if(!e)throw Error('missing '+${JSON.stringify(selector)});e.scrollIntoView({block:'center'});const r=e.getBoundingClientRect();if(!r.width)throw Error('hidden '+${JSON.stringify(selector)});return{x:r.x+r.width/2,y:r.y+r.height/2};})()`);await cmd('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[p]});await cmd('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});await delay(900);}
  async function open(selector){if(!await run('document.querySelector('+JSON.stringify(selector)+')?.open'))await touch(selector+' > summary');}
  const day=n=>{const d=new Date();d.setDate(d.getDate()+n);return d.toLocaleDateString('sv-SE',{timeZone:'Asia/Seoul'});};
+ const add='form:has(input[name=dates_json])',newPlan='form:has(input[name=plan_id][value=""])';
+ async function addDate(date){await calendarDay(date,add,true);await touchText('날짜 저장');await wait('!!document.querySelector('+JSON.stringify('[data-saved-date="'+date+'"]')+')');}
+ // The test band fixture saves every day through the end of next month for every member (migration 023),
+ // so new-date flows first free the days they need through the compact saved-date tiles.
+ const savedTiles=()=>run("[...document.querySelectorAll('[data-saved-date]')].map(e=>e.dataset.savedDate)");
+ const draftLength=()=>run('JSON.parse(document.querySelector('+JSON.stringify(add+' input[name=dates_json]')+').value).length');
+ async function deleteSaved(date){await touch('[data-saved-date="'+date+'"]');await touch('[data-saved-editor="'+date+'"] form:not(:has(input[name=old_date])) button');await wait('!document.querySelector('+JSON.stringify('[data-saved-date="'+date+'"]')+')');}
+ // Check a plan card's saved summary (title, attendance, songs) without its edit form: an open form lists every song and the picked date.
+ const summaryHas=(card,value)=>'(()=>{const c=document.querySelector('+JSON.stringify(card)+')?.cloneNode(true);if(!c)return false;c.querySelectorAll("details,form").forEach(e=>e.remove());return c.textContent.includes('+JSON.stringify(value)+');})()';
+ // Partial attendance (a current member did not save that date) needs the explicit "available members only" acknowledgement.
+ async function savePlanEdit(card,value){
+  const partial=await run('(()=>{const l=[...document.querySelectorAll('+JSON.stringify(card+' details[open] label')+')].find(e=>e.innerText.includes("참석 가능한 멤버만으로 진행합니다")&&!e.querySelector("input").checked);if(l)l.setAttribute("data-qa-ack","");return !!l;})()');
+  if(partial){await touch('[data-qa-ack]');await run('document.querySelectorAll("[data-qa-ack]").forEach(e=>e.removeAttribute("data-qa-ack"))');}
+  await touchText('계획 수정 저장');await wait('!!document.querySelector("main [role=alert]")||'+summaryHas(card,value));const error=await run('document.querySelector("main [role=alert]")?.textContent??""');
+  assert(!error&&await run(summaryHas(card,value)),'plan edit saved and shows '+value+(partial?' (partial attendance acknowledged)':'')+(error?' — error: '+error:''));
+ }
+ async function addFreshDate(date){if((await savedTiles()).includes(date))await deleteSaved(date);await addDate(date);}
  async function logout(){await go('/settings/profile','내 정보');await touchText('로그아웃 · 프로필 바꾸기');await wait('location.pathname==="/login"');}
  async function gate(){await go('/login?code='+code,'우리 밴드로 접속');assert(await run('document.querySelector("input[name=code]").value==='+JSON.stringify(code)),'code invite prefilled');await fill('password','wrong9999');await touchText('밴드 들어가기');await wait('document.body.innerText.includes("밴드 코드 또는 공용 비밀번호를 확인")');await fill('password',' qa1234 ');await touchText('밴드 들어가기');await wait('location.pathname==="/login/member"&&!!document.querySelector("select[name=member]")');await delay(300);}
  async function enter(name,pin){await gate();const id=await run(`Array.from(document.querySelectorAll('select[name=member] option')).find(e=>e.textContent.includes(${JSON.stringify(name)}))?.value`);assert(!!id,'profile available: '+name);await fill('member',id);await fill('pin','000000');await touchText('내 프로필로 로그인');await wait('document.body.innerText.includes("개인 PIN을 확인")');await fill('pin',' '+pin.slice(0,3)+' '+pin.slice(3)+' ');await touchText('내 프로필로 로그인');await wait('location.pathname==="/dashboard"');assert(true,'invalid PIN retry preserves selection and signs in');}
- async function touchNav(href){await run('(()=>{document.querySelectorAll("[data-qa-link]").forEach(e=>e.removeAttribute("data-qa-link"));const e=[...document.querySelectorAll('+JSON.stringify('a[href="'+href+'"]')+')].find(e=>e.closest("nav,aside")&&e.getBoundingClientRect().width);if(!e)throw Error("missing nav link '+href+'");e.setAttribute("data-qa-link","");})()');await touch('[data-qa-link]');}
- const shot=async name=>writeFile(resolve(artifacts,name),Buffer.from((await cmd('Page.captureScreenshot',{format:'png',captureBeyondViewport:true})).data,'base64'));
- const md=d=>Number(d.slice(5,7))+'월 '+Number(d.slice(8,10))+'일',ym=d=>Number(d.slice(0,4))+'년 '+Number(d.slice(5,7))+'월';
- const cal='section[aria-label="달력"]',panel='section[aria-label="선택한 날짜 현황"]',planCal='dialog[open] section[aria-label="달력에서 고르기"]';
- const cell=d=>cal+' [data-day="'+d+'"]';
- async function showMonth(scope,d){for(let n=0;n<4;n++){const shown=await run('document.querySelector('+JSON.stringify(scope+' [aria-live=polite]')+').textContent.trim()');if(shown===ym(d))return;const [y,m]=shown.match(/\d+/g).map(Number);const next=Number(d.slice(0,4))*12+Number(d.slice(5,7))>y*12+m;await touch(scope+' button[aria-label="'+(next?'다음 달':'이전 달')+'"]');}throw Error('month not reachable '+d);}
- const cellState=d=>run('document.querySelector('+JSON.stringify(cell(d))+')?.dataset.state');
- // First tap only focuses a date; the second one stages adding/removing it.
- async function toggleDay(d){await showMonth(cal,d);if(!(await run('document.querySelector('+JSON.stringify(cell(d))+').getAttribute("aria-label").includes("보는 중")')))await touch(cell(d));await touch(cell(d));}
- const panelText=()=>run('document.querySelector('+JSON.stringify(panel)+').innerText');
- async function saveCalendar(){await touchText('저장',panel+' button');await wait('(document.querySelector('+JSON.stringify(panel+' [role=status]')+')?.innerText??"").includes("저장했어요")||!!document.querySelector('+JSON.stringify(panel+' [role=alert]')+')');const error=await run('document.querySelector('+JSON.stringify(panel+' [role=alert]')+')?.textContent??""');if(error)throw Error('calendar save failed: '+error);await wait('!document.querySelector('+JSON.stringify(cal+' [data-day]:not([data-state=past]):disabled')+')');}
- const savedCount=()=>run('Number((document.querySelector("main button[aria-haspopup=dialog]")?.innerText.match(/가능한 날 (\\d+)개/)??[])[1])');
- async function closeSheet(){await touch('dialog[open] button[aria-label="닫기"]');await wait('!document.querySelector("dialog[open]")');}
- async function removeSaved(d){await touch('main button[aria-haspopup=dialog]');await wait('!!document.querySelector("dialog[open]")');const header='dialog[open] section[aria-label="'+Number(d.slice(5,7))+'월"] > button';if(await run('document.querySelector('+JSON.stringify(header)+')?.getAttribute("aria-expanded")==="false"'))await touch(header);await touch('dialog[open] [data-remove-date="'+d+'"]');await wait('!document.querySelector('+JSON.stringify('[data-remove-date="'+d+'"]')+')&&(document.querySelector("dialog[open] [role=status]")?.innerText??"").includes("뺐어요")');await closeSheet();}
- const trace=async tag=>{if(process.env.QA_TRACE)console.log('TRACE',tag,JSON.stringify(await run('(()=>{const p=document.querySelector('+JSON.stringify(panel)+');return [p?.innerText.slice(-70),[...document.querySelectorAll('+JSON.stringify(cal+' [data-state=adding],'+cal+' [data-state=removing]')+')].map(e=>e.dataset.day+e.dataset.state)]})()')));};
- // Read a day's state only after its month is on screen (other months' cells do not exist).
- async function ensureSaved(d,wanted){await showMonth(cal,d);await trace('ensure '+d+' '+wanted+' state='+(await cellState(d)));if(((await cellState(d))==='saved')!==wanted){await toggleDay(d);await trace('toggled');await saveCalendar();await trace('saved');}assert(((await cellState(d))==='saved')===wanted,(wanted?'saved ':'removed ')+d);}
- // Plans: every card keeps its edit/delete sheets in the DOM, so summaries ignore dialogs.
- const summaryHas=(card,value)=>'(()=>{const c=document.querySelector('+JSON.stringify(card)+')?.cloneNode(true);if(!c)return false;c.querySelectorAll("dialog,form").forEach(e=>e.remove());return c.textContent.includes('+JSON.stringify(value)+');})()';
- async function ackPartial(){if(await run('!!document.querySelector("dialog[open] input[type=checkbox]")&&!document.querySelector("dialog[open] input[type=checkbox]").checked'))await touch('dialog[open] input[type=checkbox]');}
- async function pickPlanDay(d){await showMonth(planCal,d);await touch(planCal+' [data-day="'+d+'"]');await ackPartial();}
- const planCount=()=>run('document.querySelectorAll("[data-plan-id]").length');
- async function createDatePlan(d,location){const before=await planCount();await touchText('새 합주 정하기');await wait('!!document.querySelector("dialog[open]")');await pickPlanDay(d);if(location)await set('dialog[open] input[name=location]',location);assert(!(await run("document.querySelector('dialog[open]').innerText.includes('미리보기')")),'no preview step');await touchText('이 날로 확정하기','dialog[open] button');await wait('!document.querySelector("dialog[open]")&&document.querySelectorAll("[data-plan-id]").length==='+(before+1));}
- async function openEdit(card){await touchText('수정',card+' button');await wait('!!document.querySelector("dialog[open]")');}
- async function savePlanEdit(card,value){await ackPartial();await touchText('계획 수정 저장','dialog[open] button');await wait('!document.querySelector("dialog[open]")||!!document.querySelector("dialog[open] [role=alert]")');const error=await run('document.querySelector("dialog[open] [role=alert]")?.textContent??""');await wait(summaryHas(card,value),20000).catch(()=>{});assert(!error&&await run(summaryHas(card,value)),'plan edit saved and shows '+value+(error?' — error: '+error:''));}
- async function deletePlan(card){const before=await planCount();await touch(card+' button[aria-label^="더보기:"]');await wait('!!document.querySelector("dialog[open]")');await touchText('계획 삭제','dialog[open] button');await wait('document.querySelectorAll("[data-plan-id]").length==='+(before-1));}
-
- // Home
- for(const width of [390,1280]){await viewport(width,844);await go('/dashboard','안녕하세요');await layout('home');await shot('home-'+width+'.png');}
- assert(await run('document.body.innerText.includes("다가오는 합주")&&document.body.innerText.includes("예정 합주 0/5")&&!document.body.innerText.includes("내가 할 일")'),'home shows greeting, chips and the upcoming card without a task list');
-
- // Difficulty toggle reaches list/detail/plan choices on both viewports.
- await go('/songs','투표로 함께');
+ async function createDatePlan(date){await set(newPlan+' input[name=date]',date);assert(!(await run("document.body.innerText.includes('미리보기')")),'no preview step');await touchText('합주 날짜 확정');}
+ for(const width of [390,1280]){await viewport(width,844);await go('/dashboard','내가 할 일');await layout('home tasks');await writeFile(resolve(artifacts,'home-tasks-'+width+'.png'),Buffer.from((await cmd('Page.captureScreenshot',{format:'png',captureBeyondViewport:true})).data,'base64'));}
+ // Verify the existing toggle reaches list/detail/recommendations/plan choices on both viewports.
+ await go('/songs','후보곡 등록');
  const unratedLink=await run(`Array.from(document.querySelectorAll('[data-song-id] a')).find(e=>e.textContent.startsWith('[테스트 D]'))?.getAttribute('href')`);
  assert(!!unratedLink,'unrated fully-voted fixture is available');
  const unratedId=unratedLink.split('/').pop();
  for(const width of [390,1280]){
-  await viewport(width,844);await go('/songs','투표로 함께');
+  await viewport(width,844);await go('/songs','후보곡 등록');
   assert(!(await run('document.body.innerText.includes("미등록")')),'OFF removes difficulty summaries at '+width);await layout('difficulty OFF song list');
-  await go(unratedLink,'투표 현황');assert(!(await run('!!document.querySelector("select[name=difficulty]")')),'OFF removes difficulty editor at '+width);await layout('difficulty OFF detail');
-  await shot('difficulty-off-'+width+'.png');
+  await go(unratedLink,'내 투표:');assert(!(await run('!!document.querySelector("select[name=difficulty]")')),'OFF removes difficulty editor at '+width);await layout('difficulty OFF detail');
+  await writeFile(resolve(artifacts,'difficulty-off-'+width+'.png'),Buffer.from((await cmd('Page.captureScreenshot',{format:'png',captureBeyondViewport:true})).data,'base64'));
  }
- await viewport(390,844);
- await go('/plans','새 합주 정하기');assert(await run(`!!document.querySelector('[data-song-choice="${unratedId}"]')`),'OFF allows fully-voted candidate without difficulties in new plan choices');
+ await go('/plans','합주 날짜 정하기');assert(await run(`!!document.querySelector('input[name=song_id][value="${unratedId}"]')`),'OFF allows fully-voted candidate without difficulties in new plan choices');
  await go('/settings/band','멤버와 설정');assert(!(await run('!!document.querySelector("select[name=skill]")')),'skill inputs hidden by default');
  await touchText('실력 기능 켜기');await wait('!!document.querySelector("select[name=skill]")');assert(true,'leader enables skill fields');
  for(const width of [390,1280]){
-  await viewport(width,844);await go('/songs','투표로 함께');assert(await run('document.body.innerText.includes("미등록")'),'ON restores difficulty summaries at '+width);
+  await viewport(width,844);await go('/songs','후보곡 등록');assert(await run('document.body.innerText.includes("미등록")'),'ON restores difficulty summaries at '+width);
   await go(unratedLink,'파트별 난이도');assert(await run('!!document.querySelector("select[name=difficulty]")'),'ON restores difficulty editor at '+width);await layout('difficulty ON detail');
-  await shot('difficulty-on-'+width+'.png');
+  await writeFile(resolve(artifacts,'difficulty-on-'+width+'.png'),Buffer.from((await cmd('Page.captureScreenshot',{format:'png',captureBeyondViewport:true})).data,'base64'));
  }
- await viewport(390,844);
- await go('/plans','새 합주 정하기');assert(!(await run(`!!document.querySelector('[data-song-choice="${unratedId}"]')`)),'ON excludes missing-difficulty candidate from new plan choices');
+ await go('/plans','합주 날짜 정하기');assert(!(await run(`!!document.querySelector('input[name=song_id][value="${unratedId}"]')`)),'ON excludes missing-difficulty candidate from new plan choices');
+
+ await go('/dashboard','내가 할 일');assert(await run('document.body.innerText.includes("멤버 실력 설정")'),'enabled skill task appears');
  await go('/settings/band','멤버와 설정');await touchText('실력 기능 끄기');await wait('!document.querySelector("select[name=skill]")');assert(true,'leader disables skill fields');
+ await go('/dashboard','내가 할 일');assert(!(await run('document.body.innerText.includes("멤버 실력 설정")')),'disabled skill task hidden');
+ await viewport(390,844);await go('/schedule','저장된 날짜');
 
- // Schedule: two-month window, tap once to see / twice to change, one save for add + remove, undo, range, leave guard.
- await viewport(390,844);await go('/schedule','가능한 날');
- const firstMonth=ym(day(0));await touch(cal+' button[aria-label="다음 달"]');
- assert(await run('document.querySelector('+JSON.stringify(cal+' [aria-live=polite]')+').textContent.trim()!=='+JSON.stringify(firstMonth)+'&&document.querySelector('+JSON.stringify(cal+' button[aria-label="다음 달"]')+').disabled'),'calendar exposes this month and next month only');
- await touch(cal+' button[aria-label="이전 달"]');
+ const initialMonth=await run('document.querySelector('+JSON.stringify(add+' [data-calendar-month]')+').dataset.calendarMonth');
+ await touch(add+' button[aria-label="다음 달"]');
+ const finalMonth=await run('document.querySelector('+JSON.stringify(add+' [data-calendar-month]')+').dataset.calendarMonth');
+ assert(finalMonth!==initialMonth&&await run('document.querySelector('+JSON.stringify(add+' button[aria-label="다음 달"]')+').disabled'),'calendar exposes this month and next month only');
+ await run('Array.from(document.querySelectorAll('+JSON.stringify(add+' [data-day]:not(:disabled)')+')).at(-1).focus()');
+ await cmd('Input.dispatchKeyEvent',{type:'keyDown',key:'PageDown',code:'PageDown',windowsVirtualKeyCode:34});await cmd('Input.dispatchKeyEvent',{type:'keyUp',key:'PageDown',code:'PageDown',windowsVirtualKeyCode:34});
+ assert(await run('document.querySelector('+JSON.stringify(add+' [data-calendar-month]')+').dataset.calendarMonth==='+JSON.stringify(finalMonth)),'keyboard cannot bypass two-month maximum');
+ await touch(add+' button[aria-label="이전 달"]');
  if(process.env.QA_DESKTOP){
-  await run('document.querySelector('+JSON.stringify(cell(day(2)))+').focus()');
+  await run('document.querySelector('+JSON.stringify(add+' [data-day="'+day(2)+'"]')+').focus()');
   await cmd('Input.dispatchKeyEvent',{type:'keyDown',key:'ArrowRight',code:'ArrowRight',windowsVirtualKeyCode:39});await cmd('Input.dispatchKeyEvent',{type:'keyUp',key:'ArrowRight',code:'ArrowRight',windowsVirtualKeyCode:39});
-  await wait('document.activeElement?.dataset.day==='+JSON.stringify(day(3)));assert((await panelText()).includes('바뀐 날짜 없음'),'desktop keyboard moves to the next day without changing anything');
+  // Saved and past days are read-only (they open the roster) but stay focusable; only disabled days are skipped.
+  await wait('document.activeElement?.dataset.day==='+JSON.stringify(day(3)));assert((await draftLength())===0,'desktop keyboard moves to the next day without changing draft');
+  const month=await run('document.querySelector('+JSON.stringify(add+' [data-calendar-month]')+').dataset.calendarMonth');
+  await cmd('Input.dispatchKeyEvent',{type:'keyDown',key:'PageUp',code:'PageUp',windowsVirtualKeyCode:33});await cmd('Input.dispatchKeyEvent',{type:'keyUp',key:'PageUp',code:'PageUp',windowsVirtualKeyCode:33});
+  assert(await run('document.querySelector('+JSON.stringify(add+' [data-calendar-month]')+').dataset.calendarMonth==='+JSON.stringify(month)),'desktop PageUp respects first-month boundary');
  }
- const initialSaved=await savedCount();assert(initialSaved>0,'fixture available dates counted ('+initialSaved+')');
- assert(!(await run("!!document.querySelector('main input[name=reason]')||document.body.innerText.includes('불참 사유')||document.body.innerText.includes('회차')")),'availability has no reason inputs or round terminology');
- assert((await panelText()).includes('바뀐 날짜 없음')&&await run('document.querySelector('+JSON.stringify(panel)+').querySelector("button:last-of-type").disabled'),'nothing staged and save disabled at start');
- for(const width of [320,390,430,768,1280]){await viewport(width,844);await layout('schedule calendar');if(width===390||width===1280)await shot('schedule-'+width+'.png');}await viewport(390,844);
- const freed=[10,11,13,14,20,21].map(day);let removed=0;
- for(const d of freed){await showMonth(cal,d);if((await cellState(d))==='saved'){await removeSaved(d);removed++;}}
- assert((await savedCount())===initialSaved-removed,'removing from the saved-dates sheet keeps the other dates ('+removed+' removed)');
- for(const d of freed){await showMonth(cal,d);assert((await cellState(d))!=='saved','sheet removed '+d);}
- const savedDay=await run('document.querySelector('+JSON.stringify(cal+' [data-state=saved]:not([aria-label*="보는 중"])')+')?.dataset.day');
- await touch(cell(savedDay));assert((await panelText()).includes(md(savedDay))&&(await panelText()).includes('바뀐 날짜 없음'),'first tap on a saved day only shows its roster');
- await toggleDay(day(13));await toggleDay(day(14));
- assert((await cellState(day(13)))==='adding'&&(await cellState(day(14)))==='adding'&&(await panelText()).includes('2일 추가'),'second taps stage separate dates');
- assert((await panelText()).includes('나'),'roster includes my unsaved choice');
- await touchText('초기화',panel+' button');assert((await panelText()).includes('바뀐 날짜 없음'),'reset clears staged dates only');
- await toggleDay(day(10));await saveCalendar();assert((await cellState(day(10)))==='saved','saving adds the date');
- await touchText('되돌리기',panel+' button');await wait('document.querySelector('+JSON.stringify(cell(day(10)))+').dataset.state==="none"&&!document.querySelector('+JSON.stringify(cal+' [data-day]:not([data-state=past]):disabled')+')');assert(true,'undo after saving restores the previous dates');
- await toggleDay(day(10));await toggleDay(savedDay);assert((await panelText()).includes('1일 추가 · 1일 빼기'),'one save carries an addition and a removal');await saveCalendar();
- assert((await cellState(day(10)))==='saved'&&(await cellState(savedDay))==='none','addition and removal saved together');
- await toggleDay(savedDay);await saveCalendar();
- await touchText('기간으로');await showMonth(cal,day(20));await touch(cell(day(20)));await touch(cell(day(21)));assert((await cellState(day(20)))==='adding'&&(await cellState(day(21)))==='adding','range selects every day between two taps');await saveCalendar();await touchText('하루씩');
- // Leaving with staged changes asks first.
- await toggleDay(day(13));await touchNav('/songs');await wait('!!document.querySelector("dialog[open]")');assert(await run('location.pathname==="/schedule"&&document.querySelector("dialog[open]").innerText.includes("저장하지 않은 변경이 있어요")'),'leaving with unsaved dates asks first');
- await touchText('계속 고르기','dialog[open] button');assert(await run('!document.querySelector("dialog[open]")&&location.pathname==="/schedule"')&&(await cellState(day(13)))==='adding','keep choosing returns without losing changes');
- await touchNav('/songs');await wait('!!document.querySelector("dialog[open]")');await touchText('저장하고 이동','dialog[open] button');await wait('location.pathname==="/songs"');await go('/schedule','가능한 날');await showMonth(cal,day(13));assert((await cellState(day(13)))==='saved','save-and-leave stored the date');
- await ensureSaved(day(11),true);await ensureSaved(day(14),true);
- assert((await savedCount())===initialSaved,'all freed dates restored ('+initialSaved+')');
- await touch('main button[aria-haspopup=dialog]');await wait('!!document.querySelector("dialog[open]")');for(const width of [320,390,430,768,1280]){await viewport(width,844);await layout('saved dates sheet');if(width===390)await shot('saved-dates-390.png');}await viewport(390,844);await closeSheet();
+ const initialSaved=await savedTiles();assert(initialSaved.length>0&&new Set(initialSaved).size===initialSaved.length,'fixture available dates listed once each ('+initialSaved.length+' tiles)');assert(!(await run("!!document.querySelector('main input[name=reason]')||document.body.innerText.includes('불참 사유')")),'availability has no reason inputs or saved reason text');assert((await draftLength())===0,'calendar draft starts empty');assert(!(await run("document.body.innerText.includes('선택 날짜')||document.body.innerText.includes('회차')")),'no duplicate selected-date list or round terminology');
+ for(const width of [320,390,430,768,1280]){await viewport(width,844);await layout('multi-select calendar');}await viewport(390,844);
+ const freed=[10,11,13,14,20,21].map(day).filter(d=>initialSaved.includes(d));for(const d of freed)await deleteSaved(d);
+ assert((await savedTiles()).length===initialSaved.length-freed.length,'deleting dates from compact tiles preserves the other tiles');
+ const savedDay=(await savedTiles())[0];await calendarDay(savedDay,add,true);assert((await draftLength())===0&&await run('document.querySelector('+JSON.stringify('section[aria-label="날짜별 참석 명단"]')+').innerText.includes('+JSON.stringify(savedDay)+')'),'saved calendar day opens its roster without entering the draft');
+ await calendarDay(day(13),add,true);await calendarDay(day(14),add,true);assert((await draftLength())===2,'touch multi-select chooses separate dates');assert(await run('(l=>l.includes("참석 가능")&&l.includes("선택 중"))(document.querySelector('+JSON.stringify(add+' [data-day="'+day(13)+'"]')+').getAttribute("aria-label"))'),'availability calendar previews attendance counts');assert(await run('document.querySelector('+JSON.stringify('section[aria-label="날짜별 참석 명단"]')+').innerText.includes("Mobile QA Leader (나)")'),'attendance names include the unsaved selected actor');await touchText('선택 초기화');
+ await addDate(day(10));assert((await draftLength())===0,'successful add clears only calendar draft');
+ const otherSaved=(await savedTiles()).find(d=>d!==day(10)&&d.slice(0,7)===day(10).slice(0,7));
+ await touch('[data-saved-date="'+day(10)+'"]');await touch('[data-saved-editor="'+day(10)+'"] button[aria-haspopup=dialog]');assert(await run('document.querySelector('+JSON.stringify('dialog[open] [data-day="'+otherSaved+'"]')+').disabled'),'edit calendar disables another saved date');assert(!(await run('document.querySelector('+JSON.stringify('dialog[open] [data-day="'+day(10)+'"]')+').disabled')),'edit calendar keeps current date selectable');await cmd('Input.dispatchKeyEvent',{type:'rawKeyDown',key:'Escape',code:'Escape',windowsVirtualKeyCode:27,nativeVirtualKeyCode:27});await cmd('Input.dispatchKeyEvent',{type:'keyUp',key:'Escape',code:'Escape',windowsVirtualKeyCode:27,nativeVirtualKeyCode:27});await delay(200);assert((await run('document.querySelectorAll("dialog[open]").length'))===1,'Escape closes inner picker and preserves outer editor: '+await run('JSON.stringify([...document.querySelectorAll("dialog[open]")].map(d=>d.textContent.slice(0,30)))'));await set('[data-saved-editor="'+day(10)+'"] form:has(input[name=old_date]) input[name=date]',day(11));await touch('[data-saved-editor="'+day(10)+'"] form:has(input[name=old_date]) > button');await wait('!!document.querySelector('+JSON.stringify('[data-saved-date="'+day(11)+'"]')+')');assert(!(await run('!!document.querySelector('+JSON.stringify('[data-saved-date="'+day(10)+'"]')+')')),'saved date editable from compact tile dialog');
+ const beforeDelete=(await savedTiles()).length;await deleteSaved(day(11));assert((await savedTiles()).length===beforeDelete-1,'deleting one date preserves other compact tiles');
+ await touchText('기간 선택');await calendarDay(day(20),add,true);await calendarDay(day(21),add,true);await touchText('날짜 저장');await wait('!!document.querySelector('+JSON.stringify('[data-saved-date="'+day(20)+'"]')+')&&!!document.querySelector('+JSON.stringify('[data-saved-date="'+day(21)+'"]')+')');assert(true,'range calendar saves multiple dates without a reason');await touchText('여러 날짜');
+ // Restore the freed days in one multi-date save so later plan steps see the full five-member roster.
+ for(const d of [10,11,13,14].map(day).filter(d=>freed.includes(d)))await calendarDay(d,add,true);await touchText('날짜 저장');await wait('document.querySelectorAll("[data-saved-date]").length==='+initialSaved.length);assert(true,'multi-date save restores freed days');
 
- // Plans: new plan sheet, date-only plan, edits in place, five-plan capacity, delete.
- await go('/plans','새 합주 정하기');await touchText('새 합주 정하기');await wait('!!document.querySelector("dialog[open]")');
- for(const width of [320,390,430,768,1280]){await viewport(width,844);await layout('new plan sheet');assert((await run('document.querySelectorAll("dialog[open] [data-day]").length'))>=28,'full calendar month available at '+width);if(width===390||width===1280)await shot('new-plan-'+width+'.png');}await viewport(390,844);
- assert((await run('document.querySelectorAll("dialog[open] input[name=recommended_date]").length'))===4,'four date suggestions appear automatically');
- await touch('dialog[open] fieldset label');assert((await run('document.querySelector("dialog[open] input[name=date]").value'))!=='','selecting a suggestion fills the date immediately');
- await ackPartial();assert(!(await run('[...document.querySelectorAll("dialog[open] button")].find(b=>b.innerText.trim()==="이 날로 확정하기").disabled')),'selected suggestion can be confirmed without songs or preview');
- await closeSheet();
- await createDatePlan(day(11),'홍대 QA 합주실');
- await go('/dashboard','홍대 QA 합주실');assert(await run('document.body.innerText.indexOf("다가오는 합주")<document.body.innerText.indexOf("홍대 QA 합주실")'),'home shows the upcoming rehearsal with its location');
- await go('/plans','합주 계획');const first=await run('document.querySelector("[data-plan-id]").dataset.planId'),card='[data-plan-id="'+first+'"]';
- assert(await run(summaryHas(card,'곡 미정')),'date-only plan created with no vote or song requirement');
- await openEdit(card);await touch('dialog[open] [data-song-choice]');await savePlanEdit(card,'[테스트 A]');assert((await planCount())===1,'adding a song edits the same plan without consuming a slot');
- await openEdit(card);await pickPlanDay(day(12));await touch('dialog[open] [data-song-choice][aria-pressed=true]');await savePlanEdit(card,'곡 미정');assert(await run(summaryHas(card,md(day(12)))),'plan date changed and songs removed in place');
- for(let i=1;i<=4;i++){await createDatePlan(day(12+i));}
- assert(await run('!document.body.innerText.includes("새 합주 정하기")&&document.body.innerText.includes("계획이 5개")'),'five-plan capacity enforced in screen');
- await openEdit(card);await pickPlanDay(day(17));await savePlanEdit(card,md(day(17)));assert((await planCount())===5,'existing plans remain editable at capacity');await layout('five plans');await shot('plans-390.png');
- await deletePlan(card);assert(true,'deleting from the more menu frees one plan slot');
+ for(const width of [320,390,430,768,1280]){await viewport(width,844);await layout('compact saved dates');await run("document.querySelector('[data-saved-date]').scrollIntoView({block:'center'})");if(width===390||width===1280)await writeFile(resolve(artifacts,'compact-saved-dates-'+width+'.png'),Buffer.from((await cmd('Page.captureScreenshot',{format:'png'})).data,'base64'));}await viewport(390,844);
+ await go('/plans','합주 날짜 정하기');
+ for(const width of [320,390,430,768,1280]){await viewport(width,844);await touch(newPlan+' button[aria-haspopup=dialog]');await layout('all-date attendance dialog');assert((await run('document.querySelectorAll("dialog[open] [data-day]").length'))>=28,'full calendar month available at '+width);if(width===390||width===1280)await writeFile(resolve(artifacts,'attendance-calendar-'+width+'.png'),Buffer.from((await cmd('Page.captureScreenshot',{format:'png'})).data,'base64'));await touch('dialog[open] button:first-of-type');}await viewport(390,844);
 
- // Songs: add from the sheet, one-tap voting in the list, vote/withdraw/recast in detail.
- await go('/songs','투표로 함께');await touchText('곡 추가');await wait('!!document.querySelector("dialog[open]")');await set('dialog[open] input[name=title]','Mobile candidate '+'X'.repeat(103));await set('dialog[open] input[name=artist]','Browser QA');await touchText('후보곡 올리기','dialog[open] button');await wait('document.body.innerText.includes("후보곡을 추가했습니다.")');await closeSheet();
- for(const width of [320,390,430,844]){await viewport(width,width===844?390:844);await layout('long title songs');}await viewport(390,844);
- assert(!(await run('!!document.querySelector("main select[name=difficulty]")')),'list has no difficulty editors');
- assert((await run('document.querySelectorAll("form[data-vote-editor]").length'))===(await run('[...document.querySelectorAll("[data-song-id]")].filter(e=>e.innerText.includes("미투표")).length')),'one-tap voting only on songs I have not voted on');
- await shot('song-list-390.png');
- const songLink=await run('document.querySelector("[data-song-id] a").getAttribute("href")');
+ assert((await run('document.querySelectorAll('+JSON.stringify(newPlan+' input[name=recommended_date]')+').length'))===5,'five date suggestions appear automatically without a reveal button');
+ for(const width of [320,390,430,768,844]){await viewport(width,width===844?390:844);await layout('compact automatic date suggestions');const height=await run('document.querySelector('+JSON.stringify(newPlan+' fieldset')+').getBoundingClientRect().height');assert(height<=160,'date suggestions stay compact at '+width+'px (height '+height+')');}await viewport(390,844);
+ await touch(newPlan+' fieldset label:first-of-type');assert((await run('document.querySelector('+JSON.stringify(newPlan+' input[name=date]')+').value'))!=='','selecting an automatic suggestion fills the date immediately');
+ assert(!(await run('document.querySelector('+JSON.stringify(newPlan+' button')+').disabled')),'selected suggestion can be confirmed without songs or preview');
+ await writeFile(resolve(artifacts,'automatic-date-suggestions-390.png'),Buffer.from((await cmd('Page.captureScreenshot',{format:'png',captureBeyondViewport:true})).data,'base64'));
+ await set(newPlan+' input[name=location]','홍대 QA 합주실');await createDatePlan(day(11));await wait('document.querySelectorAll("[data-plan-id]").length===1');await go('/dashboard','홍대 QA 합주실');assert(await run('document.body.innerText.indexOf("다가오는 합주")<document.body.innerText.indexOf("내가 할 일")'),'upcoming rehearsal first with stored location');await go('/plans','합주 계획');const first=await run('document.querySelector("[data-plan-id]").dataset.planId'),card='[data-plan-id="'+first+'"]';assert(await run('document.querySelector('+JSON.stringify(card)+').innerText.includes("곡 미정")'),'date-only plan created with no vote or song requirement');
+ await open(card+' details:has(input[name=band_id])');await open(card+' form:has(input[name=band_id]) details');await touch(card+' input[name=song_id]');await savePlanEdit(card,'[테스트 A]');assert((await run('document.querySelectorAll("[data-plan-id]").length'))===1,'adding a song edits the same plan without consuming a slot');
+ await open(card+' details:has(input[name=band_id])');await set(card+' input[name=date]',day(12));await touch(card+' input[name=song_id]');await savePlanEdit(card,'곡 미정');assert(await run('document.querySelector('+JSON.stringify(card)+').innerText.includes('+JSON.stringify(day(12))+')'),'plan date changed and songs removed in place');
+ for(let i=1;i<=4;i++){await createDatePlan(day(12+i));await wait('document.querySelectorAll("[data-plan-id]").length==='+String(i+1));}
+ assert(await run('!document.querySelector('+JSON.stringify(newPlan)+')&&document.body.innerText.includes("계획이 5개")'),'five-plan capacity enforced in screen');
+ await open(card+' details:has(input[name=band_id])');await set(card+' input[name=date]',day(17));await savePlanEdit(card,day(17));assert((await run('document.querySelectorAll("[data-plan-id]").length'))===5,'existing plans remain editable at capacity');await layout('five editable date-only plans');await writeFile(resolve(artifacts,'continuous-plans-390.png'),Buffer.from((await cmd('Page.captureScreenshot',{format:'png',captureBeyondViewport:true})).data,'base64'));
+ await touch(card+' details:has(input[name=confirm_delete]) summary');await touch(card+' input[name=confirm_delete]');await touch(card+' form:has(input[name=confirm_delete]) button');await wait('document.querySelectorAll("[data-plan-id]").length===4');assert(true,'explicit deletion frees one plan slot');
+ await go('/songs','후보곡 등록');assert(await run('document.querySelector("form:has(input[name=title])").closest("details").open'),'candidate registration starts expanded');await fill('title','Mobile candidate '+'X'.repeat(103));await fill('artist','Browser QA');await touch('form:has(input[name=title]) button');await wait('document.body.innerText.includes("후보곡을 추가했습니다.")');for(const width of [320,390,430,844]){await viewport(width,width===844?390:844);await layout('long title live songs');}await viewport(390,844);
+ const songLink=await run('document.querySelector("[data-song-id] a").getAttribute("href")');assert(!(await run('!!document.querySelector("select[name=difficulty],select[name=choice]")')),'compact list has no repeated difficulty or vote editors');await writeFile(resolve(artifacts,'compact-song-list-390.png'),Buffer.from((await cmd('Page.captureScreenshot',{format:'png',captureBeyondViewport:true})).data,'base64'));await go(songLink,'내 투표:');
  assert(!(await run('document.body.innerText.includes("파트별 난이도")')),'disabled feature hides difficulty on song detail');
  await go('/settings/band','멤버와 설정');await touchText('실력 기능 켜기');await wait('!!document.querySelector("select[name=skill]")');await go(songLink,'파트별 난이도');
- await set('form:has(input[name=expected_version]) select','3');await touch('form:has(input[name=expected_version]) button');await wait('document.body.innerText.includes("Difficulty saved")||document.body.innerText.includes("난이도")');
- await touchText('반대','form[data-vote-editor] button');await set('form[data-vote-editor] textarea[name=reason]','Mobile no reason');await touchText('반대로 저장','form[data-vote-editor] button');await wait('document.body.innerText.includes("반대로 저장됨")');assert(true,'difficulty and persistent vote save without a round');
- await touchText('내 투표 취소');await wait('document.body.innerText.includes("아직 안 함")');assert(true,'own vote withdrawn from song detail');
- await touchText('찬성','form[data-vote-editor] button');await wait('document.body.innerText.includes("찬성으로 저장됨")');assert(true,'vote can be recast after withdrawal');
+ await set('form:has(input[name=expected_version]) select','3');await touch('form:has(input[name=expected_version]) button');await wait('document.body.innerText.includes("Difficulty saved")');await set('form:has(select[name=choice]) select','no');await set('form:has(select[name=choice]) textarea','Mobile no reason');await touch('form:has(select[name=choice]) button');await wait('document.body.innerText.includes("투표를 저장했습니다.")');assert(true,'difficulty and persistent vote save without a round');await touchText('내 투표 취소');await wait('document.body.innerText.includes("내 투표: 미투표")');assert(true,'own vote withdrawn from song detail');await set('form:has(select[name=choice]) select','yes');await touch('form:has(select[name=choice]) button');await wait('document.body.innerText.includes("내 투표: 찬성")');assert(true,'vote can be recast after withdrawal');
  await go('/settings/band','멤버와 설정');await touchText('실력 기능 끄기');await wait('!document.querySelector("select[name=skill]")');
 
- // Ordinary member, newcomer and leader views.
- await logout();await enter('테스트 베이스','246810');await go('/plans','합주 계획');assert(!(await run("document.body.innerText.includes('계획 수정')||document.body.innerText.includes('새 합주 정하기')||document.body.innerText.includes('계획 삭제')")),'ordinary member cannot edit/delete/confirm plans');
- await go('/schedule','가능한 날');await ensureSaved(day(28),false);await ensureSaved(day(28),true);assert(true,'ordinary member changes own dates immediately');
- await logout();await gate();await touchText('처음 참여하나요? 새 프로필 만들기','summary');await set('form:has(input[name=nickname]) input[name=nickname]','Immediate newcomer');await set('form:has(input[name=nickname]) input[name=part]','보컬');await set('form:has(input[name=nickname]) input[name=pin]','987654');await touch('form:has(input[name=nickname]) button');await wait('location.pathname==="/dashboard"');
- await go('/schedule','가능한 날');await ensureSaved(day(18),true);await go(songLink,'투표 현황');assert(await run('!!document.querySelector("form[data-vote-editor]")'),'new member votes and saves dates immediately without starting a round');assert(!(await run('document.body.innerText.includes("파트별 난이도")')),'ordinary member also sees difficulty hidden when OFF');assert(!(await run('!!document.querySelector("input[name=confirmed]")')),'ordinary member cannot confirm or remove repertoire songs');await touchText('찬성','form[data-vote-editor] button');await wait('document.body.innerText.includes("투표를 저장했습니다.")');assert(true,'new member persistent vote accepted');
- await logout();await enter('Mobile QA Leader','112233');await go('/dashboard','멤버 6명');assert(await run('document.body.innerText.includes("다가오는 합주")&&document.body.innerText.includes("밴드장")'),'home summarizes the band for the leader');assert(true,'roster automatically changes to six current members');await go('/plans','새 합주 정하기');await createDatePlan(day(18));assert(await run("document.body.innerText.includes('6/6명 참석')"),'date-only plan uses new current roster despite pending song votes');await go('/settings/band','멤버와 설정');assert(!(await run("document.body.innerText.includes('회차')")),'member management has no manual round controls');
+ await logout();await enter('테스트 베이스','246810');await go('/plans','합주 계획');assert(!(await run("document.body.innerText.includes('계획 수정')||document.body.innerText.includes('합주 날짜 확정')||document.body.innerText.includes('계획 삭제')")),'ordinary member cannot edit/delete/confirm plans');await go('/schedule','저장된 날짜');await addFreshDate(day(30));assert(true,'ordinary member can add own date immediately');
+ await logout();await gate();await touchText('처음 참여하나요? 새 프로필 만들기','summary');await set('form:has(input[name=nickname]) input[name=nickname]','Immediate newcomer');await set('form:has(input[name=nickname]) input[name=part]','보컬');await set('form:has(input[name=nickname]) input[name=pin]','987654');await touch('form:has(input[name=nickname]) button');await wait('location.pathname==="/dashboard"');await go('/schedule','저장된 날짜');await addDate(day(18));await go(songLink,'내 투표:');assert(await run('!!document.querySelector("select[name=choice]")'),'new member votes and saves dates immediately without starting a round');assert(!(await run('document.body.innerText.includes("파트별 난이도")')),'ordinary member also sees difficulty hidden when OFF');assert(!(await run('!!document.querySelector("input[name=confirmed]")')),'ordinary member cannot confirm or remove repertoire songs');await set('form:has(select[name=choice]) select','yes');await touch('form:has(select[name=choice]) button');await wait('document.body.innerText.includes("투표를 저장했습니다.")');assert(true,'new member persistent vote accepted');
+ await logout();await enter('Mobile QA Leader','112233');await go('/dashboard','멤버 6명');assert(await run('document.body.innerText.includes("내가 할 일")&&document.body.innerText.includes("미투표 곡")'),'home summarizes member tasks');assert(true,'roster automatically changes to six current members');await go('/plans','합주 날짜 정하기');await createDatePlan(day(18));await wait('document.querySelectorAll("[data-plan-id]").length===5');assert(await run("document.body.innerText.includes('참석 6/6명')"),'date-only plan uses new current roster despite pending song votes');await go('/settings/band','멤버와 설정');assert(!(await run("document.body.innerText.includes('회차')")),'member management has no manual round controls');
  await go('/schedule/recommendations','날짜 추천');await touchText('홈','nav a');await wait('location.pathname==="/dashboard"');assert(true,'recommendations return directly home');
  await go('/settings/band','멤버와 설정');
  const target=await run(`(()=>{const heading=[...document.querySelectorAll('section h2')].find(e=>e.textContent==='테스트 베이스');return heading?.closest('section').querySelector('input[name=member_id]')?.value;})()`);assert(!!target,'handoff target present');
  const transfer='form:has(input[name=confirm_transfer]):has(input[name=member_id][value="'+target+'"])';
  await open('details:has(input[name=confirm_transfer]):has(input[name=member_id][value="'+target+'"])');assert(!(await run('document.body.innerText.includes("관리자 PIN")')),'handoff collects no administrator PIN');await touch(transfer+' input[name=confirm_transfer]');await touch(transfer+' > button');await wait('document.body.innerText.includes("밴드장 권한을 넘겼습니다")');assert(!(await run('!!document.querySelector("input[name=confirm_transfer]")')),'former leader loses management controls immediately');
  await go('/plans','합주 계획');assert(!(await run('document.body.innerText.includes("계획 수정")||document.body.innerText.includes("계획 삭제")')),'former leader loses plan editing immediately');
- await logout();await enter('테스트 베이스','246810');await go('/settings/band','멤버와 설정');assert(await run('!!document.querySelector("input[name=confirm_transfer]")'),'new leader manages without administrator unlock');await go('/plans','합주 계획');assert((await planCount())===5,'handoff preserves all five confirmed plans');
- const retainedId=await run('document.querySelector("[data-plan-id]").dataset.planId');const survivor='[data-plan-id="'+retainedId+'"]';await openEdit(survivor);await pickPlanDay(day(19));await savePlanEdit(survivor,md(day(19)));assert(true,'new leader edits a retained plan');
+ await logout();await enter('테스트 베이스','246810');await go('/settings/band','멤버와 설정');assert(await run('!!document.querySelector("input[name=confirm_transfer]")'),'new leader manages without administrator unlock');await go('/plans','합주 날짜 정하기');assert((await run('document.querySelectorAll("[data-plan-id]").length'))===5,'handoff preserves all five confirmed plans');
+ const retainedId=await run('document.querySelector("[data-plan-id]").dataset.planId');const survivor='[data-plan-id="'+retainedId+'"]';await open(survivor+' details:has(input[name=band_id])');await set(survivor+' input[name=date]',day(19));await savePlanEdit(survivor,day(19));assert(true,'new leader edits a retained plan');
 
  // Repertoire survives plan deletion and leader changes, independently of recommendation state.
- await go('/songs','투표로 함께');const chosenLink=await run(`Array.from(document.querySelectorAll('[data-song-id] a')).find(e=>e.textContent.startsWith('Mobile candidate'))?.getAttribute('href')`);assert(!!chosenLink,'unvoted candidate available for explicit leader decision');
- await go(chosenLink,'이 곡 확정하기');await touchText('이 곡 확정하기');await wait('document.body.innerText.includes("확정곡에 추가했습니다")');
- await go('/songs?view=confirmed','확정곡');assert(await run('[...document.querySelectorAll("[data-song-id]")].some(e=>e.innerText.includes("Mobile candidate"))'),'decided song is separated into repertoire');
+ await go('/songs','후보곡 등록');const chosenLink=await run(`Array.from(document.querySelectorAll('[data-song-id] a')).find(e=>e.textContent.startsWith('Mobile candidate'))?.getAttribute('href')`);assert(!!chosenLink,'unvoted candidate available for explicit leader decision');
+ await go(chosenLink,'이 곡 확정');await touchText('이 곡 확정');await wait('document.body.innerText.includes("확정곡에 추가했습니다")');
+ await go('/songs','확정곡 · 1곡');assert(await run('document.querySelector("section[aria-label=확정곡]").innerText.includes("Mobile candidate")'),'decided song is separated into repertoire');
  for(const width of [320,390,1280]){await viewport(width,844);await layout('confirmed repertoire');}await viewport(390,844);
  const chosenId=chosenLink.split('/').pop();await go('/plans','합주 계획');
- await openEdit(survivor);assert(await run('!!document.querySelector('+JSON.stringify('dialog[open] [data-song-choice="'+chosenId+'"]')+')'),'leader-confirmed song selectable despite pending votes');
- await touch('dialog[open] [data-song-choice="'+chosenId+'"]');await savePlanEdit(survivor,'Mobile candidate');
- await go(chosenLink,'확정 해제');await touchText('확정 해제');await wait('document.body.innerText.includes("확정 목록에서 삭제했습니다")');
+ await open(survivor+' details:has(input[name=band_id])');await open(survivor+' form:has(input[name=band_id]) details');
+ const chosenInput=survivor+' input[name=song_id][value="'+chosenId+'"]';assert(await run('!!document.querySelector('+JSON.stringify(chosenInput)+')'),'leader-confirmed song selectable despite pending votes');
+ await touch(chosenInput);await savePlanEdit(survivor,'Mobile candidate');
+ await go('/songs','확정곡 · 1곡');await touchText('확정 목록에서 삭제');await wait('document.body.innerText.includes("확정곡 · 0곡")');
  await go('/plans','합주 계획');assert(await run(summaryHas(survivor,'Mobile candidate')),'removing repertoire song preserves existing plan snapshot');
- await go(chosenLink,'이 곡 확정하기');await touchText('이 곡 확정하기');await wait('document.body.innerText.includes("확정곡에 추가했습니다")');
- await go('/plans','합주 계획');await deletePlan(survivor);
- await touchText('새 합주 정하기');await wait('!!document.querySelector("dialog[open]")');assert(await run('!!document.querySelector('+JSON.stringify('dialog[open] [data-song-choice="'+chosenId+'"]')+')'),'deleting rehearsal leaves confirmed song available for a replacement plan');await closeSheet();
+ await go(chosenLink,'이 곡 확정');await touchText('이 곡 확정');await wait('document.body.innerText.includes("확정곡에 추가했습니다")');
+ await go('/plans','합주 계획');await open(survivor+' details:has(input[name=confirm_delete])');await touch(survivor+' input[name=confirm_delete]');await touch(survivor+' form:has(input[name=confirm_delete]) button');await wait('document.querySelectorAll("[data-plan-id]").length===4');
+ await open(newPlan+' details');assert(await run('!!document.querySelector('+JSON.stringify(newPlan+' input[name=song_id][value="'+chosenId+'"]')+')'),'deleting rehearsal leaves confirmed song available for a replacement plan');
  await go('/settings/band','멤버와 설정');const removal=await run(`Array.from(document.querySelectorAll('section h2')).find(e=>e.textContent==='Immediate newcomer')?.closest('section').querySelector('dialog input[name=member_id]')?.value`);assert(!!removal,'member removal target exists');
  const removalDialog='dialog:has(input[name=member_id][value="'+removal+'"])';
  await run('document.querySelector('+JSON.stringify(removalDialog)+').parentElement.querySelector("button").click()');await wait('document.querySelector('+JSON.stringify(removalDialog)+').open');assert(await run('document.querySelector('+JSON.stringify(removalDialog)+').innerText.includes("Immediate newcomer님을 내보내겠습니까?")'),'removal requires named confirmation popup');
@@ -182,29 +160,27 @@ export async function workflows({run,go,fill,touchText,wait,assert,layout,viewpo
  await go('/settings/band','멤버와 설정');assert(!(await run('document.body.innerText.includes("프로필 시작 화면 끄기")')),'ordinary member cannot change start mode');
  await directLogout();await directLogin();await go('/settings/band','사이트 시작 화면');await touchText('프로필 시작 화면 끄기');await wait('document.body.innerText.includes("현재: 밴드 코드·공용 비밀번호 입력")');assert(true,'leader restores code/password start');
  await logout();await go('/login/member?direct=1','우리 밴드로 접속');assert(await run('!!document.querySelector("input[name=password],input[name=code]")'),'disabled direct start returns to preserved standard login');
+
 }
 
 
 export async function songDeletionWorkflow({run,go,touchText,wait,assert,layout,viewport,cmd,artifacts,writeFile,resolve}){
- async function touch(selector){await run(`document.querySelector(${JSON.stringify(selector)}).click()`);await new Promise(r=>setTimeout(r,600));}
- await go('/songs','투표로 함께');const href=await run('document.querySelector("[data-song-id] a").getAttribute("href")'),id=href.split('/').pop();
- await go(href,'이 곡 확정하기');await touchText('이 곡 확정하기');await wait('document.body.innerText.includes("확정곡에 추가했습니다")');
- assert(await run('!document.querySelector("form[data-vote-editor]")&&!document.body.innerText.includes("투표 현황")'),'confirmed detail has no voting requirement');
- await go('/songs?view=unvoted','미투표');assert(!(await run('!!document.querySelector('+JSON.stringify('[data-song-id="'+id+'"]')+')')),'confirmed song absent from pending-vote list');
- await go('/plans','새 합주 정하기');await touchText('새 합주 정하기');await wait('!!document.querySelector("dialog[open]")');
- await touch('dialog[open] fieldset label input');await touch('dialog[open] [data-song-choice="'+id+'"]');
- await run('(()=>{const e=document.querySelector("dialog[open] input[name=location]");Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,"value").set.call(e,"QA 장소");e.dispatchEvent(new Event("input",{bubbles:true}));const c=document.querySelector("dialog[open] input[type=checkbox]");if(c&&!c.checked)c.click();})()');
- await touchText('이 날로 확정하기','dialog[open] button');await wait('document.querySelectorAll("[data-plan-id]").length===1');assert(true,'confirmed song saved in plan without new votes');
- await go('/dashboard','QA 장소');assert(await run('document.body.innerText.indexOf("다가오는 합주")<document.body.innerText.indexOf("QA 장소")'),'home prioritizes upcoming rehearsal and venue');
+ await go('/songs','후보곡 등록');const href=await run('document.querySelector("[data-song-id] a").getAttribute("href")'),id=href.split('/').pop();
+ await go(href,'이 곡 확정');await touchText('이 곡 확정');await wait('document.body.innerText.includes("확정곡에 추가했습니다")');
+ assert(await run('!document.querySelector("select[name=choice]")&&!document.body.innerText.includes("미응답")'),'confirmed detail has no voting requirement');
+ await go('/songs?view=unvoted','미투표 곡');assert(!(await run('!!document.querySelector('+JSON.stringify('[data-song-id="'+id+'"]')+')')),'confirmed song absent from pending-vote list');
+ await go('/plans','합주 날짜 정하기');await run('document.querySelector("input[name=recommended_date]").closest("label").click();document.querySelector("form:has(input[name=band_id]) details").open=true;');
+ await run('document.querySelector('+JSON.stringify('input[name=song_id][value="'+id+'"]')+').click();document.querySelector("form:has(input[name=band_id]) input[name=location]").value="QA 장소"');await touchText('합주 날짜 확정');await wait('document.querySelectorAll("[data-plan-id]").length===1');assert(true,'confirmed song saved in plan without new votes');
+ await go('/dashboard','QA 장소');assert(await run('document.body.innerText.indexOf("다가오는 합주")<document.body.innerText.indexOf("내가 할 일")'),'home prioritizes upcoming rehearsal and venue');
  for(const width of [390,1280]){await viewport(width,844);await layout('upcoming rehearsal with venue');await writeFile(resolve(artifacts,'upcoming-venue-'+width+'.png'),Buffer.from((await cmd('Page.captureScreenshot',{format:'png',captureBeyondViewport:true})).data,'base64'));}await viewport(390,844);
- const setLocation=v=>run('(()=>{const e=document.querySelector("dialog[open] input[name=location]");Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,"value").set.call(e,'+JSON.stringify(v)+');e.dispatchEvent(new Event("input",{bubbles:true}));})()');
  await go('/plans','합주 계획');
- await touchText('수정','[data-plan-id] button');await wait('!!document.querySelector("dialog[open]")');await setLocation('QA 장소 수정');await touchText('계획 수정 저장','dialog[open] button');await wait('!document.querySelector("dialog[open]")&&document.querySelector("[data-plan-id]").innerText.includes("QA 장소 수정")');assert(true,'rehearsal venue editable in place');
- await touchText('수정','[data-plan-id] button');await wait('!!document.querySelector("dialog[open]")');await setLocation('');await touchText('계획 수정 저장','dialog[open] button');await wait('!document.querySelector("dialog[open]")&&document.querySelector("[data-plan-id]").innerText.includes("장소 미정")');assert(true,'rehearsal venue can be cleared');
+ await run('document.querySelector("[data-plan-id] details:has(input[name=band_id])").open=true;document.querySelector("[data-plan-id] input[name=location]").value="QA 장소 수정"');await touchText('계획 수정 저장');await wait('document.body.innerText.includes("QA 장소 수정")');assert(true,'rehearsal venue editable in place');
+ await run('document.querySelector("[data-plan-id] details:has(input[name=band_id])").open=true;document.querySelector("[data-plan-id] input[name=location]").value=""');await touchText('계획 수정 저장');await wait('!document.body.innerText.includes("QA 장소 수정")');assert(true,'rehearsal venue can be cleared');
+
  await go(href,'곡 삭제');await touchText('곡 삭제');await wait('!!document.querySelector("dialog[open]")');
  for(const width of [320,390,1280]){await viewport(width,844);await layout('song deletion dialog');await writeFile(resolve(artifacts,'delete-song-'+width+'.png'),Buffer.from((await cmd('Page.captureScreenshot',{format:'png'})).data,'base64'));}await viewport(390,844);
  assert(await run('document.querySelector("dialog[open]").innerText.includes("[테스트 A]")'),'deletion confirmation identifies target song');
- await touchText('취소','dialog[open] button');assert(await run('!document.querySelector("dialog[open]")&&!!document.querySelector("[data-song-id]")'),'cancel keeps song');
- await touchText('곡 삭제');await touchText('삭제 확인','dialog[open] button');await wait('location.pathname==="/songs"&&!document.body.innerText.includes("[테스트 A]")');assert(true,'confirmed deletion returns to list and removes song');
+ await touchText('취소');assert(await run('!document.querySelector("dialog[open]")&&!!document.querySelector("[data-song-id]")'),'cancel keeps song');
+ await touchText('곡 삭제');await touchText('삭제 확인');await wait('location.pathname==="/songs"&&!document.body.innerText.includes("[테스트 A]")');assert(true,'confirmed deletion returns to list and removes song');
  await go('/plans','합주 계획');assert(await run('document.querySelector("[data-plan-id]").innerText.includes("[테스트 A]")'),'saved plan retains deleted song snapshot');
 }

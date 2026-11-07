@@ -74,20 +74,3 @@ export async function deleteBandSongAction(_:FormState,form:FormData):Promise<Fo
  if(result.error)return result;
  redirect('/songs');
 }
-
-// Calendar save: additions and removals in one call. Phase 1 keeps the existing SQL, so the two RPCs
-// run in order and the result says which half was applied if the second one fails.
-export type AvailabilityChangeResult={ok:boolean;added:boolean;removed:boolean;error?:string};
-export async function saveAvailabilityChanges(input:{add:string[];remove:string[]}):Promise<AvailabilityChangeResult>{
- const parsed=z.object({add:z.array(date).max(366),remove:z.array(date).max(3660)}).safeParse(input);
- if(!parsed.success)return{ok:false,added:false,removed:false,error:'날짜를 확인해 주세요.'};
- const add=[...new Set(parsed.data.add)].sort(),remove=[...new Set(parsed.data.remove)].sort();
- if(add.some(day=>remove.includes(day)))return{ok:false,added:false,removed:false,error:'같은 날짜를 추가하면서 뺄 수 없어요.'};
- if(add.length===0&&remove.length===0)return{ok:true,added:false,removed:false};
- const db=await createClient();if(!db)return{ok:false,added:false,removed:false,error:'Supabase 연결 설정을 확인하세요.'};
- let added=false;
- if(add.length){const{error}=await db.rpc('save_band_availability',{p_dates:add.map(day=>({date:day}))});if(error)return{ok:false,added:false,removed:false,error:failure(error.message).error};added=true;}
- if(remove.length){const{error}=await db.rpc('delete_band_availability_dates',{p_dates:remove});if(error){revalidatePath('/','layout');return{ok:false,added,removed:false,error:(added?'추가한 날짜는 저장했지만 뺀 날짜는 저장하지 못했어요. ':'')+failure(error.message).error};}}
- revalidatePath('/','layout');
- return{ok:true,added,removed:remove.length>0};
-}

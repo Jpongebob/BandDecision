@@ -12,5 +12,5 @@ const loadCount=cache(async()=>{
 // Rendered in Suspense so the menu and page never wait for this optional count.
 export async function PendingVoteBadge(){
  const data=await loadCount();if(!data)return null;
- return <span aria-label={'미투표 '+data+'곡'} className="inline-flex h-[22px] min-w-[22px] items-center justify-center rounded-full border-2 border-white bg-danger px-1.5 text-[13px] font-bold leading-none text-white">{data>99?'99+':data}</span>;
+ return <span aria-label={'미투표 '+data+'곡'} className="inline-flex min-w-4 items-center justify-center rounded-full bg-rose-600 px-1 text-[10px] font-bold leading-4 text-white">{data>99?'99+':data}</span>;
 }
