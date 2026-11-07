@@ -7,10 +7,13 @@ const tabs=[['/dashboard','홈',Home],['/schedule','일정',CalendarDays],['/son
 function active(path:string,href:string){return href==='/dashboard'?path==='/dashboard':path===href||path.startsWith(href+'/');}
 
 // Mobile tab bar: the current tab gets the brand colour and a 3px top bar; badges keep their own red.
-export function BottomNav({pendingVoteBadge=null}:{pendingVoteBadge?:React.ReactNode}){
- const path=usePathname()??'';
+export function BottomNavView({path,pendingVoteBadge=null}:{path:string;pendingVoteBadge?:React.ReactNode}){
  return <nav aria-label="주요 메뉴" className="fixed inset-x-0 bottom-0 z-30 grid h-[72px] grid-cols-5 border-t border-line bg-white pb-[env(safe-area-inset-bottom)] lg:hidden">{tabs.map(([href,label,Icon])=>{
   const on=active(path,href);
   return <Link key={href} href={href} aria-current={on?'page':undefined} className={'flex flex-col items-center justify-center gap-1 border-t-[3px] text-[13px] '+(on?'border-brand font-bold text-brand-ink':'border-transparent font-semibold text-muted')}><span className="relative inline-flex"><Icon size={24} strokeWidth={2} aria-hidden="true"/>{href==='/songs'&&pendingVoteBadge&&<span className="absolute -right-3.5 -top-2">{pendingVoteBadge}</span>}</span>{label}</Link>;
  })}</nav>;
+}
+// Reads the URL, so AppShell renders it inside <Suspense> with BottomNavView as the prerendered fallback.
+export function BottomNav({pendingVoteBadge=null}:{pendingVoteBadge?:React.ReactNode}){
+ return <BottomNavView path={usePathname()??''} pendingVoteBadge={pendingVoteBadge}/>;
 }

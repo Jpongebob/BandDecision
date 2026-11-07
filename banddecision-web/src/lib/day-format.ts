@@ -7,4 +7,5 @@ export function daysUntil(day:string,today:string){return Math.round((Date.parse
 export function dDay(day:string,today:string){const n=daysUntil(day,today);return n===0?'D-DAY':n>0?'D-'+n:'D+'+Math.abs(n);}
 // "20:00:00" → "오후 8:00"
 export function clockLabel(time:string){const[h,m]=time.split(':').map(Number);const half=h<12?'오전':'오후',hour=h%12===0?12:h%12;return half+' '+hour+':'+String(m).padStart(2,'0');}
-export function timeRangeLabel(start:string,end:string){return clockLabel(start)+' – '+clockLabel(end);}
+// Same half of the day is said once: "오후 8:00 – 10:00".
+export function timeRangeLabel(start:string,end:string){const a=clockLabel(start),b=clockLabel(end);return a.slice(0,2)===b.slice(0,2)?a+' – '+b.slice(3):a+' – '+b;}
