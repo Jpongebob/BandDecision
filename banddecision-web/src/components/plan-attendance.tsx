@@ -37,7 +37,7 @@ export function PlanAttendanceEditor({plan,members,attending}:{plan:{id:string;v
    <button type="button" role="radio" aria-checked={yes} disabled={pending} onClick={()=>set(m.id,true)} className={yes?seg+'border-2 border-[#12a150] bg-plan-bg font-bold text-plan-ink':off}>참석</button>
    <button type="button" role="radio" aria-checked={!yes} disabled={pending} onClick={()=>set(m.id,false)} className={!yes?seg+'border-2 border-ink-2 bg-surface-2 font-bold text-ink':off}>불참</button>
   </span></li>;})}</ul>
- <p className="mt-3 text-sm text-muted">저장하면 그 멤버의 일정 달력에도 같은 날이 가능/불가로 바뀌어요.</p>
+ <p className="mt-3 text-sm text-muted">저장하면 그 멤버 일정 달력의 이 날도 함께 바뀌어요.</p>
  {error&&<p role="alert" className="mt-2 text-sm font-semibold text-danger">{error}</p>}
  {changed.length>0&&count===0&&<p role="alert" className="mt-2 text-sm font-semibold text-danger">참석하는 멤버가 한 명은 있어야 해요.</p>}
  {changed.length>0?<div className="sticky bottom-0 -mx-5 -mb-6 mt-3 flex items-center gap-2 border-t border-line bg-white px-5 pb-6 pt-3">
