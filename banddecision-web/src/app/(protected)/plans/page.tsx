@@ -7,6 +7,8 @@ import {ConfirmPlanForm} from '@/components/confirm-plan-form';
 import {ActionForm} from '@/components/action-form';
 import {OpenSheetButton,Sheet} from '@/components/sheet';
 import {PlanShareButtons} from '@/components/plan-share';
+import {PlanAttendanceEditor} from '@/components/plan-attendance';
+import {twoMonthWindow} from '@/lib/calendar-window';
 import {AttendanceChip,DDay,SongChips} from '@/components/plan-bits';
 import {deleteLivePlanAction} from '@/app/live-actions';
 import {dayLabel,timeRangeLabel,weekdayShort} from '@/lib/day-format';
@@ -17,6 +19,8 @@ export default async function PlansPage(){
  if(!page)return <Card><CardTitle>밴드 가입 후 이용할 수 있습니다</CardTitle></Card>;
  const{data,member:me}=page,plans=page.plans??[],today=seoulToday(),songs=data?liveRecommendations(data,today).songs:[],leader=me.role==='leader';
  const{upcoming,past}=splitPlans(plans,today),takenDates=upcoming.map(p=>p.rehearsal_date);
+ const{endDate}=twoMonthWindow(today),responded=new Set(data?.available.filter(r=>r.date>=today&&r.date<=endDate).map(r=>r.memberId));
+ const attendanceMembers=data?.members.map(m=>({id:m.id,nickname:m.nickname,part:m.part,leader:m.id===me.id,noDates:!responded.has(m.id)}))??[];
  const songTitles=(plan:SavedPlan)=>[...plan.confirmed_plan_songs].sort((a,b)=>a.display_order-b.display_order).map(s=>s.title_snapshot);
  const editForm=(plan:SavedPlan)=>data&&<ConfirmPlanForm key={plan.id} data={data} songs={songs} today={today} plan={plan} takenDates={takenDates}/>;
  function planCard(plan:SavedPlan,first:boolean,archived=false){
@@ -28,7 +32,7 @@ export default async function PlansPage(){
   {plan.memo&&<p className="whitespace-pre-wrap break-words rounded-xl bg-note-bg px-3.5 py-3 text-base leading-[22px] text-ink-2"><b className="font-bold text-warn-ink">메모</b> · {plan.memo}</p>}
   {archived?<p className="text-[13px] text-muted">지난 합주 기록이에요. 당시 참석자와 곡을 보관해요.</p>:<PlanShareButtons plan={{id:plan.id,date:plan.rehearsal_date,start:plan.starts_at,end:plan.ends_at,location:plan.location,memo:plan.memo,songs:titles,attending:plan.attendee_count,total:plan.participant_count}}/>}
   <div className="flex gap-2">
-   <Sheet title="참석자 명단" trigger="참석자 명단" triggerClassName={outline}><p className="mb-3 text-[15px] text-muted">{dayLabel(plan.rehearsal_date)} · {plan.attendee_count}/{plan.participant_count}명 참석</p><ul className="flex flex-col">{[...attendees,...absentees].map(m=><li key={m.id} className="flex items-center gap-2.5 border-t border-line py-2.5"><span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-full bg-surface-2 text-[15px] font-bold text-ink-2">{[...m.nickname_snapshot][0]}</span><span className="grow"><b className="text-base font-bold">{m.nickname_snapshot}</b> <span className="text-sm text-muted">{m.part_snapshot}</span></span><span className={'whitespace-nowrap rounded-full px-2.5 py-1 text-[13px] font-bold '+(m.attending?'bg-plan-bg text-plan-ink':'bg-surface-2 text-ink-2')}>{m.attending?'참석':'불참'}</span></li>)}</ul>{!archived&&<p className="mt-3 text-sm text-muted">{leader?'참석이 바뀌면 \'수정\'에서 다시 저장하면 지금 일정으로 다시 반영돼요.':'못 오게 되면 밴드장에게 알려 주세요.'}</p>}</Sheet>
+   <Sheet title="참석자 명단" trigger="참석자 명단" triggerClassName={outline}>{leader&&data&&!archived?<PlanAttendanceEditor plan={{id:plan.id,version:plan.version,date:plan.rehearsal_date,start:plan.starts_at,end:plan.ends_at}} members={attendanceMembers} attending={plan.confirmed_plan_members.filter(m=>m.attending&&m.source_member_id).map(m=>m.source_member_id!)}/>:<><p className="mb-3 text-[15px] text-muted">{dayLabel(plan.rehearsal_date)} · {plan.attendee_count}/{plan.participant_count}명 참석</p><ul className="flex flex-col">{[...attendees,...absentees].map(m=><li key={m.id} className="flex items-center gap-2.5 border-t border-line py-2.5"><span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-full bg-surface-2 text-[15px] font-bold text-ink-2">{[...m.nickname_snapshot][0]}</span><span className="grow"><b className="text-base font-bold">{m.nickname_snapshot}</b> <span className="text-sm text-muted">{m.part_snapshot}</span></span><span className={'whitespace-nowrap rounded-full px-2.5 py-1 text-[13px] font-bold '+(m.attending?'bg-plan-bg text-plan-ink':'bg-surface-2 text-ink-2')}>{m.attending?'참석':'불참'}</span></li>)}</ul>{!archived&&<p className="mt-3 text-sm text-muted">못 오게 되면 밴드장에게 알려 주세요. 밴드장이 참석자를 바꿔요.</p>}</>}</Sheet>
    {leader&&data&&!archived&&<Sheet id={'edit-'+plan.id} title="합주 계획 수정" trigger="수정" triggerClassName={outline} wide>{editForm(plan)}</Sheet>}
    {leader&&<Sheet title="계획 삭제" trigger={<MoreHorizontal size={20}/>} triggerLabel={'더보기: '+dayLabel(plan.rehearsal_date)+' 계획 삭제'} triggerClassName="grid size-11 shrink-0 place-items-center rounded-xl border border-line-strong bg-white text-ink-2"><p className="mb-4 text-base leading-6 text-muted">{dayLabel(plan.rehearsal_date)} 합주 계획을 삭제할까요? 참석자·곡 기록도 함께 지워지고 되돌릴 수 없어요.</p><ActionForm action={deleteLivePlanAction} submit="계획 삭제" variant="destructive"><input type="hidden" name="plan_id" value={plan.id}/><input type="hidden" name="plan_version" value={plan.version}/><input type="hidden" name="confirm_delete" value="yes"/></ActionForm></Sheet>}
   </div>

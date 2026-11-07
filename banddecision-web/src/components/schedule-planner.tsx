@@ -2,7 +2,8 @@
 import {useEffect,useMemo,useRef,useState,useTransition} from 'react';
 import type {KeyboardEvent} from 'react';
 import {useRouter} from 'next/navigation';
-import {Check,ChevronLeft,ChevronRight,Hand,Info,SquareCheck} from 'lucide-react';
+import Link from 'next/link';
+import {Check,ChevronLeft,ChevronRight,Hand,Lock,SquareCheck} from 'lucide-react';
 import {twoMonthWindow} from '@/lib/calendar-window';
 import {dayLabel} from '@/lib/day-format';
 import {saveAvailabilityChanges} from '@/app/live-actions';
@@ -22,8 +23,9 @@ function between(a:string,b:string){const first=a<b?a:b,last=a<b?b:a,out:string[
 const sorted=(xs:Iterable<string>)=>[...new Set(xs)].sort();
 
 // 내 일정: tap a date once to see who can come, tap the same date again (or pick a range/month) to stage
-// additions and removals, then save them together. Confirmed rehearsal days are shown in green.
-export function SchedulePlanner({today,members,available,memberId,plans}:{today:string;members:Member[];available:{memberId:string;date:string}[];memberId:string;plans:PlanDay[]}){
+// additions and removals, then save them together. Confirmed rehearsal days are shown in green and locked:
+// only the leader changes attendance there (합주 계획 › 참석자 명단).
+export function SchedulePlanner({today,members,available,memberId,plans,leader=false}:{today:string;members:Member[];available:{memberId:string;date:string}[];memberId:string;plans:PlanDay[];leader?:boolean}){
  const router=useRouter();
  const{firstMonth,lastMonth,endDate}=twoMonthWindow(today);
  const[month,setMonth]=useState(firstMonth),[focus,setFocus]=useState(today),[mode,setMode]=useState<'multi'|'range'>('multi'),[anchor,setAnchor]=useState('');
@@ -74,6 +76,7 @@ export function SchedulePlanner({today,members,available,memberId,plans}:{today:
    setAdd(a=>sorted([...a,...between(anchor,day).filter(d=>d>=today&&d<=endDate&&!saved.has(d)&&!planByDate.has(d))]));setAnchor('');return;
   }
   if(day!==focus){setFocus(day);return;}
+  if(planByDate.has(day))return;
   toggle(day);
  }
  const cells=monthCells(month);
@@ -122,7 +125,7 @@ export function SchedulePlanner({today,members,available,memberId,plans}:{today:
   const past=day<today,adding=add.includes(day),removing=remove.includes(day),isSaved=saved.has(day),isPlan=planByDate.has(day),n=count(day);
   const tone=past?'border-surface-2 bg-surface-2 text-faint':adding?'border-brand bg-brand text-white':removing?'border-2 border-dashed border-danger-dash bg-danger-bg text-danger':isPlan?'border-plan-line bg-plan-bg text-plan-ink':isSaved?'border-mine-line bg-brand-tint text-mine-ink':'border-line-strong bg-white text-ink';
   const state=past?'지난 날':adding?'추가 예정':removing?'빼기 예정':isSaved?'가능한 날':'아직 안 고름';
-  return <button type="button" key={day} data-day={day} data-state={past?'past':adding?'adding':removing?'removing':isSaved?'saved':'none'} data-plan={isPlan||undefined} disabled={past||pending} onClick={()=>pick(day)} onKeyDown={e=>keyboard(e,day)} aria-pressed={adding||removing} aria-current={day===today?'date':undefined} aria-label={dayLabel(day).replace(/ \((.)\)/,' $1요일')+', '+(day===today?'오늘, ':'')+(past?'':n+'/'+total+'명 참석, ')+state+(isPlan?', 합주 확정':'')+(day===focus?', 보는 중':'')} className={'relative flex h-11 min-w-0 flex-col items-center justify-center rounded-xl border focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand '+tone+(day===focus&&!past?' shadow-[0_0_0_3px_#101828]':'')}>
+  return <button type="button" key={day} data-day={day} data-state={past?'past':adding?'adding':removing?'removing':isSaved?'saved':'none'} data-plan={isPlan||undefined} disabled={past||pending} onClick={()=>pick(day)} onKeyDown={e=>keyboard(e,day)} aria-pressed={adding||removing} aria-current={day===today?'date':undefined} aria-label={dayLabel(day).replace(/ \((.)\)/,' $1요일')+', '+(day===today?'오늘, ':'')+(past?'':n+'/'+total+'명 참석, ')+state+(isPlan?', 합주 확정, 바꿀 수 없음':'')+(day===focus?', 보는 중':'')} className={'relative flex h-11 min-w-0 flex-col items-center justify-center rounded-xl border focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand '+tone+(day===focus&&!past?' shadow-[0_0_0_3px_#101828]':'')}>
    {isSaved&&!adding&&!removing&&!isPlan&&<Check aria-hidden="true" strokeWidth={4} className="absolute right-[3px] top-[3px] size-[9px] text-brand-ink"/>}
    {day===today&&<span aria-hidden="true" className={'absolute left-1 top-1 size-1.5 rounded-full '+(adding?'bg-white':'bg-brand')}/>}
    <span className={'text-base font-bold leading-5'+(removing?' line-through':'')+(day===today&&!adding?' text-brand-ink':'')}>{Number(day.slice(8))}</span>
@@ -136,8 +139,8 @@ export function SchedulePlanner({today,members,available,memberId,plans}:{today:
  <div className="flex items-baseline justify-between gap-2"><span className="inline-flex items-center gap-1.5"><span className="text-[17px] font-bold">{dayLabel(focus)}</span>{plan&&<span className="whitespace-nowrap rounded-md bg-plan-bg px-1.5 py-0.5 text-[13px] font-bold text-plan-ink">합주 확정</span>}</span><span className="whitespace-nowrap text-[15px] font-semibold text-ink-2">{plan?plan.attending.length+'/'+(plan.attending.length+plan.absent.length):count(focus)+'/'+total}명 참석</span></div>
  {plan?<ul className="flex flex-col text-[15px] leading-5"><NameLine dot="bg-plan-dot" label={'참석 '+plan.attending.length} names={plan.attending}/><NameLine dot="bg-faint" label={'불참 '+plan.absent.length} names={plan.absent}/></ul>
  :<ul className="flex flex-col text-[15px] leading-5"><NameLine dot="bg-brand" label={'가능 '+can.length} names={can}/><NameLine dot="bg-faint" label={'안 됨 '+cannot.length} names={cannot}/>{silent.length>0&&<NameLine dot="border-2 border-pending bg-white" label={'미응답 '+silent.length} names={silent} note="아직 날짜를 안 냈어요"/>}</ul>}
- {focus>=today&&<p className="inline-flex items-start gap-1.5 text-sm font-semibold leading-5 text-brand-ink"><Hand size={16} aria-hidden="true" className="mt-0.5 shrink-0"/>{hint}</p>}
- {plan&&<p className="inline-flex items-start gap-1.5 text-sm font-semibold leading-5 text-plan-ink"><Info size={16} aria-hidden="true" className="mt-0.5 shrink-0"/>확정된 합주예요. 못 오게 되면 밴드장에게도 알려 주세요.</p>}
+ {focus>=today&&!plan&&<p className="inline-flex items-start gap-1.5 text-sm font-semibold leading-5 text-brand-ink"><Hand size={16} aria-hidden="true" className="mt-0.5 shrink-0"/>{hint}</p>}
+ {plan&&<p className="inline-flex items-start gap-1.5 text-sm font-semibold leading-5 text-plan-ink"><Lock size={16} aria-hidden="true" className="mt-0.5 shrink-0"/>{leader?<span>확정된 합주 날이에요. 참석은 <Link href="/plans" className="underline underline-offset-2">합주 계획</Link>의 참석자 명단에서 바꿔요.</span>:'확정된 합주 날이라 직접 바꿀 수 없어요. 못 오게 되면 밴드장에게 알려 주세요.'}</p>}
  {error&&<p role="alert" className="text-sm font-semibold text-danger">{error}</p>}
  {toast?<div role="status" className="sticky bottom-[calc(96px+env(safe-area-inset-bottom))] mt-auto flex lg:bottom-3 h-12 items-center justify-between gap-2 rounded-xl bg-ink pl-3.5 pr-1 text-white"><span className="truncate text-[15px] font-semibold">{toast.text}</span><button type="button" onClick={undo} disabled={pending} className="min-h-11 shrink-0 px-3 text-base font-bold text-[#93b4ff]">되돌리기</button></div>
  :<div className="sticky bottom-[calc(84px+env(safe-area-inset-bottom))] -mx-4 mt-auto flex items-center gap-1.5 rounded-b-[20px] border-t border-line bg-white px-4 pt-1.5 lg:bottom-0"><span className={'min-w-0 grow '+(dirty?'text-base font-bold':'text-[15px] text-muted')}>{barTitle}</span>{dirty&&<button type="button" disabled={pending} onClick={()=>{setAdd([]);setRemove([]);setAnchor('');setError('');}} className="min-h-11 px-2.5 text-base font-semibold text-ink-2">초기화</button>}<button type="button" disabled={!dirty||pending} onClick={()=>commit()} className="min-h-11 min-w-[76px] rounded-xl bg-brand px-[18px] text-base font-bold text-white disabled:bg-surface-2 disabled:text-faint">{pending?'저장 중…':'저장'}</button></div>}

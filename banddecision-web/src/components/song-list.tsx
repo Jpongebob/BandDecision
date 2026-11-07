@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import {ChevronRight} from 'lucide-react';
 import {DeleteSongForm} from '@/components/delete-song-form';
+import {EditSongSheet} from '@/components/edit-song-sheet';
 import {SongVoteFields} from '@/components/song-vote-fields';
 import {withdrawSongVoteAction,setSongConfirmationAction} from '@/app/live-actions';
 import {Card,CardTitle} from '@/components/ui/card';
@@ -20,9 +21,9 @@ function MyVoteChip({choice}:{choice?:'yes'|'no'}){
 
 // 합주곡 list cards (detailed=false) and the song detail screen (detailed=true).
 export function SongList({
-  memberId,participants,songs,detailed=false,difficultyEnabled=false,emptyText,canManage=false,
+  memberId,userId,participants,songs,detailed=false,difficultyEnabled=false,emptyText,canManage=false,
 }:{
-  bandId:string;memberId:string;participants:Participant[];songs:SongInput[];detailed?:boolean;difficultyEnabled?:boolean;emptyText?:string;canManage?:boolean;register?:boolean;
+  bandId:string;memberId:string;userId?:string;participants:Participant[];songs:SongInput[];detailed?:boolean;difficultyEnabled?:boolean;emptyText?:string;canManage?:boolean;register?:boolean;
 }){
  const parts=[...new Map(participants.map(p=>[p.partKey,p])).values()];
  const canVote=participants.some(p=>p.id===memberId),total=participants.length;
@@ -43,8 +44,15 @@ export function SongList({
  return <div className="flex flex-col gap-3">{songs.map(song=>{
   const yes=song.votes.filter(v=>v.choice==='yes').length,no=song.votes.filter(v=>v.choice==='no').length,mine=song.votes.find(v=>v.memberId===memberId);
   const passed=!song.confirmedAt&&status.get(song.id)?.status==='eligible',requiredYes=Math.ceil(2*total/3);
+  // 올린 사람은 고칠 수 있고, 확정 전이면서 다른 멤버 투표가 없을 때만 지울 수 있다(밴드장은 언제나).
+  const uploader=Boolean(userId&&song.createdBy===userId),manage=canManage||uploader;
+  const otherVotes=song.votes.filter(v=>participants.find(p=>p.id===v.memberId)?.userId!==song.createdBy).length;
+  const canDelete=canManage||uploader&&!song.confirmedAt&&otherVotes===0;
+  const uploadedOn=song.createdAt?new Date(song.createdAt).toLocaleDateString('ko-KR',{timeZone:'Asia/Seoul',month:'long',day:'numeric'}):'';
+  const uploaderName=uploader?'나':song.createdByNickname??'알 수 없는 멤버';
   return <div key={song.id} data-song-id={song.id} className="flex flex-col gap-3">
-   <section className="flex flex-col gap-1.5 px-1"><span className={'self-start whitespace-nowrap rounded-md px-2 py-0.5 text-[13px] font-bold '+(song.confirmedAt?'bg-plan-bg text-plan-ink':passed?'bg-brand-tint text-brand-ink':'bg-seg text-ink-2')}>{song.confirmedAt?'확정곡':passed?'투표 통과':'후보곡'}</span><h1 className="break-words text-2xl font-extrabold leading-8">{song.title}</h1><p className="break-words text-[17px] font-semibold text-ink-2">{song.artist}</p></section>
+   <section className="flex flex-col gap-1.5 px-1"><span className={'self-start whitespace-nowrap rounded-md px-2 py-0.5 text-[13px] font-bold '+(song.confirmedAt?'bg-plan-bg text-plan-ink':passed?'bg-brand-tint text-brand-ink':'bg-seg text-ink-2')}>{song.confirmedAt?'확정곡':passed?'투표 통과':'후보곡'}</span><h1 className="break-words text-2xl font-extrabold leading-8">{song.title}{song.editedAt&&<span className="ml-2 align-middle text-[13px] font-semibold text-muted">수정됨</span>}</h1><p className="break-words text-[17px] font-semibold text-ink-2">{song.artist}</p>
+    {song.createdAt&&<p className="mt-1.5 flex items-center gap-2 text-[15px] text-muted"><span aria-hidden="true" className="grid size-[26px] shrink-0 place-items-center rounded-full bg-surface-2 text-[13px] font-bold text-ink-2">{[...uploaderName][0]}</span><span>{uploader?<b className="font-bold text-ink-2">내가</b>:<><b className="font-bold text-ink-2">{uploaderName}</b> 님이</>} {uploadedOn}에 올렸어요</span></p>}</section>
    {song.confirmedAt&&<p className="rounded-2xl bg-plan-bg px-4 py-3 text-[15px] font-semibold text-plan-ink">확정곡이에요. 추가 투표 없이 합주 계획에서 바로 고를 수 있어요.</p>}
    {!song.confirmedAt&&canVote&&<Card aria-label="내 투표" className="flex flex-col gap-3 p-4"><div className="flex items-center justify-between"><h2 className="text-[17px] font-bold">내 투표</h2><span className={'rounded-full px-2.5 py-1 text-[13px] font-bold '+(mine?'bg-brand-tint text-brand-ink':'bg-surface-2 text-muted')}>{mine?(mine.choice==='yes'?'찬성으로':'반대로')+' 저장됨':'아직 안 함'}</span></div>
     <SongVoteFields key={memberId} songId={song.id} choice={mine?.choice} reason={mine?.reason}/>
@@ -58,9 +66,12 @@ export function SongList({
      {meta&&<p className="text-[13px] text-muted">마지막 수정: {meta.updatedBy??'알 수 없는 멤버'} · {new Date(meta.updatedAt).toLocaleString('ko-KR')} · v{meta.version}</p>}
     </ActionForm>;})}</div>:<p className="text-[15px] text-muted">등록된 밴드 파트가 없어요.</p>}
    </div></details></Card>}
-   {canManage&&<Card aria-label="곡 관리" className="flex flex-col gap-2.5 p-4"><h2 className="text-[17px] font-bold">곡 관리</h2><p className="text-sm text-muted">확정·삭제는 밴드장만 할 수 있어요.</p>
-    <ActionForm action={setSongConfirmationAction} submit={song.confirmedAt?'확정 해제':'이 곡 확정하기'} variant="secondary" className="gap-2"><input type="hidden" name="song_id" value={song.id}/><input type="hidden" name="confirmed" value={song.confirmedAt?'false':'true'}/><p className="text-sm text-muted">{song.confirmedAt?'해제하면 후보곡으로 돌아가요. 이미 정한 합주 계획은 그대로예요.':'밴드장이 정한 곡은 투표 결과와 상관없이 합주 계획에 넣을 수 있어요.'}</p></ActionForm>
-    <DeleteSongForm songId={song.id} title={song.title} artist={song.artist}/></Card>}
+   {manage&&<Card aria-label="곡 관리" className="flex flex-col gap-2.5 p-4"><h2 className="text-[17px] font-bold">곡 관리</h2>
+    <dl className="flex flex-col gap-0.5 text-sm leading-5">{[['수정','올린 사람 · 밴드장'],['확정','밴드장'],['삭제','밴드장 · 다른 멤버 투표가 없으면 올린 사람도']].map(([k,v])=><div key={k} className="flex gap-2.5"><dt className="w-8 shrink-0 font-bold text-ink-2">{k}</dt><dd className="text-muted">{v}</dd></div>)}</dl>
+    <div className={'grid items-start gap-2 '+(canManage?'grid-cols-2':'')}><EditSongSheet songId={song.id} title={song.title} artist={song.artist}/>
+    {canManage&&<ActionForm action={setSongConfirmationAction} submit={song.confirmedAt?'확정 해제':'이 곡 확정하기'} variant="secondary" className="gap-2"><input type="hidden" name="song_id" value={song.id}/><input type="hidden" name="confirmed" value={song.confirmedAt?'false':'true'}/></ActionForm>}</div>
+    {canManage&&<p className="text-sm text-muted">{song.confirmedAt?'확정을 해제하면 후보곡으로 돌아가요. 이미 정한 합주 계획은 그대로예요.':'확정하면 투표 결과와 상관없이 합주 계획에 넣을 수 있어요.'}</p>}
+    {canDelete?<DeleteSongForm songId={song.id} title={song.title} artist={song.artist}/>:<p className="rounded-xl bg-surface-2 px-3.5 py-3 text-sm text-ink-2">{song.confirmedAt?'확정곡은 밴드장만 지울 수 있어요.':'다른 멤버가 투표해서 이제 밴드장만 지울 수 있어요.'}</p>}</Card>}
   </div>;
  })}</div>;
 }
