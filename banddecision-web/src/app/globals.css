@@ -2,20 +2,81 @@
 
 :root {
   color-scheme: light;
-  --background: #f5f7fb;
-  --foreground: #172033;
+  --background: #f4f6fa;
+  --foreground: #101828;
 }
 
+/* Design tokens from the 2026-11 redesign (contrast checked against white/tints, 4.5:1+). */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: Arial, Helvetica, sans-serif;
+  --color-ink: #101828;
+  --color-ink-2: #344054;
+  --color-muted: #475467;
+  --color-faint: #98a2b3;
+  --color-line: #eaecf0;
+  --color-line-strong: #d0d5dd;
+  --color-canvas: #f4f6fa;
+  --color-surface-2: #f2f4f7;
+  --color-seg: #e9ecf2;
+  --color-brand: #2563eb;
+  --color-brand-ink: #1d4ed8;
+  --color-brand-tint: #eaf0fe;
+  --color-brand-line: #bfd0fb;
+  --color-mine-ink: #1e40af;
+  --color-mine-line: #93b4ff;
+  --color-plan-bg: #e3f5ea;
+  --color-plan-line: #7cc9a0;
+  --color-plan-ink: #0f5132;
+  --color-plan-dot: #12a150;
+  --color-warn-ink: #b54708;
+  --color-warn-bg: #fff4e5;
+  --color-warn-line: #fec84b;
+  --color-note-bg: #fffaeb;
+  --color-note-line: #fedf89;
+  --color-pending: #f79009;
+  --color-danger: #b42318;
+  --color-danger-bg: #fef3f2;
+  --color-danger-line: #fda29b;
+  --color-danger-dash: #d92d20;
+  --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
 }
 
-* { box-sizing: border-box; }
-body { min-height: 100vh; background: var(--background); color: var(--foreground); font-family: Arial, Helvetica, sans-serif; }
-button, input, select, textarea { font: inherit; }
+/* Base rules live in the base layer so Tailwind utilities (font-bold, text-[17px] …) can override them.
+   Unlayered "button { font: inherit }" used to beat every utility on buttons. */
+@layer base {
+  * { box-sizing: border-box; }
+  body {
+    min-height: 100vh;
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    letter-spacing: -0.01em;
+    /* Korean breaks between words only; text-wrap: pretty avoids one-word last lines where supported. */
+    word-break: keep-all;
+    text-wrap: pretty;
+  }
+  button, input, select, textarea { font: inherit; letter-spacing: inherit; }
+  /* Long song titles, nicknames and snapshots must wrap inside narrow mobile cards. */
+  main { overflow-wrap: anywhere; }
+}
 
-
-/* Long song titles, nicknames and snapshots must wrap inside narrow mobile cards. */
-main { overflow-wrap: anywhere; }
+/* Bottom sheets built on <dialog>: full width on phones, anchored to the bottom. */
+@layer components {
+dialog.sheet {
+  margin: auto auto 0;
+  width: 100%;
+  max-width: 32rem;
+  max-height: calc(100dvh - 2.5rem);
+  padding: 0;
+  border: 0;
+  border-radius: 1.5rem 1.5rem 0 0;
+  background: #fff;
+  color: var(--foreground);
+  overflow: hidden;
+}
+dialog.sheet::backdrop { background: rgb(16 24 40 / 0.45); }
+@media (min-width: 640px) {
+  dialog.sheet { margin: auto; border-radius: 1.5rem; max-height: min(90dvh, 52rem); }
+}
+}

@@ -28,15 +28,15 @@ async function viewport(width,height){if(process.env.QA_DESKTOP)width=Math.max(w
 async function layout(label){const data=await run(`({width:innerWidth,scroll:document.documentElement.scrollWidth,offenders:[...document.querySelectorAll('main input,main select,main textarea,main button,main details,main section')].filter(e=>{const r=e.getBoundingClientRect();return r.width&& (r.right>innerWidth+1||r.left< -1)}).map(e=>e.tagName+':'+e.textContent.slice(0,60))})`);assert(data.scroll<=viewportWidth+1&&data.width<=viewportWidth+1&&data.offenders.length===0,label+' fits '+data.width+'px '+JSON.stringify(data.offenders));}
 try{
  await connect();await viewport(390,844);
- await go('/bands/test','내가 밴드장인 테스트 밴드');await fill('nickname','Mobile QA Leader');await fill('password','qa1234');await fill('pin','112233');await fill('member_pin','246810');await touchText('테스트 밴드 만들고 밴드장으로 접속');await wait('location.pathname==="/dashboard"&&document.body.innerText.includes("Mobile QA Leader")',90000);assert(true,'touch creates five-member fixture via real Next server action');
+ await go('/bands/test','내가 밴드장인 테스트 밴드');await fill('nickname','Mobile QA Leader');await fill('password','qa1234');await fill('pin','112233');await fill('member_pin','246810');await touchText('테스트 밴드 만들고 밴드장으로 접속');await wait('location.pathname==="/dashboard"&&document.body.innerText.includes("Mobile QA Leader님")',90000);assert(true,'touch creates five-member fixture via real Next server action');
  await go('/settings/band','멤버와 설정');const code=await run("document.querySelector('.font-mono')?.textContent");assert(/^[A-F0-9]{10}$/.test(code),'band code displayed');await touchText('간편 초대 링크 만들기');await wait('document.querySelector("[role=status]")?.textContent.includes("code=")');assert(await run('document.querySelector("[role=status]").textContent.includes('+JSON.stringify(code)+')'),'reusable code invite generated');await layout('leader settings');
  await writeFile(resolve(artifacts,'session.json'),JSON.stringify({code}));
  if(process.env.QA_DELETE_SONG){await songDeletionWorkflow({run,go,touchText,wait,assert,layout,viewport,cmd,artifacts,writeFile,resolve});}else{
- const routes=[['/dashboard','반가워요'],['/schedule','내 일정'],['/schedule/recommendations','추천'],['/songs','후보곡 등록'],['/songs/recommendations','추천'],['/plans','합주 계획'],['/settings/band','멤버와 설정'],['/settings','설정'],['/settings/profile','내 정보'],['/bands/test','5인 테스트 준비']];
+ const routes=[['/dashboard','안녕하세요'],['/schedule','내 일정'],['/schedule/recommendations','추천'],['/songs','투표로 함께'],['/songs/recommendations','추천'],['/plans','합주 계획'],['/settings/band','멤버와 설정'],['/settings','설정'],['/settings/profile','내 정보'],['/bands/test','5인 테스트 준비']];
  for(const width of (process.env.QA_FAST?[]:[320,390,430,768,844,1280])){await viewport(width,width===844?390:844);for(const [path,text]of routes){await go(path,text);await layout(path);}}
  if(process.env.QA_BENCHMARK){
   const measurements=[];
-  for(let pass=0;pass<3;pass++)for(const [path,marker]of [['/schedule','저장된 날짜'],['/schedule/recommendations','날짜 추천'],['/dashboard','반가워요'],['/songs','확정곡'],['/plans','예정된 계획']]){
+  for(let pass=0;pass<3;pass++)for(const [path,marker]of [['/schedule','가능한 날'],['/schedule/recommendations','날짜 추천'],['/dashboard','안녕하세요'],['/songs','확정곡'],['/plans','예정된 합주']]){
    await fetch('http://127.0.0.1:54329/__qa/reset');const query='?qa_bench='+pass+'-'+Date.now();const start=performance.now();
    await cmd('Page.navigate',{url:'http://127.0.0.1:3101'+path+query});
    await wait('location.search==='+JSON.stringify(query)+'&&document.readyState==="complete"&&document.body.innerText.includes('+JSON.stringify(marker)+')');

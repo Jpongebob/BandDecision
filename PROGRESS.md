@@ -554,9 +554,10 @@ Final date-UI verification: 209 unit/component tests PASS; focused Chrome 84 che
 - 서울 publishable key로 실제 HTTP Auth 설정/공개 입장 RPC/JWKS 확인. 익명 로그인 활성화와 ES256 서명 확인. 임시 익명 계정 SDK signup/getClaims 통과, PIN 미검증 planning/identity NULL 확인 후 표식+UUID가 일치하는 임시 Auth 계정 1개만 정리. 기존/서울 데이터 지문 재비교 통과.
 - 서울 URL/공개 키를 Git 제외 .env.local에 설정. 타입/린트/프로덕션 빌드 모두 통과(19개 경로). Vercel 연결 인증 부재로 실제 배포/환경변수 수정은 실행하지 않음. 소유자 Vercel 설정 교체 후 Preview/PIN 검증과 Production 전환이 남음.
 
-### 2026-11-07 새 UI 병합 취소
-- 사용자 요청으로 master에 fast-forward 병합/푸시된 UI 브랜치의 4개 커밋(69a5112, 1a55e1d, 7a01f58, df0ad71)을 역순으로 revert. 강제 푸시 없이 취소 커밋으로 기록 유지.
-- 취소 직후 git diff --exit-code 69b5437 -- 통과: 모든 추적 파일이 UI 병합 직전 상태와 일치. DB 변경 없음. 별도 테스트는 실행하지 않음. 이후 UI 재적용 시 이미 병합된 브랜치를 다시 merge만 해서는 적용되지 않으므로 새 수정 커밋 또는 취소 커밋의 revert 필요.
+### 2026-11-07 공동작업자 UI 다시 적용
+- 사용자가 앞서 UI 병합을 취소하도록 요청해 3eda575를 만들고 푸시했으며, 이번 요청으로 해당 취소 커밋을 revert하여 UI 브랜치 4개 커밋(69a5112, 1a55e1d, 7a01f58, df0ad71)의 변경을 복원. 새 한국어 커밋으로 기록하고 강제 푸시 없이 master에 반영.
+- 재적용 직후 git diff --exit-code df0ad71 -- 통과: 공동작업자 UI 브랜치와 추적 파일 일치. DB/마이그레이션 변경 없음.
+- 타입/린트 통과. 첫 빌드는 로컬에 pretendard 패키지가 없어 실패했으며, npm install --ignore-scripts --no-audit --no-fund로 잠금 파일의 새 의존성 1개 설치 후 프로덕션 빌드 통과. package.json/package-lock.json은 UI 원본과 일치. 별도 테스트 및 Vercel 배포 상태 확인은 실행하지 않음.
 
 ### 2026-11-06 다가오는 합주 남은 일수
 - 홈의 가까운 합주 및 이후 합주 날짜 옆에 D-N 배지 표시. 한국 기준 오늘은 seoulToday로 한 번 결정하고 날짜 문자열을 UTC 자정으로 환산해 달력 날짜 차이를 계산. 당일 D-DAY, 접근성 설명 제공. 좁은 화면은 줄바꿈 허용. 추가 DB 조회 및 SQL 변경 없음. 별도 테스트는 실행하지 않음.
