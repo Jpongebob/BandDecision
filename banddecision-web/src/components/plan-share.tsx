@@ -11,9 +11,11 @@ export function planShareText(p:SharePlan){
 // iCalendar text in Asia/Seoul local time; lines folded only by content, which calendar apps accept for short events.
 export function planIcs(p:SharePlan){
  const esc=(s:string)=>s.replace(/\\/g,'\\\\').replace(/\n/g,'\\n').replace(/[,;]/g,m=>'\\'+m);
- const stamp=(time:string)=>p.date.replaceAll('-','')+'T'+time.slice(0,5).replace(':','')+'00';
+ // An end time at or before the start (e.g. 22:00–00:30) ends on the next day.
+ const endDay=p.end.slice(0,5)<=p.start.slice(0,5)?new Date(Date.parse(p.date+'T00:00:00Z')+86400000).toISOString().slice(0,10):p.date;
+ const stamp=(day:string,time:string)=>day.replaceAll('-','')+'T'+time.slice(0,5).replace(':','')+'00';
  const now=new Date().toISOString().replace(/[-:]/g,'').slice(0,15)+'Z';
- return ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//BandDecision//KO','CALSCALE:GREGORIAN','BEGIN:VEVENT','UID:'+p.id+'@banddecision','DTSTAMP:'+now,'DTSTART;TZID=Asia/Seoul:'+stamp(p.start),'DTEND;TZID=Asia/Seoul:'+stamp(p.end),'SUMMARY:'+esc('합주'+(p.songs.length?' · '+p.songs.slice(0,3).join(', '):'')),p.location?'LOCATION:'+esc(p.location):'','DESCRIPTION:'+esc(planShareText(p)),'END:VEVENT','END:VCALENDAR'].filter(Boolean).join('\r\n')+'\r\n';
+ return ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//BandDecision//KO','CALSCALE:GREGORIAN','BEGIN:VEVENT','UID:'+p.id+'@banddecision','DTSTAMP:'+now,'DTSTART;TZID=Asia/Seoul:'+stamp(p.date,p.start),'DTEND;TZID=Asia/Seoul:'+stamp(endDay,p.end),'SUMMARY:'+esc('합주'+(p.songs.length?' · '+p.songs.slice(0,3).join(', '):'')),p.location?'LOCATION:'+esc(p.location):'','DESCRIPTION:'+esc(planShareText(p)),'END:VEVENT','END:VCALENDAR'].filter(Boolean).join('\r\n')+'\r\n';
 }
 // 공유하기 uses the phone share sheet (단톡방 등) and falls back to copying the text.
 export function PlanShareButtons({plan}:{plan:SharePlan}){

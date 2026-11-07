@@ -1,6 +1,6 @@
 import {renderToStaticMarkup} from 'react-dom/server';
 import {describe,it,expect,vi} from 'vitest';
-vi.mock('@/app/live-actions',()=>({deleteBandSongAction:vi.fn(),setSongConfirmationAction:vi.fn(),saveLivePlanAction:vi.fn(),liveVoteAction:vi.fn(),withdrawSongVoteAction:vi.fn()}));
+vi.mock('@/app/live-actions',()=>({deleteBandSongAction:vi.fn(),setSongConfirmationAction:vi.fn(),saveLivePlanAction:vi.fn(),liveVoteAction:vi.fn(),withdrawSongVoteAction:vi.fn(),updateBandSongAction:vi.fn()}));
 vi.mock('@/app/actions',()=>({removeMemberAction:vi.fn(),addSongAction:vi.fn(),difficultyAction:vi.fn()}));
 import {ConfirmPlanForm} from '../src/components/confirm-plan-form';
 import {SongList} from '../src/components/song-list';

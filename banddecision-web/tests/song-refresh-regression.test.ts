@@ -3,7 +3,7 @@ import { createElement } from 'react';
 import { cleanup, render, fireEvent, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 vi.mock('@/app/actions',()=>({addSongAction:vi.fn(async()=>({})),difficultyAction:vi.fn(async()=>({success:'difficulty saved'})),voteAction:vi.fn(async()=>({success:'vote saved'}))}));
-vi.mock('@/app/live-actions',()=>({liveVoteAction:vi.fn(async()=>({success:'vote saved'})),withdrawSongVoteAction:vi.fn(async()=>({success:'withdrawn'}))}));
+vi.mock('@/app/live-actions',()=>({liveVoteAction:vi.fn(async()=>({success:'vote saved'})),withdrawSongVoteAction:vi.fn(async()=>({success:'withdrawn'})),updateBandSongAction:vi.fn(async()=>({}))}));
 import { SongList } from '../src/components/song-list';
 import type { Participant, SongInput } from '../src/services/recommendations';
 afterEach(cleanup);
@@ -24,11 +24,12 @@ describe('saved song form refresh consistency',()=>{
  });
 
  it('resets a draft when the signed-in member changes',()=>{
-  const unvoted={...song,votes:[]};
-  const view=render(createElement(SongList,{...props,songs:[unvoted]}));
-  fireEvent.click(screen.getByRole('button',{name:'반대'}));
+  // 반대가 저장된 멤버에게만 사유 칸이 열린다. 다른 멤버로 바뀌면 그 초안은 남지 않는다.
+  const opposed={...song,votes:[{memberId:'m',choice:'no' as const,reason:null}]};
+  const view=render(createElement(SongList,{...props,songs:[opposed]}));
+  expect(pressed('반대')).toBe('true');
   fireEvent.change(view.container.querySelector('textarea[name="reason"]')!,{target:{value:'old draft'}});
-  view.rerender(createElement(SongList,{...props,memberId:'next',participants:[{...participants[0],id:'next'}],songs:[unvoted]}));
+  view.rerender(createElement(SongList,{...props,memberId:'next',participants:[{...participants[0],id:'next'}],songs:[opposed]}));
   expect(pressed('반대')).toBe('false');
   expect(view.container.querySelector('textarea[name="reason"]')).toBeNull();
  });

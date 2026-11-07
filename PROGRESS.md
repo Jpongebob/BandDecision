@@ -554,6 +554,11 @@ Final date-UI verification: 209 unit/component tests PASS; focused Chrome 84 che
 - 서울 publishable key로 실제 HTTP Auth 설정/공개 입장 RPC/JWKS 확인. 익명 로그인 활성화와 ES256 서명 확인. 임시 익명 계정 SDK signup/getClaims 통과, PIN 미검증 planning/identity NULL 확인 후 표식+UUID가 일치하는 임시 Auth 계정 1개만 정리. 기존/서울 데이터 지문 재비교 통과.
 - 서울 URL/공개 키를 Git 제외 .env.local에 설정. 타입/린트/프로덕션 빌드 모두 통과(19개 경로). Vercel 연결 인증 부재로 실제 배포/환경변수 수정은 실행하지 않음. 소유자 Vercel 설정 교체 후 Preview/PIN 검증과 Production 전환이 남음.
 
+### 2026-11-08 공동작업자 2단계 브랜치 병합 준비
+- 사용자 요청으로 원격 fetch 후 feat/phase2-db의 커밋4개(6cb1fa5,32a694b,1b8ac9d,df2b420)를 확인. master(8ad6951)에 --no-ff --no-commit 병합하여 사용자 직접 커밋/푸시 대기 상태로 둠. 충돌 없음. 작성자 Git 설정은 Jpongebob으로 확인.
+- 027 확정일 잠금/밴드장 참석자 수정/합주 시간/반대 사유 선택/작성자 곡 수정·삭제 및 대응 화면 변경. 기존 홈·긴 장소명 수정은 유지. 타입 검사/린트/프로덕션19경로 빌드 통과, staged diff 공백 검사 통과. 별도 단위/DB/브라우저 테스트와 운영 SQL은 이번 요청에서 실행하지 않음.
+- 배포 전 서울027 적용 필요. 앞서 제공한SQL이 성공했다면 재실행하지 않고 supabase/checks/migration_status.sql로 읽기 전용 확인 가능. 사용자에게 한국어 병합 커밋 메시지와 소스트리 Commit→Push 순서 안내.
+
 ### 2026-11-07 새 UI PC·모바일 QA 및 수정
 - 개편 후 전체 점검: 단위/컴포넌트/액션 38파일256개, 현재 DB225개와 역사적 DB300개 통과. 모바일 Chrome 225개 / PC Chrome 마우스·키보드166개 검사 통과, 각각 처리되지 않은 JS 예외0. 320/390/430/768/844/1280px 주요10경로 점검. 운영 DB 대신 임시 PGlite와 localhost Auth/REST 게이트웨이 사용.
 - 일정 저장이 추가/삭제 RPC 두 개로 분리돼 두 번째 실패 시 일부만 저장되는 오류 수정. 026에서 밴드 잠금과 기존 입력검증/RPC를 한 트랜잭션으로 결합. 액션은 단일 RPC만 호출. 오류 시 날짜와 planning_version 원복을 삭제 트리거 실패 주입으로 확인. 중복/겹침/범위/타인 일정/익명 접근 포함18개 DB회귀 추가. 최종 모바일390px 터치로 단일 요청·재로딩 보존·역방향 저장·되돌리기 확인.

@@ -10,5 +10,5 @@ export default async function SchedulePage(){
  const{member:me,data}=context,today=seoulToday(),myName=data.members.find(m=>m.id===me.id)?.nickname;
  // Confirmed rehearsals keep their own attendee snapshot; show it on the calendar day.
  const plans:PlanDay[]=(context.plans??[]).filter(p=>p.rehearsal_date>=today).map(p=>({date:p.rehearsal_date,attending:p.confirmed_plan_members.filter(m=>m.attending).map(m=>m.nickname_snapshot===myName?'나':m.nickname_snapshot),absent:p.confirmed_plan_members.filter(m=>!m.attending).map(m=>m.nickname_snapshot===myName?'나':m.nickname_snapshot)}));
- return <SchedulePlanner members={data.members} available={data.available} memberId={me.id} today={today} plans={plans}/>;
+ return <SchedulePlanner members={data.members} available={data.available} memberId={me.id} today={today} plans={plans} leader={me.role==='leader'}/>;
 }
