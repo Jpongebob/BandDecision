@@ -554,6 +554,13 @@ Final date-UI verification: 209 unit/component tests PASS; focused Chrome 84 che
 - 서울 publishable key로 실제 HTTP Auth 설정/공개 입장 RPC/JWKS 확인. 익명 로그인 활성화와 ES256 서명 확인. 임시 익명 계정 SDK signup/getClaims 통과, PIN 미검증 planning/identity NULL 확인 후 표식+UUID가 일치하는 임시 Auth 계정 1개만 정리. 기존/서울 데이터 지문 재비교 통과.
 - 서울 URL/공개 키를 Git 제외 .env.local에 설정. 타입/린트/프로덕션 빌드 모두 통과(19개 경로). Vercel 연결 인증 부재로 실제 배포/환경변수 수정은 실행하지 않음. 소유자 Vercel 설정 교체 후 Preview/PIN 검증과 Production 전환이 남음.
 
+### 2026-11-09 실력 저장 후 선택값 복원 오류 수정
+- 실력 저장 성공 뒤 공통 ActionForm의 form.reset()이 uncontrolled select를 이전 defaultValue로 되돌리는 오류를 회귀 테스트로 재현(4 저장 후 표시3). 이후 그대로 재저장하면 이전 실력이 다시 전송될 수 있었음.
+- ActionForm에 resetOnSuccess(기본true) 옵션 추가. 실력 편집 폼만 false로 설정해 저장한 선택값 유지. 서버에서 skill이 바뀌면 select key를 통해 최신 값으로 동기화. 다른 생성 폼의 성공 후 초기화와 실패 시 입력 유지 동작은 유지. 추가 DB 조회/SQL 변경 없음.
+- 새 회귀3개 포함 전체40파일280개 테스트 통과. 타입/린트/QA 프로덕션 빌드 통과. 임시 PGlite/로컬 Auth·REST 게이트웨이와 실제 Next/Chrome390px 터치·1280px 마우스에서 3→4→5, 그대로 재저장, 미설정 해제, 다시2설정, 다른 멤버 수정, 매번 새로고침 후 DB값/표시 일치 확인. JS예외0. 스크린샷/보고서는 Git 제외 .qa-artifacts/skill-save-*.
+- 운영 DB 변경 없음. 실제 휴대기기·카카오톡 브라우저는 별도 미검증.
+- 검사 서버 종료 후 QA 환경변수 없는 일반 환경의 프로덕션19경로 빌드도 통과. diff 공백 검사 통과.
+
 ### 2026-11-08 공동작업자 2단계 브랜치 병합 준비
 - 사용자 요청으로 원격 fetch 후 feat/phase2-db의 커밋4개(6cb1fa5,32a694b,1b8ac9d,df2b420)를 확인. master(8ad6951)에 --no-ff --no-commit 병합하여 사용자 직접 커밋/푸시 대기 상태로 둠. 충돌 없음. 작성자 Git 설정은 Jpongebob으로 확인.
 - 027 확정일 잠금/밴드장 참석자 수정/합주 시간/반대 사유 선택/작성자 곡 수정·삭제 및 대응 화면 변경. 기존 홈·긴 장소명 수정은 유지. 타입 검사/린트/프로덕션19경로 빌드 통과, staged diff 공백 검사 통과. 별도 단위/DB/브라우저 테스트와 운영 SQL은 이번 요청에서 실행하지 않음.
