@@ -7,7 +7,7 @@ HTMLDialogElement.prototype.showModal=function(){this.setAttribute('open','');};
 afterEach(()=>{cleanup();vi.unstubAllGlobals();});
 function setup(){render(<PlanShareButtons plan={plan}/>);fireEvent.click(screen.getByRole('button',{name:'캘린더에 추가'}));return screen.getByRole('dialog',{name:'캘린더에 추가'});}
 it('offers Google and an authenticated HTTP calendar URL instead of a forced blob download',()=>{
- const dialog=setup(),apple=within(dialog).getByRole('link',{name:'Apple·기타 캘린더로 열기'});expect(apple.getAttribute('href')).toBe('/api/plans/'+plan.id+'/calendar.ics');expect(apple.hasAttribute('download')).toBe(false);expect(within(dialog).getByRole('link',{name:'Google 캘린더에 추가'}).getAttribute('href')).toContain('https://calendar.google.com/');expect(dialog.textContent).toContain('아이폰 Chrome');
+ const dialog=setup(),apple=within(dialog).getByRole('link',{name:'Apple 캘린더 · 아이폰'});expect(apple.getAttribute('href')).toBe('/api/plans/'+plan.id+'/calendar.ics');expect(apple.hasAttribute('download')).toBe(false);expect(within(dialog).getByRole('link',{name:'Google 캘린더 · 갤럭시'}).getAttribute('href')).toContain('https://calendar.google.com/');expect(dialog.textContent).toContain('아이폰 Chrome');
 });
 it('explains file sharing fallback when the browser does not support sharing ICS files',async()=>{
  vi.stubGlobal('navigator',{canShare:()=>false,share:vi.fn()});const dialog=setup();fireEvent.click(within(dialog).getByRole('button',{name:'일정 파일 공유 · Mail로 보내기'}));await waitFor(()=>expect(within(dialog).getByRole('status').textContent).toContain('지원하지 않아요'));
