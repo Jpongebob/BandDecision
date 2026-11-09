@@ -1,5 +1,12 @@
 # BandDecision Web Progress
 
+### 2026-11-09 아이폰 Chrome 캘린더 추가 호환
+- 파일 다운로드만 하던 캘린더 버튼을 Google 캘린더, Apple·기타 캘린더 URL, 일정 파일 공유 선택 화면으로 변경. 아이폰 Chrome에서 다운로드만 되는 경우 Safari 재시도와 Apple 기본 Mail 첨부파일 가져오기 안내 제공.
+- 일정 URL은 PIN 인증한 현재 밴드 멤버만 조회 가능. 비로그인 401, 다른 밴드 404, private/no-store 및 inline text/calendar 응답. 공개 일정이나 운영 DB 변경 없음. 추가 SQL 불필요.
+- 공유 파일과 Google 링크의 한국 시간을 UTC로 일치시키고 자정/연말 넘김 처리. ICS의 CRLF 이스케이프와 UTF-8 75바이트 줄 접기로 긴 한글·이모지 메모 보존.
+- lint, 타입 검사, 43개 파일 292개 테스트 및 프로덕션 빌드 통과. 임시 로컬 DB와 Chrome에서 일정 생성, 일정 URL의 인증/밴드 제한, 파일 내용, Google 링크 및 320/390/1280px 화면 확인. 처리되지 않은 JS 오류 없음.
+- 실제 아이폰 Chrome/Safari와 Apple 캘린더의 네이티브 가져오기 동작은 실기기 미검증. 특정 브라우저가 반드시 캘린더 앱을 연다고 보장하지 않음. Mail 가져오기 참고: https://support.apple.com/en-mt/guide/iphone/ipha0d932e96/ios
+
 The requested root files `SPEC.md`, `AGENTS.md`, and `CODEX_TASK.md` were not present. I read the supplied equivalents `banddecision_web_SPEC.md`, `banddecision_web_AGENTS.md`, and `banddecision_web_CODEX_TASK.md` in full, then built the new web app under `banddecision-web/`. The previous mobile/Expo app was not changed.
 
 ## Phases 0-7

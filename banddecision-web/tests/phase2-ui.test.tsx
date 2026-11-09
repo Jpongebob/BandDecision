@@ -137,7 +137,7 @@ describe('rehearsal time',()=>{
  });
  it('a calendar file for a plan past midnight ends on the next day',()=>{
   const ics=planIcs({id:'p',date:'2026-11-30',start:'22:00:00',end:'00:30:00',songs:[],attending:1,total:1});
-  expect(ics).toContain('DTSTART;TZID=Asia/Seoul:20261130T220000');
-  expect(ics).toContain('DTEND;TZID=Asia/Seoul:20261201T003000');
+  expect(ics).toContain('DTSTART:20261130T130000Z');
+  expect(ics).toContain('DTEND:20261130T153000Z');
  });
 });
