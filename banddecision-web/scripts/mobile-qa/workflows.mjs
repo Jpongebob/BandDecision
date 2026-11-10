@@ -34,10 +34,12 @@ export async function workflows({run,go,fill,touchText,wait,assert,layout,viewpo
  async function createDatePlan(d,location){const before=await planCount();await touchText('새 합주 정하기');await wait('!!document.querySelector("dialog[open]")');await pickPlanDay(d);if(location)await set('dialog[open] input[name=location]',location);assert(!(await run("document.querySelector('dialog[open]').innerText.includes('미리보기')")),'no preview step');await touchText('이 날로 확정하기','dialog[open] button');await wait('!document.querySelector("dialog[open]")&&document.querySelectorAll("[data-plan-id]").length==='+(before+1));}
  async function openEdit(card){await touchText('수정',card+' button');await wait('!!document.querySelector("dialog[open]")');}
  async function savePlanEdit(card,value){await ackPartial();await touchText('계획 수정 저장','dialog[open] button');await wait('!document.querySelector("dialog[open]")||!!document.querySelector("dialog[open] [role=alert]")');const error=await run('document.querySelector("dialog[open] [role=alert]")?.textContent??""');await wait(summaryHas(card,value),20000).catch(()=>{});assert(!error&&await run(summaryHas(card,value)),'plan edit saved and shows '+value+(error?' — error: '+error:''));}
- async function deletePlan(card){const before=await planCount();await touch(card+' button[aria-label^="더보기:"]');await wait('!!document.querySelector("dialog[open]")');await touchText('계획 삭제','dialog[open] button');await wait('document.querySelectorAll("[data-plan-id]").length==='+(before-1));}
+ async function deletePlan(card){const before=await planCount();assert(!(await run('!!document.querySelector('+JSON.stringify(card+' button[aria-label^="더보기:"]')+')')),'plan card has no delete-only more button');await openEdit(card);await touchText('이 계획 삭제','dialog[open] button');await wait('!!document.querySelector("dialog[open] [role=group]")');await wait('(()=>{const g=document.querySelector("dialog[open] [role=group]").getBoundingClientRect(),f=document.querySelector("dialog[open] .sticky").getBoundingClientRect();return g.top>=0&&g.bottom<=f.top+1;})()').catch(()=>{});assert(await run('(()=>{const g=document.querySelector("dialog[open] [role=group]").getBoundingClientRect(),f=document.querySelector("dialog[open] .sticky").getBoundingClientRect();return g.top>=0&&g.bottom<=f.top+1;})()'),'delete question scrolls above the save bar');await shot('plan-delete-confirm-390.png');await touchText('이 계획 삭제','dialog[open] [role=group] button');await wait('document.querySelectorAll("[data-plan-id]").length==='+(before-1));}
 
  // Home
  for(const width of [390,1280]){await viewport(width,844);await go('/dashboard','안녕하세요');await layout('home');await shot('home-'+width+'.png');}
+ await viewport(1280,844);await go('/dashboard','안녕하세요');assert(await run('[...document.querySelectorAll("aside a[aria-current=page]")].map(a=>a.innerText.trim()).join()==="홈"&&getComputedStyle(document.querySelector("aside form button")).cursor==="pointer"'),'PC menu marks 홈 and buttons show the hand cursor');
+ await go('/songs','합주곡');assert(await run('(()=>{const on=[...document.querySelectorAll("aside a[aria-current=page]")];return on.length===1&&on[0].innerText.trim().startsWith("합주곡");})()&&document.querySelector("aside").innerText.includes("설정")'),'PC menu follows the current tab and groups settings');await viewport(390,844);await go('/dashboard','안녕하세요');
  assert(await run('document.body.innerText.includes("다가오는 합주")&&document.body.innerText.includes("예정 합주 0/5")&&!document.body.innerText.includes("내가 할 일")'),'home shows greeting, chips and the upcoming card without a task list');
 
  // Difficulty toggle reaches list/detail/plan choices on both viewports.
@@ -78,8 +80,10 @@ export async function workflows({run,go,fill,touchText,wait,assert,layout,viewpo
  assert(!(await run("!!document.querySelector('main input[name=reason]')||document.body.innerText.includes('불참 사유')||document.body.innerText.includes('회차')")),'availability has no reason inputs or round terminology');
  assert((await panelText()).includes('바뀐 날짜 없음')&&await run('document.querySelector('+JSON.stringify(panel)+').querySelector("button:last-of-type").disabled'),'nothing staged and save disabled at start');
  for(const width of [320,390,430,768,1280]){await viewport(width,844);await layout('schedule calendar');if(width===390||width===1280)await shot('schedule-'+width+'.png');}await viewport(390,844);
- const freed=[10,11,13,14,20,21].map(day);let removed=0;
- for(const d of freed){await showMonth(cal,d);if((await cellState(d))==='saved'){await removeSaved(d);removed++;}}
+ // The range check needs two days in one month; near a month end use day 19–20 instead of 20–21.
+ const rangeDays=day(20).slice(0,7)===day(21).slice(0,7)?[day(20),day(21)]:[day(19),day(20)];
+ const freed=[...new Set([10,11,13,14,20,21].map(day).concat(rangeDays))],original=new Map();let removed=0;
+ for(const d of freed){await showMonth(cal,d);const saved=(await cellState(d))==='saved';original.set(d,saved);if(saved){await removeSaved(d);removed++;}}
  assert((await savedCount())===initialSaved-removed,'removing from the saved-dates sheet keeps the other dates ('+removed+' removed)');
  for(const d of freed){await showMonth(cal,d);assert((await cellState(d))!=='saved','sheet removed '+d);}
  const savedDay=await run('document.querySelector('+JSON.stringify(cal+' [data-state=saved]:not([aria-label*="보는 중"])')+')?.dataset.day');
@@ -91,14 +95,14 @@ export async function workflows({run,go,fill,touchText,wait,assert,layout,viewpo
  await toggleDay(day(10));await saveCalendar();assert((await cellState(day(10)))==='saved','saving adds the date');
  await touchText('되돌리기',panel+' button');await wait('document.querySelector('+JSON.stringify(cell(day(10)))+').dataset.state==="none"&&!document.querySelector('+JSON.stringify(cal+' [data-day]:not([data-state=past]):disabled')+')');assert(true,'undo after saving restores the previous dates');
  await toggleDay(day(10));await toggleDay(savedDay);assert((await panelText()).includes('1일 추가 · 1일 빼기'),'one save carries an addition and a removal');await saveCalendar();
- assert((await cellState(day(10)))==='saved'&&(await cellState(savedDay))==='none','addition and removal saved together');
+ await showMonth(cal,day(10));const addedState=await cellState(day(10));await showMonth(cal,savedDay);assert(addedState==='saved'&&(await cellState(savedDay))==='none','addition and removal saved together');
  await toggleDay(savedDay);await saveCalendar();
- await touchText('기간으로');await showMonth(cal,day(20));await touch(cell(day(20)));await touch(cell(day(21)));assert((await cellState(day(20)))==='adding'&&(await cellState(day(21)))==='adding','range selects every day between two taps');await saveCalendar();await touchText('하루씩');
+ const[rangeA,rangeB]=rangeDays;await touchText('기간으로');await showMonth(cal,rangeA);await touch(cell(rangeA));await touch(cell(rangeB));assert((await cellState(rangeA))==='adding'&&(await cellState(rangeB))==='adding','range selects every day between two taps');await saveCalendar();await touchText('하루씩');
  // Leaving with staged changes asks first.
  await toggleDay(day(13));await touchNav('/songs');await wait('!!document.querySelector("dialog[open]")');assert(await run('location.pathname==="/schedule"&&document.querySelector("dialog[open]").innerText.includes("저장하지 않은 변경이 있어요")'),'leaving with unsaved dates asks first');
  await touchText('계속 고르기','dialog[open] button');assert(await run('!document.querySelector("dialog[open]")&&location.pathname==="/schedule"')&&(await cellState(day(13)))==='adding','keep choosing returns without losing changes');
  await touchNav('/songs');await wait('!!document.querySelector("dialog[open]")');await touchText('저장하고 이동','dialog[open] button');await wait('location.pathname==="/songs"');await go('/schedule','가능한 날');await showMonth(cal,day(13));assert((await cellState(day(13)))==='saved','save-and-leave stored the date');
- await ensureSaved(day(11),true);await ensureSaved(day(14),true);
+ for(const d of freed)await ensureSaved(d,original.get(d));
  assert((await savedCount())===initialSaved,'all freed dates restored ('+initialSaved+')');
  await touch('main button[aria-haspopup=dialog]');await wait('!!document.querySelector("dialog[open]")');for(const width of [320,390,430,768,1280]){await viewport(width,844);await layout('saved dates sheet');if(width===390)await shot('saved-dates-390.png');}await viewport(390,844);await closeSheet();
 
@@ -113,12 +117,13 @@ export async function workflows({run,go,fill,touchText,wait,assert,layout,viewpo
  await go('/dashboard','홍대 QA 합주실');assert(await run('document.body.innerText.indexOf("다가오는 합주")<document.body.innerText.indexOf("홍대 QA 합주실")'),'home shows the upcoming rehearsal with its location');
  await go('/plans','합주 계획');const first=await run('document.querySelector("[data-plan-id]").dataset.planId'),card='[data-plan-id="'+first+'"]';
  assert(await run(summaryHas(card,'곡 미정')),'date-only plan created with no vote or song requirement');
- await openEdit(card);await touch('dialog[open] [data-song-choice]');await savePlanEdit(card,'[테스트 A]');assert((await planCount())===1,'adding a song edits the same plan without consuming a slot');
+ await openEdit(card);assert(await run('[...document.querySelectorAll("dialog[open] button")].find(b=>b.innerText.trim()==="계획 수정 저장").disabled&&document.querySelector("dialog[open]").innerText.includes("바뀐 내용이 없어요")&&!!document.querySelector("dialog[open] [data-saved-attendance]")&&!document.querySelector("dialog[open] input[type=checkbox]")'),'unchanged edit keeps save off, says why, and shows the saved attendance without the partial checkbox');await shot('plan-edit-unchanged-390.png');
+ await touch('dialog[open] [data-song-choice]');assert(!(await run('[...document.querySelectorAll("dialog[open] button")].find(b=>b.innerText.trim()==="계획 수정 저장").disabled')),'a song change wakes the save button');await savePlanEdit(card,'[테스트 A]');assert((await planCount())===1,'adding a song edits the same plan without consuming a slot');
  await openEdit(card);await pickPlanDay(day(12));await touch('dialog[open] [data-song-choice][aria-pressed=true]');await savePlanEdit(card,'곡 미정');assert(await run(summaryHas(card,md(day(12)))),'plan date changed and songs removed in place');
  for(let i=1;i<=4;i++){await createDatePlan(day(12+i));}
  assert(await run('!document.body.innerText.includes("새 합주 정하기")&&document.body.innerText.includes("계획이 5개")'),'five-plan capacity enforced in screen');
  await openEdit(card);await pickPlanDay(day(17));await savePlanEdit(card,md(day(17)));assert((await planCount())===5,'existing plans remain editable at capacity');await layout('five plans');await shot('plans-390.png');
- await deletePlan(card);assert(true,'deleting from the more menu frees one plan slot');
+ await deletePlan(card);assert(true,'deleting from the edit sheet frees one plan slot');
 
  // Leader attendance (단톡방 등 앱 밖에서 들은 불참), locked plan days and plan times.
  const lockedId=await run('document.querySelector("[data-plan-id]").dataset.planId'),locked='[data-plan-id="'+lockedId+'"]';assert(await run(summaryHas(locked,md(day(13)))),'first remaining plan is on '+day(13));
@@ -188,7 +193,7 @@ export async function workflows({run,go,fill,touchText,wait,assert,layout,viewpo
  for(const width of [320,390,1280]){await viewport(width,844);await layout('confirmed repertoire');}await viewport(390,844);
  const chosenId=chosenLink.split('/').pop();await go('/plans','합주 계획');
  await openEdit(survivor);assert(await run('!!document.querySelector('+JSON.stringify('dialog[open] [data-song-choice="'+chosenId+'"]')+')'),'leader-confirmed song selectable despite pending votes');
- await touch('dialog[open] [data-song-choice="'+chosenId+'"]');await savePlanEdit(survivor,'Mobile candidate');
+ await touch('dialog[open] [data-song-choice="'+chosenId+'"]');assert(await run('(()=>{const d=document.querySelector("dialog[open]").getBoundingClientRect();return [...document.querySelectorAll("dialog[open] [data-song-choice]")].every(b=>b.getBoundingClientRect().right<=d.right+1);})()'),'long song chips stay inside the plan sheet');await savePlanEdit(survivor,'Mobile candidate');
  await go(chosenLink,'확정 해제');await touchText('확정 해제');await wait('document.body.innerText.includes("확정 목록에서 삭제했습니다")');
  await go('/plans','합주 계획');assert(await run(summaryHas(survivor,'Mobile candidate')),'removing repertoire song preserves existing plan snapshot');
  await go(chosenLink,'이 곡 확정하기');await touchText('이 곡 확정하기');await wait('document.body.innerText.includes("확정곡에 추가했습니다")');
