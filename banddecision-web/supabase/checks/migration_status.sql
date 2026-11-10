@@ -22,3 +22,5 @@ select
  to_regprocedure('public.update_band_song(bigint,text,text)') is not null as "027_song_edit",
  exists(select 1 from information_schema.columns where table_schema='public' and table_name='songs' and column_name='edited_at') as "027_edited_at",
  exists(select 1 from pg_constraint where conrelid='public.band_song_votes'::regclass and conname='band_song_votes_reason_check') as "027_optional_reason";
+-- After 028 succeeds, this is true.
+select coalesce(obj_description(to_regprocedure('public.save_rehearsal_plan(uuid,date,bigint[],bigint,uuid,integer,boolean,text,text,time,time)'),'pg_proc') like '028:%',false) as "028_same_day_keeps_attendance";
