@@ -1,8 +1,12 @@
 import {dayLabel,timeRangeLabel} from '@/lib/day-format';
 
-export type SharePlan={id:string;date:string;start:string;end:string;location?:string|null;memo?:string|null;songs:string[];attending:number;total:number};
+export function sortedNames(names:string[]){return [...names].sort((a,b)=>a.localeCompare(b,'ko'));}
+// artists runs parallel to songs; attendees/absentees are the saved names. All optional for older callers.
+export type SharePlan={id:string;date:string;start:string;end:string;location?:string|null;memo?:string|null;songs:string[];artists?:(string|null)[];attending:number;total:number;band?:string|null;attendees?:string[];absentees?:string[]};
 export function planShareText(p:SharePlan){
- return ['합주 안내',dayLabel(p.date)+' '+timeRangeLabel(p.start,p.end),p.location?'장소: '+p.location:'',p.attending+'/'+p.total+'명 참석',p.songs.length?'곡: '+p.songs.join(', '):'',p.memo?'메모: '+p.memo:''].filter(Boolean).join('\n');
+ const people=p.attendees?['👥 참석 '+p.attendees.length+'명'+(p.attendees.length?': '+p.attendees.join(', '):''),p.absentees?.length?'   불참: '+p.absentees.join(', '):'']:['👥 참석 '+p.attending+'/'+p.total+'명'];
+ const songs=p.songs.length?['🎵 곡',...p.songs.map((title,i)=>(i+1)+'. '+title+(p.artists?.[i]?' – '+p.artists[i]:''))]:[];
+ return [(p.band?'🎸 '+p.band+' 합주 안내':'🎸 합주 안내')+'\n','📅 '+dayLabel(p.date)+' '+timeRangeLabel(p.start,p.end),p.location?'📍 '+p.location:'',...people,...songs,p.memo?'📝 메모: '+p.memo:''].filter(Boolean).join('\n');
 }
 function calendarTimes(p:SharePlan){
  const endDay=p.end<=p.start?new Date(Date.parse(p.date+'T00:00:00Z')+86400000).toISOString().slice(0,10):p.date;

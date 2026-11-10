@@ -4,7 +4,8 @@ import {usePathname} from 'next/navigation';
 import {Home,CalendarDays,Music2,ClipboardCheck,MoreHorizontal} from 'lucide-react';
 
 const tabs=[['/dashboard','홈',Home],['/schedule','일정',CalendarDays],['/songs','합주곡',Music2],['/plans','합주 계획',ClipboardCheck],['/settings','더보기',MoreHorizontal]] as const;
-function active(path:string,href:string){return href==='/dashboard'?path==='/dashboard':path===href||path.startsWith(href+'/');}
+export function isActiveTab(path:string,href:string){return href==='/dashboard'?path==='/dashboard':path===href||path.startsWith(href+'/');}
+const active=isActiveTab;
 
 // Mobile tab bar: the current tab gets the brand colour and a 3px top bar; badges keep their own red.
 export function BottomNavView({path,pendingVoteBadge=null}:{path:string;pendingVoteBadge?:React.ReactNode}){

@@ -57,6 +57,11 @@
     text-wrap: pretty;
   }
   button, input, select, textarea { font: inherit; letter-spacing: inherit; }
+  /* Only links show the hand. Buttons keep the arrow and get a little darker under the mouse;
+     buttons with their own hover: colour (the shared Button, blue/red fills) skip this. */
+  @media (hover: hover) {
+    button:enabled:not([class*="hover:"]):hover { background-image: linear-gradient(rgb(16 24 40 / 0.05), rgb(16 24 40 / 0.05)); }
+  }
   /* Long song titles, nicknames and snapshots must wrap inside narrow mobile cards. */
   main { overflow-wrap: anywhere; }
 }
