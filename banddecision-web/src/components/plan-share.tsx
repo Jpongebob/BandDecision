@@ -10,8 +10,8 @@ const button='inline-flex min-h-11 items-center justify-center gap-1.5 rounded-x
 export function PlanShareButtons({plan}:{plan:SharePlan}){
  const[note,setNote]=useState(''),[calendarNote,setCalendarNote]=useState('');
  async function share(){
-  const text=planShareText(plan),url=location.origin+'/plans';
-  try{if(navigator.share){await navigator.share({title:'합주 안내',text,url});return;}await navigator.clipboard.writeText(text+'\n'+url);setNote('안내 문구를 복사했어요');}
+  const text=planShareText(plan);
+  try{if(navigator.share){await navigator.share({title:'합주 안내',text});return;}await navigator.clipboard.writeText(text);setNote('안내 문구를 복사했어요');}
   catch(error){if((error as Error)?.name!=='AbortError')setNote('공유하지 못했어요. 다시 시도해 주세요.');}
  }
  async function shareFile(){
