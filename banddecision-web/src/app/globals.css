@@ -57,6 +57,11 @@
     text-wrap: pretty;
   }
   button, input, select, textarea { font: inherit; letter-spacing: inherit; }
+  /* Tailwind v4 leaves buttons on the arrow cursor; on PC everything clickable shows the hand like links do. */
+  button:not(:disabled), [role="button"]:not([aria-disabled="true"]), summary, select:not(:disabled),
+  input[type="checkbox"]:not(:disabled), input[type="radio"]:not(:disabled),
+  label:has(input[type="checkbox"]:not(:disabled), input[type="radio"]:not(:disabled)) { cursor: pointer; }
+  button:disabled, select:disabled { cursor: not-allowed; }
   /* Long song titles, nicknames and snapshots must wrap inside narrow mobile cards. */
   main { overflow-wrap: anywhere; }
 }
