@@ -44,8 +44,8 @@ export function SavedDatesSheet({today,endDate,saved,count,total,plans,label}:{t
  </section>;})}
  {error&&<p role="alert" className="text-sm font-semibold text-danger">{error}</p>}
  </div>
- {bulk&&<div className="absolute inset-x-0 bottom-0 border-t border-line bg-white px-5 pb-6 pt-3"><button type="button" disabled={!picked.length||pending} onClick={()=>removeDays(picked)} className="min-h-[52px] w-full rounded-[14px] bg-danger text-[17px] font-bold text-white disabled:bg-surface-2 disabled:text-faint">{pending?'빼는 중…':'선택한 '+picked.length+'개 빼기'}</button></div>}
- {toast&&!bulk&&<div role="status" className="absolute inset-x-5 bottom-6 flex items-center justify-between gap-2 rounded-[14px] bg-ink py-1 pl-4 pr-1 text-white shadow-[0_8px_24px_rgba(16,24,40,0.24)]"><span className="text-base font-semibold">{toast.text}</span><button type="button" onClick={undo} disabled={pending} className="min-h-11 px-3.5 text-base font-bold text-[#93b4ff]">되돌리기</button></div>}
+ {bulk&&<div className="absolute inset-x-0 bottom-0 border-t border-line bg-white px-5 pb-6 pt-3"><button type="button" disabled={!picked.length||pending} onClick={()=>removeDays(picked)} className="min-h-[52px] w-full rounded-[14px] bg-danger text-[17px] font-bold text-white enabled:hover:bg-[#912018] disabled:bg-surface-2 disabled:text-faint">{pending?'빼는 중…':'선택한 '+picked.length+'개 빼기'}</button></div>}
+ {toast&&!bulk&&<div role="status" className="absolute inset-x-5 bottom-6 flex items-center justify-between gap-2 rounded-[14px] bg-ink py-1 pl-4 pr-1 text-white shadow-[0_8px_24px_rgba(16,24,40,0.24)]"><span className="text-base font-semibold">{toast.text}</span><button type="button" onClick={undo} disabled={pending} className="min-h-11 rounded-lg px-3.5 text-base font-bold text-[#93b4ff] enabled:hover:bg-white/10">되돌리기</button></div>}
  </div>
  </dialog></>;
 }

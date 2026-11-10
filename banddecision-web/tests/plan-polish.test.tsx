@@ -6,12 +6,14 @@ const actions=vi.hoisted(()=>({remove:vi.fn(async()=>({success:'계획을 삭제
 vi.mock('next/navigation',()=>({useRouter:()=>({push:vi.fn(),refresh:vi.fn()}),usePathname:()=>'/songs/12'}));
 vi.mock('@/app/live-actions',()=>({deleteLivePlanAction:actions.remove,saveLivePlanAction:vi.fn(async()=>({})),saveAvailabilityChanges:vi.fn(),setPlanAttendance:vi.fn()}));
 import {ConfirmPlanForm} from '../src/components/confirm-plan-form';
-import {PlanDeleteControl} from '../src/components/plan-delete';
+import {PlanDeleteButton} from '../src/components/plan-delete';
 import {SideNav} from '../src/components/side-nav';
 import {SchedulePlanner} from '../src/components/schedule-planner';
 import {planShareText} from '../src/lib/calendar-export';
 import {timeRangeLabel} from '../src/lib/day-format';
 import type {SavedPlan} from '../src/lib/live-planning';
+Object.defineProperty(HTMLDialogElement.prototype,'showModal',{configurable:true,value:function(this:HTMLDialogElement){this.setAttribute('open','');}});
+Object.defineProperty(HTMLDialogElement.prototype,'close',{configurable:true,value:function(this:HTMLDialogElement){this.removeAttribute('open');this.dispatchEvent(new Event('close'));}});
 afterEach(cleanup);beforeEach(()=>actions.remove.mockClear());
 
 const members=[{id:'a',userId:'ua',nickname:'Ann',part:'기타',partKey:'기타',skill:null},{id:'b',userId:'ub',nickname:'Bo',part:'베이스',partKey:'베이스',skill:null},{id:'c',userId:'uc',nickname:'Cy',part:'드럼',partKey:'드럼',skill:null}];
@@ -67,23 +69,33 @@ describe('editing a plan',()=>{
 });
 
 describe('deleting a plan',()=>{
- it('asks once more in place, then deletes with the plan version',async()=>{
-  render(createElement(PlanDeleteControl,{planId:'p1',version:4,label:'이 계획 삭제',question:'삭제할까요?',triggerClassName:''}));
-  fireEvent.click(screen.getByRole('button',{name:'이 계획 삭제'}));
-  const box=screen.getByRole('group',{name:'이 계획 삭제'});
-  fireEvent.click(within(box).getByRole('button',{name:'취소'}));
+ const props={planId:'p1',version:4,what:'합주 계획',when:'11월 20일 (금) · 오후 8:00 – 10:00',triggerLabel:'11월 20일 (금) 합주 삭제',triggerClassName:''};
+ it('the card button opens one confirmation popup, then deletes with the plan version',async()=>{
+  render(createElement(PlanDeleteButton,props));
+  const trigger=screen.getByRole('button',{name:'11월 20일 (금) 합주 삭제'});
+  expect(trigger.textContent).toBe('삭제');
+  fireEvent.click(trigger);
+  const popup=screen.getByRole('dialog',{name:'이 합주 계획을 삭제할까요?'});
+  expect(popup.textContent).toContain('11월 20일 (금) · 오후 8:00 – 10:00');
+  fireEvent.click(within(popup).getByRole('button',{name:'취소'}));
+  expect(popup.hasAttribute('open')).toBe(false);
   expect(actions.remove).not.toHaveBeenCalled();
-  fireEvent.click(screen.getByRole('button',{name:'이 계획 삭제'}));
-  await act(async()=>{fireEvent.click(within(screen.getByRole('group',{name:'이 계획 삭제'})).getByRole('button',{name:'이 계획 삭제'}));});
+  fireEvent.click(trigger);
+  await act(async()=>{fireEvent.click(within(popup).getByRole('button',{name:'삭제 확인'}));});
   const form=(actions.remove.mock.calls[0] as unknown as [unknown,FormData])[1];
   expect([form.get('plan_id'),form.get('plan_version'),form.get('confirm_delete')]).toEqual(['p1','4','yes']);
  });
- it('shows the server error',async()=>{
+ it('shows the server error inside the popup',async()=>{
   actions.remove.mockResolvedValueOnce({error:'다른 창에서 계획을 수정했습니다. 새로고침 후 확인하세요.'});
-  render(createElement(PlanDeleteControl,{planId:'p1',version:4,label:'기록 삭제',question:'삭제할까요?',triggerClassName:''}));
-  fireEvent.click(screen.getByRole('button',{name:'기록 삭제'}));
-  await act(async()=>{fireEvent.click(within(screen.getByRole('group',{name:'기록 삭제'})).getByRole('button',{name:'기록 삭제'}));});
-  expect(screen.getByRole('alert').textContent).toContain('새로고침');
+  render(createElement(PlanDeleteButton,{...props,what:'합주 기록'}));
+  fireEvent.click(screen.getByRole('button',{name:'11월 20일 (금) 합주 삭제'}));
+  const popup=screen.getByRole('dialog',{name:'이 합주 기록을 삭제할까요?'});
+  await act(async()=>{fireEvent.click(within(popup).getByRole('button',{name:'삭제 확인'}));});
+  expect(within(popup).getByRole('alert').textContent).toContain('새로고침');
+ });
+ it('the edit form has no delete button any more',()=>{
+  render(createElement(ConfirmPlanForm,{data,songs:[],today:'2026-11-10',plan}));
+  expect(screen.queryByRole('button',{name:/삭제/})).toBeNull();
  });
 });
 

@@ -9,11 +9,12 @@ import {PlanShareButtons} from '@/components/plan-share';
 import {PlanAttendanceEditor} from '@/components/plan-attendance';
 import {twoMonthWindow} from '@/lib/calendar-window';
 import {AttendanceChip,DDay,SongChips} from '@/components/plan-bits';
-import {PlanDeleteControl} from '@/components/plan-delete';
+import {PlanDeleteButton} from '@/components/plan-delete';
 import {getBandContext} from '@/lib/band-context';
 import {sortedNames} from '@/lib/calendar-export';
 import {dayLabel,timeRangeLabel,weekdayShort} from '@/lib/day-format';
 const outline='inline-flex min-h-11 min-w-0 flex-1 basis-0 items-center justify-center gap-1.5 rounded-xl border border-line-strong bg-white px-3 text-base font-semibold text-ink';
+const deleteButton='inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl border border-line-strong bg-white px-3.5 text-base font-semibold text-danger';
 export default async function PlansPage(){
  const db=await createClient();if(!db)return null;
  const page=await loadVerifiedPlanningPage(db,'full',true);
@@ -25,8 +26,7 @@ export default async function PlansPage(){
  const attendanceMembers=data?.members.map(m=>({id:m.id,nickname:m.nickname,part:m.part,leader:m.id===me.id,noDates:!responded.has(m.id)}))??[];
  const orderedSongs=(plan:SavedPlan)=>[...plan.confirmed_plan_songs].sort((a,b)=>a.display_order-b.display_order);
  const songTitles=(plan:SavedPlan)=>orderedSongs(plan).map(s=>s.title_snapshot),songArtists=(plan:SavedPlan)=>orderedSongs(plan).map(s=>s.artist_snapshot);
- const question=(plan:SavedPlan,what:string)=>dayLabel(plan.rehearsal_date)+' '+what+'을 삭제할까요? 참석자·곡 기록도 함께 지워지고 되돌릴 수 없어요.';
- const editForm=(plan:SavedPlan)=>data&&<ConfirmPlanForm key={plan.id} data={data} songs={songs} today={today} plan={plan} takenDates={takenDates} extra={<div className="flex justify-center border-t border-line pt-3"><PlanDeleteControl planId={plan.id} version={plan.version} label="이 계획 삭제" question={question(plan,'합주 계획')} triggerClassName="min-h-11 px-3 text-base font-semibold text-danger"/></div>}/>;
+ const editForm=(plan:SavedPlan)=>data&&<ConfirmPlanForm key={plan.id} data={data} songs={songs} today={today} plan={plan} takenDates={takenDates}/>;
  function planCard(plan:SavedPlan,first:boolean,archived=false){
   const titles=songTitles(plan),attendees=plan.confirmed_plan_members.filter(m=>m.attending),absentees=plan.confirmed_plan_members.filter(m=>!m.attending);
   return <Card key={plan.id} data-plan-id={archived?undefined:plan.id} data-archived-plan-id={archived?plan.id:undefined} className="flex flex-col gap-3.5 p-4">
@@ -35,10 +35,10 @@ export default async function PlansPage(){
   {titles.length?<SongChips titles={titles}/>:<div className="flex items-center justify-between gap-2 rounded-xl border border-dashed border-line-strong px-3 py-2"><span className="text-[15px] text-muted">곡 미정 · 날짜만 확정</span>{leader&&data&&!archived&&<OpenSheetButton target={'edit-'+plan.id} className="min-h-11 shrink-0 px-1 text-[15px] font-bold text-brand-ink" label={dayLabel(plan.rehearsal_date)+' 합주에 곡 추가'}>곡 추가</OpenSheetButton>}</div>}
   {plan.memo&&<p className="whitespace-pre-wrap break-words rounded-xl bg-note-bg px-3.5 py-3 text-base leading-[22px] text-ink-2"><b className="font-bold text-warn-ink">메모</b> · {plan.memo}</p>}
   {archived?<p className="text-[13px] text-muted">지난 합주 기록이에요. 당시 참석자와 곡을 보관해요.</p>:<PlanShareButtons plan={{id:plan.id,date:plan.rehearsal_date,start:plan.starts_at,end:plan.ends_at,location:plan.location,memo:plan.memo,songs:titles,artists:songArtists(plan),attending:plan.attendee_count,total:plan.participant_count,band:bandName,attendees:sortedNames(attendees.map(m=>m.nickname_snapshot)),absentees:sortedNames(absentees.map(m=>m.nickname_snapshot))}}/>}
-  <div className="flex flex-wrap gap-2">
+  <div className="flex gap-2">
    <Sheet title="참석자 명단" trigger="참석자 명단" triggerClassName={outline}>{leader&&data&&!archived?<PlanAttendanceEditor plan={{id:plan.id,version:plan.version,date:plan.rehearsal_date,start:plan.starts_at,end:plan.ends_at}} members={attendanceMembers} attending={plan.confirmed_plan_members.filter(m=>m.attending&&m.source_member_id).map(m=>m.source_member_id!)}/>:<><p className="mb-3 text-[15px] text-muted">{dayLabel(plan.rehearsal_date)} · {plan.attendee_count}/{plan.participant_count}명 참석</p><ul className="flex flex-col">{[...attendees,...absentees].map(m=><li key={m.id} className="flex items-center gap-2.5 border-t border-line py-2.5"><span aria-hidden="true" className="grid size-9 shrink-0 place-items-center rounded-full bg-surface-2 text-[15px] font-bold text-ink-2">{[...m.nickname_snapshot][0]}</span><span className="grow"><b className="text-base font-bold">{m.nickname_snapshot}</b> <span className="text-sm text-muted">{m.part_snapshot}</span></span><span className={'whitespace-nowrap rounded-full px-2.5 py-1 text-[13px] font-bold '+(m.attending?'bg-plan-bg text-plan-ink':'bg-surface-2 text-ink-2')}>{m.attending?'참석':'불참'}</span></li>)}</ul>{!archived&&<p className="mt-3 text-sm text-muted">못 오게 되면 밴드장에게 알려 주세요. 밴드장이 참석자를 바꿔요.</p>}</>}</Sheet>
    {leader&&data&&!archived&&<Sheet id={'edit-'+plan.id} title="합주 계획 수정" trigger="수정" triggerClassName={outline} wide>{editForm(plan)}</Sheet>}
-   {leader&&archived&&<PlanDeleteControl planId={plan.id} version={plan.version} label="기록 삭제" question={question(plan,'합주 기록')} triggerClassName={outline}/>}
+   {leader&&<PlanDeleteButton planId={plan.id} version={plan.version} what={archived?'합주 기록':'합주 계획'} when={dayLabel(plan.rehearsal_date)+' · '+timeRangeLabel(plan.starts_at,plan.ends_at)} triggerLabel={dayLabel(plan.rehearsal_date)+' 합주 삭제'} triggerClassName={deleteButton}/>}
   </div>
  </Card>;}
  return <div className="mx-auto flex max-w-xl flex-col gap-3">

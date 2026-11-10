@@ -57,11 +57,11 @@
     text-wrap: pretty;
   }
   button, input, select, textarea { font: inherit; letter-spacing: inherit; }
-  /* Tailwind v4 leaves buttons on the arrow cursor; on PC everything clickable shows the hand like links do. */
-  button:not(:disabled), [role="button"]:not([aria-disabled="true"]), summary, select:not(:disabled),
-  input[type="checkbox"]:not(:disabled), input[type="radio"]:not(:disabled),
-  label:has(input[type="checkbox"]:not(:disabled), input[type="radio"]:not(:disabled)) { cursor: pointer; }
-  button:disabled, select:disabled { cursor: not-allowed; }
+  /* Only links show the hand. Buttons keep the arrow and get a little darker under the mouse;
+     buttons with their own hover: colour (the shared Button, blue/red fills) skip this. */
+  @media (hover: hover) {
+    button:enabled:not([class*="hover:"]):hover { background-image: linear-gradient(rgb(16 24 40 / 0.05), rgb(16 24 40 / 0.05)); }
+  }
   /* Long song titles, nicknames and snapshots must wrap inside narrow mobile cards. */
   main { overflow-wrap: anywhere; }
 }
