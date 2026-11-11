@@ -1,4 +1,5 @@
 import {loadDefaultBandEntry} from '@/lib/direct-band-entry';
+import {testBandsEnabled} from '@/lib/test-band-access';
 import { redirect } from 'next/navigation';
 import { bandCodeSchema } from '@/lib/band-login-validation';
 import { createClient, getCurrentUser } from '@/lib/supabase/server';
@@ -26,6 +27,6 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       <BandCodeField value={invitedCode}/>
       <BandPasswordField />
     </ActionForm></>
-    <div className="mt-6 flex flex-wrap justify-between gap-3 text-sm"><Link href="/bands/new" className="font-semibold text-blue-700">새 밴드 만들기</Link><Link href="/bands/test" className="text-slate-600">테스트 밴드 체험</Link></div>
+    <div className="mt-6 flex flex-wrap justify-between gap-3 text-sm"><Link href="/bands/new" className="font-semibold text-blue-700">새 밴드 만들기</Link>{testBandsEnabled()&&<Link href="/bands/test" className="text-slate-600">테스트 밴드 체험</Link>}</div>
   </Card></main>;
 }

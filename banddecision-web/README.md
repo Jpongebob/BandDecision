@@ -4,6 +4,12 @@
 
 # BandDecision Web app
 
+## 운영 테스트 밴드 차단
+
+`/bands/test`와 테스트 생성/멤버 추가 요청은 기본 차단됩니다. 로그인 화면에서도 체험 링크가 숨겨집니다. `ENABLE_TEST_BANDS=true`와 로컬 Supabase 주소(`localhost`, `127.0.0.1`, `::1`)를 모두 설정한 격리 QA 환경에서만 사용할 수 있습니다. 호스팅된 운영 Supabase 주소는 플래그를 켜도 허용되지 않습니다. 로컬 QA 서버를 프로덕션 모드로 실행할 때도 이 설정이 필요합니다.
+
+운영 DB에 남아 있는 테스트 전용 RPC의 직접 호출까지 막으려면 `supabase/manual/disable_public_test_band_access.sql`을 서울 Supabase SQL Editor에서 실행하세요. 기존 테스트/실제 밴드 데이터는 삭제하지 않습니다. 아래의 예전 공개 체험 안내보다 이 차단 정책이 우선합니다.
+
 > Current onboarding (006): band code/shared password + personal PIN only. Email login/signup/reset and legacy token invitations have been removed. Reusable /login?code=... invites remain. Apply new 006 after 005, then redeploy; see DEPLOYMENT.md. Supabase Email-provider disabling is a separate owner configuration step; keep anonymous sign-ins enabled.
 
 This folder contains the Next.js application. For setup and product behavior, see the repository [README](../README.md).

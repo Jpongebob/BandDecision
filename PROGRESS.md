@@ -1,5 +1,11 @@
 # BandDecision Web Progress
 
+### 2026-11-11 운영 테스트 체험 차단
+- 사용자 요청으로 로그인 화면의 공개 테스트 체험 링크를 기본 제거하고 /bands/test 직접 접근은 DB 조회 전에 notFound 처리. 테스트 밴드 생성/멤버 추가 Server Action 및 하위 준비 함수도 DB/Auth 접근 전에 차단.
+- 로컬 QA 유지: ENABLE_TEST_BANDS=true와 loopback Supabase 주소를 모두 설정해야만 허용. 실제 hosted Supabase에서는 플래그를 켜도 거부. .env.example/README에 정책과 로컬 설정 기록.
+- 직접 Supabase RPC 호출 차단용 운영 수동 SQL supabase/manual/disable_public_test_band_access.sql 추가. create_test_band/register_test_member/prepare_test_band/test_band_setup_status의 PUBLIC·anon·authenticated EXECUTE 제거 및 권한 확인 조회 포함. 기존 데이터 삭제 없음. 운영 DB에는 실행하지 않았으므로 SQL 적용은 별도 필요.
+- 프로덕션 빌드(타입 검사 포함), ESLint, diff 공백 검사 통과. 이번 요청에서 단위/DB/브라우저 테스트는 추가하거나 실행하지 않음.
+
 ### 2026-11-11 공동작업자 계획 수정·화면 보완 병합
 - 사용자 요청으로 원격을 갱신하고 fix/plan-edit-and-polish의 5개 커밋(6c95404~9ed5ba3)을 검토 후 master에 병합. 작업 전 변경 파일 없었으며 충돌 없음.
 - 028은 같은 날짜 수정 시 확정 참석자 스냅샷/인원을 보존. 저장 화면도 같은 기준으로 표시하고 실제 변경이 있을 때만 저장 활성화. 날짜 변경 시 참석 재계산/부분 참석 동의 유지. SQL의 count(*) 정상 확인; 앞서 사용자에게 제공한 수정 SQL과 같은 동작.

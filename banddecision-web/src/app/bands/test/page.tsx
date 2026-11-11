@@ -1,4 +1,6 @@
 import Link from 'next/link';
+import { notFound } from 'next/navigation';
+import { testBandsEnabled } from '@/lib/test-band-access';
 import { createClient, getCurrentUser } from '@/lib/supabase/server';
 import { createTestBandAction, addTestMembersAction } from '@/app/band-login-actions';
 import { signOutAction } from '@/app/actions';
@@ -9,6 +11,7 @@ import { BandPasswordField, PinField } from '@/components/band-login-fields';
 export const instant = false;
 export const maxDuration = 60;
 export default async function TestBandPage() {
+  if(!testBandsEnabled())notFound();
   const db = await createClient();
   const user = db ? await getCurrentUser(db) : null;
   const {data:setup}=user&&db ? await db.rpc('test_band_setup_status') : {data:null};

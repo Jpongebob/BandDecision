@@ -2,8 +2,10 @@ import { createClient as createIsolatedClient } from '@supabase/supabase-js';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { anonymousSignInError } from '@/lib/auth-errors';
 import { bandLoginErrors } from '@/lib/band-login-validation';
+import { testBandsEnabled } from '@/lib/test-band-access';
 export type TestSetup = { code: string; prepared: boolean; members: {slot:string;nickname:string;part:string}[] };
 export async function prepareTestMembers(leader: SupabaseClient, password: string, pin: string): Promise<string|null> {
+ if(!testBandsEnabled())return '테스트 밴드 기능은 사용할 수 없습니다.';
  const {data,error}=await leader.rpc('test_band_setup_status');
  const setup=data as TestSetup|null;
  if(error||!setup)return '테스트 밴드의 밴드장으로 접속해 주세요.';
