@@ -39,7 +39,8 @@ describe('optional song difficulty',()=>{
    expect(off).not.toContain('파트별 난이도');expect(off).not.toContain('name="difficulty"');expect(off).not.toContain('기타 4');
    expect(off).toContain('Chosen song');
    const on=renderToStaticMarkup(<SongList {...props} difficultyEnabled/>);
-   expect(on).toContain('기타 4');
+   // With the feature on, difficulty shows on the song detail only, never in the list.
+   if(detailed)expect(on).toContain('기타 4');else expect(on).not.toContain('기타 4');
    if(detailed){expect(on).toContain('파트별 난이도');expect(on).toContain('name="difficulty"');}
    if(detailed&&!confirmedAt)expect(off).toContain('name="choice"');
   });
