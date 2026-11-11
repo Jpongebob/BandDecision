@@ -3,10 +3,15 @@ import {dayLabel,timeRangeLabel} from '@/lib/day-format';
 export function sortedNames(names:string[]){return [...names].sort((a,b)=>a.localeCompare(b,'ko'));}
 // artists runs parallel to songs; attendees/absentees are the saved names. All optional for older callers.
 export type SharePlan={id:string;date:string;start:string;end:string;location?:string|null;memo?:string|null;songs:string[];artists?:(string|null)[];attending:number;total:number;band?:string|null;attendees?:string[];absentees?:string[]};
+// Lines under a heading start where the heading's text starts. An emoji plus a space is about 1.5em in
+// messenger fonts (Apple SD Gothic Neo: 24.2px at 16px); an em space plus an en space is exactly 1.5em,
+// while plain spaces are only about a quarter em each and never line up.
+export const SHARE_INDENT='\u2003\u2002';
 export function planShareText(p:SharePlan){
- const people=p.attendees?['👥 참석 '+p.attendees.length+'명'+(p.attendees.length?': '+p.attendees.join(', '):''),p.absentees?.length?'   불참: '+p.absentees.join(', '):'']:['👥 참석 '+p.attending+'/'+p.total+'명'];
- const songs=p.songs.length?['🎵 곡',...p.songs.map((title,i)=>(i+1)+'. '+title+(p.artists?.[i]?' – '+p.artists[i]:''))]:[];
- return [(p.band?'🎸 '+p.band+' 합주 안내':'🎸 합주 안내')+'\n','📅 '+dayLabel(p.date)+' '+timeRangeLabel(p.start,p.end),p.location?'📍 '+p.location:'',...people,...songs,p.memo?'📝 메모: '+p.memo:''].filter(Boolean).join('\n');
+ const people=p.attendees?['👥 참석 '+p.attendees.length+'명'+(p.attendees.length?': '+p.attendees.join(', '):''),p.absentees?.length?SHARE_INDENT+'불참 '+p.absentees.length+'명: '+p.absentees.join(', '):'']:['👥 참석 '+p.attending+'/'+p.total+'명'];
+ const songs=p.songs.length?['🎵 곡',...p.songs.map((title,i)=>SHARE_INDENT+(i+1)+'. '+title+(p.artists?.[i]?' – '+p.artists[i]:''))]:[];
+ const memo=p.memo?'📝 메모: '+p.memo.split(/\r\n|\r|\n/).join('\n'+SHARE_INDENT):'';
+ return [(p.band?'🎸 '+p.band+' 합주 안내':'🎸 합주 안내')+'\n','📅 '+dayLabel(p.date)+' '+timeRangeLabel(p.start,p.end),p.location?'📍 '+p.location:'',...people,...songs,memo].filter(Boolean).join('\n');
 }
 function calendarTimes(p:SharePlan){
  const endDay=p.end<=p.start?new Date(Date.parse(p.date+'T00:00:00Z')+86400000).toISOString().slice(0,10):p.date;

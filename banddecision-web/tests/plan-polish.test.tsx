@@ -102,7 +102,9 @@ describe('deleting a plan',()=>{
 describe('share text and times',()=>{
  it('reads like a notice with names and numbered songs, and no link',()=>{
   const text=planShareText({id:'p',date:'2026-11-20',start:'22:00:00',end:'00:30:00',location:'Room A',memo:'목표',songs:['Song A','Song B'],artists:['Artist A',null],attending:2,total:3,band:'Our Band',attendees:['Ann','Bo'],absentees:['Cy']});
-  expect(text).toBe('🎸 Our Band 합주 안내\n\n📅 11월 20일 (금) 오후 10:00 – 오전 12:30 (다음 날)\n📍 Room A\n👥 참석 2명: Ann, Bo\n   불참: Cy\n🎵 곡\n1. Song A – Artist A\n2. Song B\n📝 메모: 목표');
+  const I='\u2003\u2002';
+  expect(text).toBe('🎸 Our Band 합주 안내\n\n📅 11월 20일 (금) 오후 10:00 – 오전 12:30 (다음 날)\n📍 Room A\n👥 참석 2명: Ann, Bo\n'+I+'불참 1명: Cy\n🎵 곡\n'+I+'1. Song A – Artist A\n'+I+'2. Song B\n📝 메모: 목표');
+  expect(planShareText({id:'p',date:'2026-11-20',start:'20:00',end:'22:00',songs:[],attending:1,total:1,memo:'1부\n2부'})).toContain('📝 메모: 1부\n'+I+'2부');
   expect(text).not.toContain('http');
  });
  it('older callers without names still get counts',()=>{
