@@ -9,7 +9,7 @@ function leader(members:{slot:string}[]=[],prepared=false){
  return {rpc:leaderRpc} as unknown as Leader;
 }
 beforeEach(()=>{
- vi.clearAllMocks();vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL','https://example.supabase.co');vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY','test-public-key');
+ vi.clearAllMocks();vi.stubEnv('ENABLE_TEST_BANDS','true');vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL','http://127.0.0.1:54321');vi.stubEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY','test-public-key');
  s.signup.mockResolvedValue({data:{user:{id:'new-auth-user'}},error:null});
  s.rpc.mockResolvedValue({data:{ok:true},error:null});s.signout.mockResolvedValue({error:null});
  s.create.mockReturnValue({auth:{signInAnonymously:s.signup,signOut:s.signout},rpc:s.rpc});

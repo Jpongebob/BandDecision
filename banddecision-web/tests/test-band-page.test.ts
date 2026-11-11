@@ -1,12 +1,14 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from '@testing-library/react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const state=vi.hoisted(()=>({user:vi.fn(),setup:null as unknown}));
 vi.mock('@/lib/supabase/server',()=>({createClient:async()=>({rpc:async()=>({data:state.setup,error:null})}),getCurrentUser:state.user}));
 vi.mock('@/app/actions',()=>({signOutAction:vi.fn()}));
 vi.mock('@/app/band-login-actions',()=>({createTestBandAction:vi.fn(async()=>({})),addTestMembersAction:vi.fn(async()=>({}))}));
 import TestBandPage from '../src/app/bands/test/page';
-afterEach(cleanup);
+// The page only exists in local QA (ENABLE_TEST_BANDS and a loopback Supabase).
+beforeEach(()=>{vi.stubEnv('ENABLE_TEST_BANDS','true');vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL','http://127.0.0.1:54321');});
+afterEach(()=>{cleanup();vi.unstubAllEnvs();});
 describe('test band entry',()=>{
  it('lets an existing one-person fixture leader resume preparation',async()=>{
   state.setup={prepared:false,members:[]};state.user.mockResolvedValue({nickname:'Test leader'});

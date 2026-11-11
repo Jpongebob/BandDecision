@@ -28,6 +28,8 @@ export function SongList({
  const parts=[...new Map(participants.map(p=>[p.partKey,p])).values()];
  const canVote=participants.some(p=>p.id===memberId),total=participants.length;
  const status=new Map(recommendSongs(participants,songs,difficultyEnabled).map(r=>[r.id,r]));
+ // List: one number per song (average of the parts that have one); the detail keeps the per-part values.
+ const difficultyAverage=(song:SongInput)=>{const values=parts.map(p=>song.difficulties[p.partKey]).filter((v):v is number=>typeof v==='number');return values.length?'평균 난이도 '+(values.reduce((a,b)=>a+b,0)/values.length).toFixed(1):'난이도 미입력';};
  const difficultyLine=(song:SongInput)=>parts.map(p=>p.part+' '+(song.difficulties[p.partKey]??'미등록')).join(' · ');
  if(songs.length===0)return <Card><CardTitle>{emptyText??'아직 등록된 후보곡이 없어요'}</CardTitle><p className="mt-2 text-[15px] text-muted">{emptyText?'전체 곡에서 내 투표를 확인하거나 바꿀 수 있어요.':'오른쪽 위 \'곡 추가\'로 첫 후보곡을 올려 보세요.'}</p></Card>;
  if(!detailed)return <section aria-label="곡 목록" className="overflow-hidden rounded-[20px] bg-white shadow-[0_1px_2px_rgba(16,24,40,0.06)]">{songs.map(song=>{
@@ -36,7 +38,7 @@ export function SongList({
   const head=<span className="flex items-start gap-2.5"><span className="flex min-w-0 grow flex-col"><span className="flex flex-wrap items-center gap-1.5"><span className="break-words text-base font-bold">{song.title}</span>{passed&&<span className="whitespace-nowrap rounded-md bg-brand-tint px-1.5 py-0.5 text-[13px] font-bold text-brand-ink">통과</span>}{song.confirmedAt&&<span className="whitespace-nowrap rounded-md bg-plan-bg px-1.5 py-0.5 text-[13px] font-bold text-plan-ink">확정곡</span>}</span><span className="break-words text-[15px] text-muted">{song.artist}</span></span>{!song.confirmedAt&&<MyVoteChip choice={mine?.choice}/>}<ChevronRight size={20} aria-hidden="true" className="shrink-0 self-center text-faint"/></span>;
   const stats=!song.confirmedAt&&<><VoteBar yes={yes} no={no} total={total}/><span className="text-[13px] text-muted">찬성 {yes} · 반대 {no} · 응답 {yes+no}/{total}</span></>;
   return <div key={song.id} data-song-id={song.id} className={'flex flex-col gap-2.5 border-b border-line p-4 last:border-b-0 '+(inline?'bg-[#fffbf5]':'')}>
-   <Link href={`/songs/${song.id}`} className="flex flex-col gap-2.5 text-ink">{head}{stats}{song.confirmedAt&&<span className="text-[13px] text-muted">추가 투표 없이 합주 계획에서 바로 고를 수 있어요</span>}</Link>
+   <Link href={`/songs/${song.id}`} className="flex flex-col gap-2.5 text-ink">{head}{stats}{song.confirmedAt&&<span className="text-[13px] text-muted">추가 투표 없이 합주 계획에서 바로 고를 수 있어요{difficultyEnabled?' · '+difficultyAverage(song):''}</span>}{!song.confirmedAt&&difficultyEnabled&&<span className="text-[13px] text-muted">{difficultyAverage(song)}</span>}</Link>
    {inline&&<SongVoteFields key={memberId} songId={song.id} compact/>}
   </div>;
  })}</section>;

@@ -1,9 +1,9 @@
 'use client';
 import Link from 'next/link';
 import {usePathname} from 'next/navigation';
-import {Home,CalendarDays,Music2,ClipboardCheck,MoreHorizontal} from 'lucide-react';
+import {Home,CalendarDays,Music2,ClipboardCheck,Settings} from 'lucide-react';
 
-const tabs=[['/dashboard','홈',Home],['/schedule','일정',CalendarDays],['/songs','합주곡',Music2],['/plans','합주 계획',ClipboardCheck],['/settings','더보기',MoreHorizontal]] as const;
+const tabs=[['/dashboard','홈',Home],['/schedule','일정',CalendarDays],['/songs','합주곡',Music2],['/plans','합주 계획',ClipboardCheck],['/settings','설정',Settings]] as const;
 export function isActiveTab(path:string,href:string){return href==='/dashboard'?path==='/dashboard':path===href||path.startsWith(href+'/');}
 const active=isActiveTab;
 

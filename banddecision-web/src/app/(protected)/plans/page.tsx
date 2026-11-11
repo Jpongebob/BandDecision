@@ -3,7 +3,7 @@ import {splitPlans} from '@/lib/plan-dates';
 import {createClient} from '@/lib/supabase/server';
 import {loadVerifiedPlanningPage,liveRecommendations,seoulToday,type SavedPlan} from '@/lib/live-planning';
 import {Card,CardTitle} from '@/components/ui/card';
-import {ConfirmPlanForm} from '@/components/confirm-plan-form';
+import {ConfirmPlanForm,NewPlanForm} from '@/components/confirm-plan-form';
 import {OpenSheetButton,Sheet} from '@/components/sheet';
 import {PlanShareButtons} from '@/components/plan-share';
 import {PlanAttendanceEditor} from '@/components/plan-attendance';
@@ -26,7 +26,7 @@ export default async function PlansPage(){
  const attendanceMembers=data?.members.map(m=>({id:m.id,nickname:m.nickname,part:m.part,leader:m.id===me.id,noDates:!responded.has(m.id)}))??[];
  const orderedSongs=(plan:SavedPlan)=>[...plan.confirmed_plan_songs].sort((a,b)=>a.display_order-b.display_order);
  const songTitles=(plan:SavedPlan)=>orderedSongs(plan).map(s=>s.title_snapshot),songArtists=(plan:SavedPlan)=>orderedSongs(plan).map(s=>s.artist_snapshot);
- const editForm=(plan:SavedPlan)=>data&&<ConfirmPlanForm key={plan.id} data={data} songs={songs} today={today} plan={plan} takenDates={takenDates}/>;
+ const editForm=(plan:SavedPlan)=>data&&<ConfirmPlanForm key={plan.id} data={data} songs={songs} today={today} plan={plan} takenDates={upcoming.filter(p=>p.id!==plan.id).map(p=>p.rehearsal_date)}/>;
  function planCard(plan:SavedPlan,first:boolean,archived=false){
   const titles=songTitles(plan),attendees=plan.confirmed_plan_members.filter(m=>m.attending),absentees=plan.confirmed_plan_members.filter(m=>!m.attending);
   return <Card key={plan.id} data-plan-id={archived?undefined:plan.id} data-archived-plan-id={archived?plan.id:undefined} className="flex flex-col gap-3.5 p-4">
@@ -43,7 +43,7 @@ export default async function PlansPage(){
  </Card>;}
  return <div className="mx-auto flex max-w-xl flex-col gap-3">
  <div className="flex items-center justify-between gap-3 px-1"><h1 className="text-2xl font-extrabold leading-8">합주 계획</h1><span className="whitespace-nowrap rounded-full border border-line bg-white px-3 py-1.5 text-[15px] font-semibold text-ink-2">예정 {upcoming.length}/5</span></div>
- {leader&&data&&(upcoming.length<5?<Sheet title="새 합주 정하기" trigger={<><Plus size={20} strokeWidth={2.4} aria-hidden="true"/>새 합주 정하기</>} triggerClassName="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-[14px] bg-brand text-[17px] font-bold text-white" wide>{data.available.length===0&&<p className="mb-3 text-[15px] text-warn-ink">아직 멤버들이 저장한 가능한 날이 없어요. 일정에서 먼저 저장해야 해요.</p>}<ConfirmPlanForm key="new" data={data} songs={songs} today={today} takenDates={takenDates}/></Sheet>
+ {leader&&data&&(upcoming.length<5?<Sheet title="새 합주 정하기" trigger={<><Plus size={20} strokeWidth={2.4} aria-hidden="true"/>새 합주 정하기</>} triggerClassName="inline-flex min-h-[52px] items-center justify-center gap-2 rounded-[14px] bg-brand text-[17px] font-bold text-white" wide>{data.available.length===0&&<p className="mb-3 text-[15px] text-warn-ink">아직 멤버들이 저장한 가능한 날이 없어요. 일정에서 먼저 저장해야 해요.</p>}<NewPlanForm data={data} songs={songs} today={today} takenDates={takenDates}/></Sheet>
   :<p className="rounded-2xl bg-surface-2 px-4 py-3 text-[15px] text-ink-2">예정된 계획이 5개예요. 예정 계획을 수정하거나 삭제한 뒤 추가하세요.</p>)}
  <h2 className="mt-1 px-1 text-[17px] font-bold">예정된 합주</h2>
  {upcoming.length===0&&<Card><p className="text-base text-ink-2">{leader?'아직 정해진 합주가 없어요. \'새 합주 정하기\'로 날짜를 정해 보세요.':'아직 정해진 합주가 없어요. 밴드장이 정하면 여기에 보여요.'}</p></Card>}

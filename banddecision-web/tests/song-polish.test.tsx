@@ -18,3 +18,10 @@ it('a plan card can list every song, with no hidden "+N곡" chip',()=>{
  for(const t of titles)expect(html).toContain(t);
  expect(html).not.toContain('외 ');
 });
+it('the song list shows one average difficulty, or 미입력 when no part has one',()=>{
+ const unrated={...song,id:8,title:'Unrated',difficulties:{},difficultyMeta:{}};
+ const rated={...song,difficulties:{기타:3,베이스:4}};
+ const html=renderToStaticMarkup(<SongList bandId="band" memberId="a" participants={members} songs={[rated,unrated]} difficultyEnabled/>);
+ expect(html).toContain('평균 난이도 3.5');expect(html).toContain('난이도 미입력');expect(html).not.toContain('기타 3');
+ expect(renderToStaticMarkup(<SongList bandId="band" memberId="a" participants={members} songs={[rated]}/>)).not.toContain('난이도');
+});

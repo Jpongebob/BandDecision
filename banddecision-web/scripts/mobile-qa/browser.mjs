@@ -28,6 +28,10 @@ async function viewport(width,height){if(process.env.QA_DESKTOP)width=Math.max(w
 async function layout(label){const data=await run(`({width:innerWidth,scroll:document.documentElement.scrollWidth,offenders:[...document.querySelectorAll('main input,main select,main textarea,main button,main details,main section')].filter(e=>{const r=e.getBoundingClientRect();return r.width&& (r.right>innerWidth+1||r.left< -1)}).map(e=>e.tagName+':'+e.textContent.slice(0,60))})`);assert(data.scroll<=viewportWidth+1&&data.width<=viewportWidth+1&&data.offenders.length===0,label+' fits '+data.width+'px '+JSON.stringify(data.offenders));}
 try{
  await connect();await viewport(390,844);
+ // Since 2026-11-11 the test band page exists only with ENABLE_TEST_BANDS=true and a loopback Supabase URL.
+ const probe=await fetch('http://127.0.0.1:3101/bands/test',{redirect:'manual'}).catch(()=>null);
+ if(!probe)throw Error('개발 서버(127.0.0.1:3101)에 연결하지 못했어요. README의 로컬 브라우저 QA 실행 순서를 확인하세요.');
+ if(probe.status===404)throw Error('/bands/test가 막혀 있어요. 개발 서버를 ENABLE_TEST_BANDS=true와 로컬 Supabase 주소(예: http://127.0.0.1:54329)로 다시 실행하세요.');
  await go('/bands/test','내가 밴드장인 테스트 밴드');await fill('nickname','Mobile QA Leader');await fill('password','qa1234');await fill('pin','112233');await fill('member_pin','246810');await touchText('테스트 밴드 만들고 밴드장으로 접속');await wait('location.pathname==="/dashboard"&&document.body.innerText.includes("Mobile QA Leader님")',90000);assert(true,'touch creates five-member fixture via real Next server action');
  await go('/settings/band','멤버와 설정');const code=await run("document.querySelector('.font-mono')?.textContent");assert(/^[A-F0-9]{10}$/.test(code),'band code displayed');await touchText('간편 초대 링크 만들기');await wait('document.querySelector("[role=status]")?.textContent.includes("code=")');assert(await run('document.querySelector("[role=status]").textContent.includes('+JSON.stringify(code)+')'),'reusable code invite generated');await layout('leader settings');
  await writeFile(resolve(artifacts,'session.json'),JSON.stringify({code}));

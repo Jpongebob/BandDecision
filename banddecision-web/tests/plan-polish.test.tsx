@@ -133,3 +133,13 @@ describe('PC menu and calendar details',()=>{
   expect(next.querySelector('svg')).toBeTruthy();
  });
 });
+
+describe('settings naming',()=>{
+ it('the phone tab says 설정 like the PC menu',async()=>{
+  const {BottomNavView}=await import('../src/components/bottom-nav');
+  render(createElement(BottomNavView,{path:'/settings/band'}));
+  const tab=screen.getByRole('link',{name:'설정'});
+  expect(tab.getAttribute('href')).toBe('/settings');expect(tab.getAttribute('aria-current')).toBe('page');
+  expect(screen.queryByText('더보기')).toBeNull();
+ });
+});
