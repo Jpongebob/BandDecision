@@ -12,7 +12,7 @@ it('folds long Korean and emoji lines at 75 UTF-8 bytes without losing text',()=
 });
 it('escapes user text and normalizes all newline styles rather than injecting ICS fields',()=>{
  const ics=planIcs({...plan,memo:'a\r\nBEGIN:VEVENT\rb\nc;d,\\'}).replace(/\r\n[ \t]/g,'');
- expect(ics.match(/^BEGIN:VEVENT$/gm)).toHaveLength(1);expect(ics).toContain('a\\nBEGIN:VEVENT\\nb\\nc\\;d\\,\\\\');
+ expect(ics.match(/^BEGIN:VEVENT$/gm)).toHaveLength(1);const I='\u2003\u2002';expect(ics).toContain('a\\n'+I+'BEGIN:VEVENT\\n'+I+'b\\n'+I+'c\\;d\\,\\\\');
 });
 it('uses a real Google event editor URL with equivalent times and encoded fields',()=>{
  const url=new URL(googleCalendarUrl(plan));expect(url.origin).toBe('https://calendar.google.com');expect(url.searchParams.get('action')).toBe('TEMPLATE');expect(url.searchParams.get('dates')).toBe('20261231T130000Z/20261231T153000Z');expect(url.searchParams.get('location')).toBe(plan.location);expect(url.searchParams.get('details')).toContain(plan.songs[0]);

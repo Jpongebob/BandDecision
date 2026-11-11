@@ -63,7 +63,7 @@ export async function workflows({run,go,fill,touchText,wait,assert,layout,viewpo
  await go('/settings/band','멤버와 설정');assert(!(await run('!!document.querySelector("select[name=skill]")')),'skill inputs hidden by default');
  await touchText('실력 기능 켜기');await wait('!!document.querySelector("select[name=skill]")');assert(true,'leader enables skill fields');
  for(const width of [390,1280]){
-  await viewport(width,844);await go('/songs','투표로 함께');assert(await run('document.body.innerText.includes("미등록")'),'ON restores difficulty summaries at '+width);
+  await viewport(width,844);await go('/songs','투표로 함께');assert(await run('!document.body.innerText.includes("미등록")&&/평균 난이도 \\d\\.\\d|난이도 미입력/.test(document.body.innerText)'),'ON shows one average difficulty per song in the list at '+width);
   await go(unratedLink,'파트별 난이도');assert(await run('!!document.querySelector("select[name=difficulty]")'),'ON restores difficulty editor at '+width);await layout('difficulty ON detail');
   await shot('difficulty-on-'+width+'.png');
  }
@@ -120,11 +120,14 @@ export async function workflows({run,go,fill,touchText,wait,assert,layout,viewpo
  await closeSheet();
  await createDatePlan(day(11),'홍대 QA 합주실');
  await go('/dashboard','홍대 QA 합주실');assert(await run('document.body.innerText.indexOf("다가오는 합주")<document.body.innerText.indexOf("홍대 QA 합주실")'),'home shows the upcoming rehearsal with its location');
+ await go('/plans','합주 계획');await touchText('새 합주 정하기');await wait('!!document.querySelector("dialog[open]")');await showMonth(planCal,day(11));
+ assert(await run('document.querySelector("dialog[open] input[name=location]").value===""&&document.querySelector("dialog[open]").innerText.includes("날짜를 골라 주세요")&&!!document.querySelector('+JSON.stringify(planCal+' [data-day="'+day(11)+'"][data-taken]')+')'),'a new plan form opens empty after a save and shows the planned day as a green cell');await closeSheet();
  await go('/plans','합주 계획');const first=await run('document.querySelector("[data-plan-id]").dataset.planId'),card='[data-plan-id="'+first+'"]';
  assert(await run(summaryHas(card,'곡 미정')),'date-only plan created with no vote or song requirement');
  await openEdit(card);assert(await run('[...document.querySelectorAll("dialog[open] button")].find(b=>b.innerText.trim()==="계획 수정 저장").disabled&&document.querySelector("dialog[open]").innerText.includes("바뀐 내용이 없어요")&&!!document.querySelector("dialog[open] [data-saved-attendance]")&&!document.querySelector("dialog[open] input[type=checkbox]")'),'unchanged edit keeps save off, says why, and shows the saved attendance without the partial checkbox');await shot('plan-edit-unchanged-390.png');
  await touch('dialog[open] [data-song-choice]');assert(!(await run('[...document.querySelectorAll("dialog[open] button")].find(b=>b.innerText.trim()==="계획 수정 저장").disabled')),'a song change wakes the save button');await savePlanEdit(card,'[테스트 A]');assert((await planCount())===1,'adding a song edits the same plan without consuming a slot');
- await openEdit(card);await pickPlanDay(day(12));await touch('dialog[open] [data-song-choice][aria-pressed=true]');await savePlanEdit(card,'곡 미정');assert(await run(summaryHas(card,md(day(12)))),'plan date changed and songs removed in place');
+ await go('/dashboard','다가오는 합주');assert(await run('document.body.innerText.includes("[테스트 A]")'),'home shows the songs of the next rehearsal');await go('/plans','합주 계획');
+ await openEdit(card);assert(!(await run('!!document.querySelector('+JSON.stringify(planCal+' [data-day="'+day(11)+'"][data-taken]')+')')),'the edited plan does not mark its own day as taken');await pickPlanDay(day(12));assert(await run('document.querySelector("dialog[open] [data-date-move]")?.innerText.includes("옮겨요")'),'moving the date says the rehearsal moves');await touch('dialog[open] [data-song-choice][aria-pressed=true]');await savePlanEdit(card,'곡 미정');assert(await run(summaryHas(card,md(day(12)))),'plan date changed and songs removed in place');
  for(let i=1;i<=4;i++){await createDatePlan(day(12+i));}
  assert(await run('!document.body.innerText.includes("새 합주 정하기")&&document.body.innerText.includes("계획이 5개")'),'five-plan capacity enforced in screen');
  await openEdit(card);await pickPlanDay(day(17));await savePlanEdit(card,md(day(17)));assert((await planCount())===5,'existing plans remain editable at capacity');await layout('five plans');await shot('plans-390.png');
@@ -158,7 +161,7 @@ export async function workflows({run,go,fill,touchText,wait,assert,layout,viewpo
  const songLink=await run('document.querySelector("[data-song-id] a").getAttribute("href")');
  assert(!(await run('document.body.innerText.includes("파트별 난이도")')),'disabled feature hides difficulty on song detail');
  await go('/settings/band','멤버와 설정');await touchText('실력 기능 켜기');await wait('!!document.querySelector("select[name=skill]")');await go(songLink,'파트별 난이도');
- await set('form:has(input[name=expected_version]) select','3');await touch('form:has(input[name=expected_version]) button');await wait('document.body.innerText.includes("Difficulty saved")||document.body.innerText.includes("난이도")');
+ await set('form:has(input[name=expected_version]) select','3');await touch('form:has(input[name=expected_version]) button');await wait('document.body.innerText.includes("난이도를 저장했어요")');assert(!(await run('/Difficulty saved|마지막 수정/.test(document.body.innerText)')),'difficulty save says it in Korean without an edit-history line');
  await touchText('반대','form[data-vote-editor] button');await wait('document.body.innerText.includes("반대로 저장됨")&&!!document.querySelector("form[data-vote-editor] textarea[name=reason]")');assert(await run('!document.querySelector("form[data-vote-editor] textarea[name=reason]").required'),'반대 saves at once without a reason');
  await set('form[data-vote-editor] textarea[name=reason]','Mobile no reason');await touchText('사유 저장','form[data-vote-editor] button');await wait('document.body.innerText.includes("반대와 사유를 저장했어요")&&document.body.innerText.includes("Mobile no reason")');assert(true,'difficulty and persistent vote save without a round; optional reason added afterwards');
  await touchText('내 투표 취소');await wait('document.body.innerText.includes("아직 안 함")');assert(true,'own vote withdrawn from song detail');
@@ -187,7 +190,7 @@ export async function workflows({run,go,fill,touchText,wait,assert,layout,viewpo
  const target=await run(`(()=>{const heading=[...document.querySelectorAll('section h2')].find(e=>e.textContent==='테스트 베이스');return heading?.closest('section').querySelector('input[name=member_id]')?.value;})()`);assert(!!target,'handoff target present');
  const transfer='form:has(input[name=confirm_transfer]):has(input[name=member_id][value="'+target+'"])';
  await open('details:has(input[name=confirm_transfer]):has(input[name=member_id][value="'+target+'"])');assert(!(await run('document.body.innerText.includes("관리자 PIN")')),'handoff collects no administrator PIN');await touch(transfer+' input[name=confirm_transfer]');await touch(transfer+' > button');await wait('document.body.innerText.includes("밴드장 권한을 넘겼습니다")');assert(!(await run('!!document.querySelector("input[name=confirm_transfer]")')),'former leader loses management controls immediately');
- await go('/plans','합주 계획');assert(!(await run('document.body.innerText.includes("계획 수정")||document.body.innerText.includes("계획 삭제")')),'former leader loses plan editing immediately');
+ await go('/plans','합주 계획');assert(await run('!document.body.innerText.includes("새 합주 정하기")&&!document.body.innerText.includes("계획 수정")&&![...document.querySelectorAll("[data-plan-id] button")].some(b=>["수정","삭제","곡 추가"].includes(b.innerText.trim()))&&[...document.querySelectorAll("[data-plan-id] button")].some(b=>b.innerText.trim()==="참석자 명단")'),'former leader loses plan editing immediately and sees the member view');await run('scrollTo(0,0)');await shot('member-plans-'+(process.env.QA_DESKTOP?1280:390)+'.png');
  await logout();await enter('테스트 베이스','246810');await go('/settings/band','멤버와 설정');assert(await run('!!document.querySelector("input[name=confirm_transfer]")'),'new leader manages without administrator unlock');await go('/plans','합주 계획');assert((await planCount())===5,'handoff preserves all five confirmed plans');
  const retainedId=await run('document.querySelector("[data-plan-id]").dataset.planId');const survivor='[data-plan-id="'+retainedId+'"]';await openEdit(survivor);await pickPlanDay(day(19));await savePlanEdit(survivor,md(day(19)));assert(true,'new leader edits a retained plan');
 

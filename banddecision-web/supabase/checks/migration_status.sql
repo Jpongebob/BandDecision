@@ -24,3 +24,5 @@ select
  exists(select 1 from pg_constraint where conrelid='public.band_song_votes'::regclass and conname='band_song_votes_reason_check') as "027_optional_reason";
 -- After 028 succeeds, this is true.
 select coalesce(obj_description(to_regprocedure('public.save_rehearsal_plan(uuid,date,bigint[],bigint,uuid,integer,boolean,text,text,time,time)'),'pg_proc') like '028:%',false) as "028_same_day_keeps_attendance";
+-- After 029 succeeds, this is true.
+select coalesce(obj_description(to_regprocedure('public.band_home_context()'),'pg_proc') like '029:%',false) as "029_home_plan_songs";

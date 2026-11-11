@@ -51,10 +51,10 @@ export async function difficultyAction(_:FormState,form:FormData):Promise<FormSt
  const songId=Number(value(form,'song_id')),difficulty=Number(value(form,'difficulty')),expectedVersion=Number(value(form,'expected_version')),part=value(form,'part_key');
  if(!Number.isSafeInteger(songId)||songId<1||!Number.isInteger(difficulty)||difficulty<1||difficulty>5||!Number.isInteger(expectedVersion)||expectedVersion<0||!part)return{error:'곡·파트·난이도(1~5)와 수정 버전을 확인해 주세요.'};
  const{client,error}=await clientOrError();if(!client)return{error:error!};
- const{data,error:rpcError}=await client.rpc('update_song_difficulty',{p_song:songId,p_part:part,p_difficulty:difficulty,p_expected_version:expectedVersion});
+ const{error:rpcError}=await client.rpc('update_song_difficulty',{p_song:songId,p_part:part,p_difficulty:difficulty,p_expected_version:expectedVersion});
  if(rpcError)return{error:errorText(rpcError)};
  revalidatePath('/songs');revalidatePath(`/songs/${songId}`);revalidatePath('/songs/recommendations');revalidatePath('/plans');
- return{success:`Difficulty saved (version ${data}). Recommendations have been refreshed; confirmed plans remain unchanged.`};
+ return{success:'난이도를 저장했어요.'};
 }
 export async function voteAction(_:FormState,form:FormData):Promise<FormState>{
  const round=value(form,'round_id'),song=Number(value(form,'song_id')),choice=value(form,'choice'),reason=value(form,'reason');

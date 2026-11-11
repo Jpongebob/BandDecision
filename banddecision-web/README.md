@@ -8,7 +8,15 @@
 
 `/bands/test`와 테스트 생성/멤버 추가 요청은 기본 차단됩니다. 로그인 화면에서도 체험 링크가 숨겨집니다. `ENABLE_TEST_BANDS=true`와 로컬 Supabase 주소(`localhost`, `127.0.0.1`, `::1`)를 모두 설정한 격리 QA 환경에서만 사용할 수 있습니다. 호스팅된 운영 Supabase 주소는 플래그를 켜도 허용되지 않습니다. 로컬 QA 서버를 프로덕션 모드로 실행할 때도 이 설정이 필요합니다.
 
-운영 DB에 남아 있는 테스트 전용 RPC의 직접 호출까지 막으려면 `supabase/manual/disable_public_test_band_access.sql`을 서울 Supabase SQL Editor에서 실행하세요. 기존 테스트/실제 밴드 데이터는 삭제하지 않습니다. 아래의 예전 공개 체험 안내보다 이 차단 정책이 우선합니다.
+운영 DB에 남아 있는 테스트 전용 RPC의 직접 호출까지 막으려면 `supabase/manual/disable_public_test_band_access.sql`을 서울 Supabase SQL Editor에서 실행하세요. 기존 테스트/실제 밴드 데이터는 삭제하지 않습니다. 아래 기록에 나오는 `/bands/test` 안내는 모두 로컬 격리 QA 기준입니다.
+
+로컬 브라우저 QA는 가짜 DB 게이트웨이와 개발 서버를 이 설정으로 띄운 뒤 실행합니다. 설정이 빠지면 `npm run test:mobile`이 시작할 때 이유를 알려 주고 멈춥니다.
+
+```bash
+npm run test:mobile:gateway
+ENABLE_TEST_BANDS=true NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54329 NEXT_PUBLIC_SUPABASE_ANON_KEY=local-browser-qa-only npx next dev --hostname 127.0.0.1 --port 3101
+npm run test:mobile
+```
 
 > Current onboarding (006): band code/shared password + personal PIN only. Email login/signup/reset and legacy token invitations have been removed. Reusable /login?code=... invites remain. Apply new 006 after 005, then redeploy; see DEPLOYMENT.md. Supabase Email-provider disabling is a separate owner configuration step; keep anonymous sign-ins enabled.
 
@@ -43,7 +51,7 @@ Apply only the NEW supabase/migrations/202611050004_workflow_and_leadership.sql 
 A signed-in active band leader can immediately manage members, invite, start rounds and finalize plans; no separate administrator PIN unlock or 30-minute window is required. Apply migration 202611050005_leader_without_admin_unlock.sql after 004 and redeploy. Ordinary-member, cross-band and personal-session checks remain. Latest local run: 115 tests and 175 PostgreSQL assertions passed; see PROGRESS.md/DEPLOYMENT.md for rollout and live verification limits.
 
 ### Test band and identity optimization (007)
-Apply only new 202611050007_identity_context_and_test_band.sql after 006 and redeploy. Open /bands/test (or login → 테스트 밴드 체험) in a private window; choose your nickname/shared password/personal PIN. The new separate one-member band logs you in as leader and contains four song scenarios plus dates. Your real band is preserved. See TEST_CASES.md in the repository root.
+Apply only new 202611050007_identity_context_and_test_band.sql after 006 and redeploy. In local isolated QA only (`ENABLE_TEST_BANDS=true` and a loopback Supabase URL; the production site blocks it since 2026-11-11), open /bands/test and choose your nickname/shared password/personal PIN. The login screen no longer links to it. The new separate one-member band logs you in as leader and contains four song scenarios plus dates. Your real band is preserved. See TEST_CASES.md in the repository root.
 
 Identity RPC now includes verified member/band context, avoiding two follow-up database requests. Auth verification is retained and no global user cache is used. Latest checks: 111 tests, 221 PostgreSQL assertions, lint/typecheck and 19-route build passed; actual hosted latency remains unmeasured.
 
@@ -51,7 +59,7 @@ Identity RPC now includes verified member/band context, avoiding two follow-up d
 Apply only new 202611050008_strict_submission_inputs.sql after 007, then redeploy. Repaired date-none/past-date entry, refreshed difficulty/vote state, round roster editing and partial-read error handling. Latest evidence: 139 tests, 232 SQL assertions, lint/typecheck and 19-route build passed. Public Chrome rendering/retired-route checks executed; hosted authenticated testing remains unverified. See BUG_AUDIT.md in the repository root.
 
 ### Five-member test band (009)
-Apply only new 202611050009_multi_member_test_band.sql after 008 and deploy. A new /bands/test fixture contains you as leader plus four PIN-protected ordinary profiles. Existing original one-person fixture owners can open the same page and use '테스트 멤버 추가하고 5인 회차 준비'. Choose a shared demo PIN different from your own. Use another browser/device to select each demo profile. See TEST_CASES.md; hosted Auth provisioning remains unverified.
+Apply only new 202611050009_multi_member_test_band.sql after 008 and deploy. A new /bands/test fixture (local isolated QA only, see 운영 테스트 밴드 차단) contains you as leader plus four PIN-protected ordinary profiles. Existing original one-person fixture owners can open the same page and use '테스트 멤버 추가하고 5인 회차 준비'. Choose a shared demo PIN different from your own. Use another browser/device to select each demo profile. See TEST_CASES.md; hosted Auth provisioning remains unverified.
 
 
 ### 합주 계획 최대 5개 (010)

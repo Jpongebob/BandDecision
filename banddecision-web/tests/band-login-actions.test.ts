@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const mocks = vi.hoisted(() => ({
   rpc: vi.fn(), prepare: vi.fn(),
@@ -83,6 +83,8 @@ describe('band login actions', () => {
 
 
 describe('isolated test band creation action', () => {
+  beforeEach(()=>{vi.stubEnv('ENABLE_TEST_BANDS','true');vi.stubEnv('NEXT_PUBLIC_SUPABASE_URL','http://127.0.0.1:54321');});
+  afterEach(()=>vi.unstubAllEnvs());
  it('rejects a shared demo PIN equal to the leader personal PIN',async()=>{
   expect((await createTestBandAction({},form({nickname:'Me',password:'test1234',pin:'112233',member_pin:'112233'}))).error).toBeTruthy();
   expect(mocks.rpc).not.toHaveBeenCalled();
