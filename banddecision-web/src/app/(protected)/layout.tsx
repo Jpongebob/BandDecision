@@ -15,7 +15,7 @@ async function ProtectedContent({children}:{children:React.ReactNode}){
  const context=await getBandContext(supabase,user.id,user.bandContext);
  if(context.status==='error')return <AppShell nickname={user.nickname} band="밴드 정보 확인 필요"><BandLoadError code={context.code}/></AppShell>;
  const band=context.status==='ready'?context.band:null;
- return <AppShell nickname={user.nickname} band={band?.name??null} bandId={band?.id??null} pendingVoteBadge={band?<Suspense fallback={null}><PendingVoteBadge/></Suspense>:null}>{children}</AppShell>;
+ return <AppShell nickname={user.nickname} band={band?.name??null} bandId={band?.id??null} role={context.status==='ready'?context.member.role:null} pendingVoteBadge={band?<Suspense fallback={null}><PendingVoteBadge/></Suspense>:null}>{children}</AppShell>;
 }
 
 export default function ProtectedLayout({children}:{children:React.ReactNode}) {
