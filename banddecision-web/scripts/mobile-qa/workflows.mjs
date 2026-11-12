@@ -131,6 +131,7 @@ export async function workflows({run,go,fill,touchText,wait,assert,layout,viewpo
  for(let i=1;i<=4;i++){await createDatePlan(day(12+i));}
  assert(await run('!document.body.innerText.includes("새 합주 정하기")&&document.body.innerText.includes("계획이 5개")'),'five-plan capacity enforced in screen');
  await openEdit(card);await pickPlanDay(day(17));await savePlanEdit(card,md(day(17)));assert((await planCount())===5,'existing plans remain editable at capacity');await layout('five plans');await shot('plans-390.png');
+ await go('/dashboard','그다음 합주');await layout('home with later plans');assert(await run('[...document.querySelectorAll("[data-later-plan]")].length===2&&[...document.querySelectorAll("[data-later-plan]")].every(e=>!!e.querySelector("svg")&&!e.innerText.includes("장소:"))'),'later rehearsals on home use the same order with a place icon');await shot('home-later-plans-'+(process.env.QA_DESKTOP?1280:390)+'.png');await go('/plans','합주 계획');
  await deletePlan(card);assert(true,'deleting from the edit sheet frees one plan slot');
 
  // Leader attendance (단톡방 등 앱 밖에서 들은 불참), locked plan days and plan times.
