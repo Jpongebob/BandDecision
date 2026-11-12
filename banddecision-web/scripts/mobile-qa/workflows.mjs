@@ -134,6 +134,13 @@ export async function workflows({run,go,fill,touchText,wait,assert,layout,viewpo
  for(let i=1;i<=4;i++){await createDatePlan(day(12+i));}
  assert(await run('!document.body.innerText.includes("새 합주 정하기")&&document.body.innerText.includes("계획이 5개")'),'five-plan capacity enforced in screen');
  await openEdit(card);await pickPlanDay(day(17));await savePlanEdit(card,md(day(17)));assert((await planCount())===5,'existing plans remain editable at capacity');await layout('five plans');await shot('plans-390.png');
+ for(const width of [1024,1152,1280]){
+  await viewport(width,844,true);await go('/plans','합주 계획');await layout('PC plan list and detail');
+  assert(await run('(()=>{const e=document.querySelector("[data-plan-detail] h2");return !!e&&e.getBoundingClientRect().width>=160;})()'),'PC plan heading stays readable at '+width);
+  await go('/songs','합주곡');await layout('PC song table');
+  assert(await run('(()=>{const e=document.querySelector("[data-song-row] b");return !!e&&e.getBoundingClientRect().width>=80;})()'),'PC song titles remain visible at '+width);
+ }
+ await viewport(390,844);await go('/plans','합주 계획');
  // PC review shots: plan list + detail, schedule, song table + detail.
  if(desk){await run('scrollTo(0,0)');await cmd('Input.dispatchMouseEvent',{type:'mouseMoved',x:5,y:5});await delay(200);await layout('pc plans');await shot('pc-plans-1280.png');
   assert(await run('document.querySelectorAll("[data-plan-row]").length===5&&!!document.querySelector("[data-plan-detail] h2")'),'PC plans show a list of five and one detail');

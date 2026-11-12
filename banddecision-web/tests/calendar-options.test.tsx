@@ -15,3 +15,14 @@ it('explains file sharing fallback when the browser does not support sharing ICS
 it('shares an actual calendar attachment and leaves saving to the user',async()=>{
  const share=vi.fn(async(data:ShareData)=>{void data;});vi.stubGlobal('navigator',{canShare:()=>true,share});const dialog=setup();fireEvent.click(within(dialog).getByRole('button',{name:'일정 파일 공유 · Mail로 보내기'}));await waitFor(()=>expect(share).toHaveBeenCalledOnce());expect(share.mock.calls[0][0].files?.[0]?.name).toBe('합주-2026-11-20.ics');expect(within(dialog).getByRole('status').textContent).toContain('Mail');
 });
+it.each([
+ {userAgent:'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)',platform:'iPhone',maxTouchPoints:5},
+ {userAgent:'Mozilla/5.0 (Macintosh; Intel Mac OS X)',platform:'MacIntel',maxTouchPoints:5},
+])('uses file sharing without navigating to the calendar URL on Apple mobile devices: $platform',async(device)=>{
+ const share=vi.fn(async(data:ShareData)=>{void data;});
+ vi.stubGlobal('navigator',{...device,canShare:()=>true,share});
+ const dialog=setup(),apple=within(dialog).getByRole('link',{name:'Apple 캘린더 · 아이폰'});
+ expect(fireEvent.click(apple)).toBe(false);
+ await waitFor(()=>expect(share).toHaveBeenCalledOnce());
+ expect(share.mock.calls[0][0].files?.[0]?.name).toBe('합주-2026-11-20.ics');
+});

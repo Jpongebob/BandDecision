@@ -20,7 +20,7 @@ export function PlanBoard({rows,details,pastRows,pastDetails,empty}:{rows:BoardR
    <span className="flex shrink-0 flex-col items-end gap-1">{r.tags}</span>
   </button>;
  };
- return <div className="hidden lg:grid lg:grid-cols-[348px_minmax(0,1fr)] lg:items-start lg:gap-5">
+ return <div className="hidden lg:grid lg:grid-cols-[280px_minmax(0,1fr)] lg:items-start lg:gap-5 xl:grid-cols-[348px_minmax(0,1fr)]">
   <section aria-label="합주 목록" className="flex flex-col rounded-2xl bg-white p-1.5 shadow-[0_1px_2px_rgba(16,24,40,0.06)]">
    <h2 className="px-3 pb-1.5 pt-3 text-xs font-bold text-muted">예정된 합주</h2>
    {rows.length?rows.map((r,i)=>item(r,i,false)):<p className="px-3 pb-3 text-sm text-muted">아직 정해진 합주가 없어요.</p>}

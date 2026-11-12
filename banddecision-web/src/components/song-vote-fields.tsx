@@ -11,8 +11,10 @@ export function SongVoteFields({songId,choice,reason='',compact=false}:{songId:n
  const[picked,setPicked]=useState(choice),[seen,setSeen]=useState(choice);
  if(seen!==choice){setSeen(choice);setPicked(choice);}
  const[state,vote,pending]=useActionState(liveVoteAction,{} as FormState);
- const yesOn=picked==='yes',noOn=picked==='no';
- return <form action={vote} className="flex flex-col gap-2.5" data-vote-editor>
+ // A failed request must not look like a saved vote. Keep the server value on error.
+ const displayed=state.error&&!pending?choice:picked;
+ const yesOn=displayed==='yes',noOn=displayed==='no';
+ return <form action={vote} onReset={event=>event.preventDefault()} className="flex flex-col gap-2.5" data-vote-editor>
   <input type="hidden" name="song_id" value={songId}/>
   <div role="group" aria-label="찬반 선택" className="grid grid-cols-2 gap-2">
    <button type="submit" name="choice" value="yes" disabled={pending} aria-pressed={yesOn} onClick={()=>setPicked('yes')} className={base+(yesOn?'border-2 border-[#2e9e63] bg-plan-bg text-plan-ink':'border border-line-strong bg-white text-ink-2')}><Check size={18} strokeWidth={2.6} aria-hidden="true"/>찬성</button>
