@@ -1,4 +1,6 @@
 import Link from 'next/link';
+import {difficultyAverageLabel} from '@/lib/difficulty';
+import {VoteBar} from '@/components/vote-bar';
 import {ChevronRight} from 'lucide-react';
 import {DeleteSongForm} from '@/components/delete-song-form';
 import {EditSongSheet} from '@/components/edit-song-sheet';
@@ -10,10 +12,6 @@ import {difficultyAction} from '@/app/actions';
 import {recommendSongs,type Participant,type SongInput} from '@/services/recommendations';
 
 const chipBase='shrink-0 whitespace-nowrap rounded-full px-2.5 py-1 text-[13px] font-bold';
-function VoteBar({yes,no,total}:{yes:number;no:number;total:number}){
- const pct=(n:number)=>total?(n/total*100).toFixed(1)+'%':'0%';
- return <span aria-hidden="true" className="flex h-2 overflow-hidden rounded-full bg-surface-2"><span className="bg-[#2e9e63]" style={{width:pct(yes)}}/><span className="bg-faint" style={{width:pct(no)}}/></span>;
-}
 function MyVoteChip({choice}:{choice?:'yes'|'no'}){
  if(!choice)return <span className={chipBase+' border border-warn-line bg-warn-bg py-[3px] text-warn-ink'}>미투표</span>;
  return <span className={chipBase+' '+(choice==='yes'?'bg-plan-bg text-plan-ink':'bg-surface-2 text-ink-2')}>내 투표 · {choice==='yes'?'찬성':'반대'}</span>;
@@ -29,7 +27,7 @@ export function SongList({
  const canVote=participants.some(p=>p.id===memberId),total=participants.length;
  const status=new Map(recommendSongs(participants,songs,difficultyEnabled).map(r=>[r.id,r]));
  // List: one number per song (average of the parts that have one); the detail keeps the per-part values.
- const difficultyAverage=(song:SongInput)=>{const values=parts.map(p=>song.difficulties[p.partKey]).filter((v):v is number=>typeof v==='number');return values.length?'평균 난이도 '+(values.reduce((a,b)=>a+b,0)/values.length).toFixed(1):'난이도 미입력';};
+ const difficultyAverage=(song:SongInput)=>difficultyAverageLabel(song.difficulties,parts.map(p=>p.partKey));
  const difficultyLine=(song:SongInput)=>parts.map(p=>p.part+' '+(song.difficulties[p.partKey]??'미등록')).join(' · ');
  if(songs.length===0)return <Card><CardTitle>{emptyText??'아직 등록된 후보곡이 없어요'}</CardTitle><p className="mt-2 text-[15px] text-muted">{emptyText?'전체 곡에서 내 투표를 확인하거나 바꿀 수 있어요.':'오른쪽 위 \'곡 추가\'로 첫 후보곡을 올려 보세요.'}</p></Card>;
  if(!detailed)return <section aria-label="곡 목록" className="overflow-hidden rounded-[20px] bg-white shadow-[0_1px_2px_rgba(16,24,40,0.06)]">{songs.map(song=>{

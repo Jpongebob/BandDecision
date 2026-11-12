@@ -8,13 +8,22 @@ export type {SharePlan} from '@/lib/calendar-export';
 
 const button='inline-flex min-h-11 items-center justify-center gap-1.5 rounded-xl border border-line-strong bg-white px-3 text-[15px] font-semibold text-ink disabled:opacity-50';
 // On PC (the side-menu layout, lg and up) there is no phone calendar to add to, so only sharing stays.
-export function PlanShareButtons({plan}:{plan:SharePlan}){
- const[note,setNote]=useState(''),[calendarNote,setCalendarNote]=useState('');
+function useShare(plan:SharePlan){
+ const[note,setNote]=useState('');
  async function share(){
   const text=planShareText(plan);
   try{if(navigator.share){await navigator.share({title:'합주 안내',text});return;}await navigator.clipboard.writeText(text);setNote('안내 문구를 복사했어요');}
   catch(error){if((error as Error)?.name!=='AbortError')setNote('공유하지 못했어요. 다시 시도해 주세요.');}
  }
+ return {share,note};
+}
+// PC detail header: sharing only (no phone calendar there).
+export function PlanShareButton({plan,className}:{plan:SharePlan;className:string}){
+ const{share,note}=useShare(plan);
+ return <><button type="button" onClick={share} className={className}><Share2 size={15} aria-hidden="true"/>공유하기</button>{note&&<span role="status" className="sr-only">{note}</span>}{note&&<span aria-hidden="true" className="absolute right-6 top-[68px] rounded-lg bg-ink px-2.5 py-1 text-xs font-semibold text-white">{note}</span>}</>;
+}
+export function PlanShareButtons({plan}:{plan:SharePlan}){
+ const{share,note}=useShare(plan),[calendarNote,setCalendarNote]=useState('');
  async function shareFile(){
   setCalendarNote('');
   try{const file=new File([planIcs(plan)],'합주-'+plan.date+'.ics',{type:'text/calendar'});
