@@ -78,7 +78,10 @@ dialog.sheet {
   border-radius: 1.5rem 1.5rem 0 0;
   background: #fff;
   color: var(--foreground);
-  overflow: hidden;
+  /* Short viewports must still let users reach form actions in simple sheets. */
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
 }
 dialog.sheet::backdrop { background: rgb(16 24 40 / 0.45); }
 @media (min-width: 640px) {

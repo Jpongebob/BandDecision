@@ -12,7 +12,7 @@ export function EditSongSheet({songId,title,artist}:{songId:number;title:string;
  useEffect(()=>{if(state.success)dialog.current?.close();},[state]);
  return <><Button type="button" variant="secondary" aria-haspopup="dialog" className="w-full" onClick={()=>dialog.current?.showModal()}>곡 정보 수정</Button>
  <dialog ref={dialog} aria-labelledby="edit-song-title" onClick={e=>{if(e.target===e.currentTarget)dialog.current?.close();}} className="sheet">
- <form action={save} className="flex flex-col gap-3 px-5 pb-6 pt-2.5"><div aria-hidden="true" className="mx-auto mb-1 h-[5px] w-10 rounded-full bg-line-strong"/><h2 id="edit-song-title" className="text-xl font-extrabold">곡 정보 수정</h2>
+ <form action={save} onReset={event=>event.preventDefault()} className="flex flex-col gap-3 px-5 pb-6 pt-2.5"><div aria-hidden="true" className="mx-auto mb-1 h-[5px] w-10 rounded-full bg-line-strong"/><h2 id="edit-song-title" className="text-xl font-extrabold">곡 정보 수정</h2>
  <input type="hidden" name="song_id" value={songId}/>
  <label className="text-[15px] font-semibold text-ink-2">곡 제목<input key={title} name="title" defaultValue={title} maxLength={120} required className={field}/></label>
  <label className="text-[15px] font-semibold text-ink-2">가수<input key={artist} name="artist" defaultValue={artist} maxLength={120} required className={field}/></label>
