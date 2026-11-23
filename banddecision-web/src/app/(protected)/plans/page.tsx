@@ -9,7 +9,7 @@ import {PlanShareButton,PlanShareButtons,type SharePlan} from '@/components/plan
 import {PlanBoard,type BoardRow} from '@/components/plan-board';
 import {averageDifficulty} from '@/lib/difficulty';
 import {PlanAttendanceEditor} from '@/components/plan-attendance';
-import {twoMonthWindow} from '@/lib/calendar-window';
+import {answeredMonths,monthOf} from '@/lib/availability-months';
 import {AttendanceChip,DDay,SongChips} from '@/components/plan-bits';
 import {PlanDeleteButton} from '@/components/plan-delete';
 import {getBandContext} from '@/lib/band-context';
@@ -25,8 +25,9 @@ export default async function PlansPage(){
  const band=await getBandContext(db,page.user.id,page.user.bandContext),bandName=band.status==='ready'?band.band.name:null;
  const{data,member:me}=page,plans=page.plans??[],today=seoulToday(),songs=data?liveRecommendations(data,today).songs:[],leader=me.role==='leader';
  const{upcoming,past}=splitPlans(plans,today),takenDates=upcoming.map(p=>p.rehearsal_date);
- const{endDate}=twoMonthWindow(today),responded=new Set(data?.available.filter(r=>r.date>=today&&r.date<=endDate).map(r=>r.memberId));
- const attendanceMembers=data?.members.map(m=>({id:m.id,nickname:m.nickname,part:m.part,leader:m.id===me.id,noDates:!responded.has(m.id)}))??[];
+ // 미응답 for a plan: no day saved in that plan's month.
+ const answered=answeredMonths(data?.available??[]);
+ const attendanceMembers=(date:string)=>data?.members.map(m=>({id:m.id,nickname:m.nickname,part:m.part,leader:m.id===me.id,noDates:!answered.get(m.id)?.has(monthOf(date))}))??[];
  const orderedSongs=(plan:SavedPlan)=>[...plan.confirmed_plan_songs].sort((a,b)=>a.display_order-b.display_order);
  const songTitles=(plan:SavedPlan)=>orderedSongs(plan).map(s=>s.title_snapshot),songArtists=(plan:SavedPlan)=>orderedSongs(plan).map(s=>s.artist_snapshot);
  const sharePlan=(plan:SavedPlan):SharePlan=>{const attendees=plan.confirmed_plan_members.filter(m=>m.attending),absentees=plan.confirmed_plan_members.filter(m=>!m.attending);return {id:plan.id,date:plan.rehearsal_date,start:plan.starts_at,end:plan.ends_at,location:plan.location,memo:plan.memo,songs:songTitles(plan),artists:songArtists(plan),attending:plan.attendee_count,total:plan.participant_count,band:bandName,attendees:sortedNames(attendees.map(m=>m.nickname_snapshot)),absentees:sortedNames(absentees.map(m=>m.nickname_snapshot))};};
@@ -80,7 +81,7 @@ export default async function PlansPage(){
  </div>
  <PlanBoard rows={upcoming.map(p=>row(p))} details={upcoming.map(p=>planDetail(p))} pastRows={past.map(p=>row(p,true))} pastDetails={past.map(p=>planDetail(p,true))} empty={<p className="px-6 py-10 text-base text-ink-2">{leader?'아직 정해진 합주가 없어요. \'새 합주 정하기\'로 날짜를 정해 보세요.':'아직 정해진 합주가 없어요. 밴드장이 정하면 여기에 보여요.'}</p>}/>
  {/* Popups shared by the phone cards and the PC detail: outside both so either layout can open them. */}
- {leader&&data&&upcoming.map(plan=><div key={plan.id}><Sheet id={'attend-'+plan.id} title="참석자 명단"><PlanAttendanceEditor plan={{id:plan.id,version:plan.version,date:plan.rehearsal_date,start:plan.starts_at,end:plan.ends_at}} members={attendanceMembers} attending={plan.confirmed_plan_members.filter(m=>m.attending&&m.source_member_id).map(m=>m.source_member_id!)}/></Sheet><Sheet id={'edit-'+plan.id} title="합주 계획 수정" wide>{editForm(plan)}</Sheet></div>)}
+ {leader&&data&&upcoming.map(plan=><div key={plan.id}><Sheet id={'attend-'+plan.id} title="참석자 명단"><PlanAttendanceEditor plan={{id:plan.id,version:plan.version,date:plan.rehearsal_date,start:plan.starts_at,end:plan.ends_at}} members={attendanceMembers(plan.rehearsal_date)} attending={plan.confirmed_plan_members.filter(m=>m.attending&&m.source_member_id).map(m=>m.source_member_id!)}/></Sheet><Sheet id={'edit-'+plan.id} title="합주 계획 수정" wide>{editForm(plan)}</Sheet></div>)}
  {leader&&[...upcoming,...past].map(plan=><PlanDeleteButton key={plan.id} id={'delete-'+plan.id} withTrigger={false} planId={plan.id} version={plan.version} what={past.includes(plan)?'합주 기록':'합주 계획'} when={dayLabel(plan.rehearsal_date)+' · '+timeRangeLabel(plan.starts_at,plan.ends_at)}/>)}
  </div>;
 }
