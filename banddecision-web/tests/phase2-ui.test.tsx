@@ -58,7 +58,7 @@ describe('leader attendance editor',()=>{
  it('shows who changed, saves the whole list, then undoes with the next version',async()=>{
   render(createElement(PlanAttendanceEditor,{plan,members,attending:['L','M']}));
   expect(screen.getByText('2/3명 참석')).toBeTruthy();
-  expect(screen.getByText('날짜를 아직 안 냈어요')).toBeTruthy();
+  expect(screen.getByText('11월 날짜를 아직 안 냈어요')).toBeTruthy();
   fireEvent.click(within(screen.getByRole('radiogroup',{name:'Min 참석 여부'})).getByRole('radio',{name:'불참'}));
   fireEvent.click(within(screen.getByRole('radiogroup',{name:'Na 참석 여부'})).getByRole('radio',{name:'참석'}));
   expect(screen.getByText('2명 바뀜')).toBeTruthy();

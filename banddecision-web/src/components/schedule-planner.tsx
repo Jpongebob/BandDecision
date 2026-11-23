@@ -8,9 +8,11 @@ import {twoMonthWindow} from '@/lib/calendar-window';
 import {dayLabel} from '@/lib/day-format';
 import {saveAvailabilityChanges} from '@/app/live-actions';
 import {SavedDatesSheet} from '@/components/saved-dates-sheet';
+import {answeredMonths,monthLabel,monthOf} from '@/lib/availability-months';
 
 type Member={id:string;nickname:string;part:string};
-export type PlanDay={date:string;attending:string[];absent:string[]};
+// Names are for display (나 for me); ids let the leader's 멤버별 view match each member's row.
+export type PlanDay={date:string;attending:string[];absent:string[];attendingIds?:string[];absentIds?:string[]};
 type Toast={text:string;undoAdd:string[];undoRemove:string[]};
 const pad=(n:number)=>String(n).padStart(2,'0');
 const iso=(d:Date)=>`${d.getUTCFullYear()}-${pad(d.getUTCMonth()+1)}-${pad(d.getUTCDate())}`;
@@ -25,7 +27,7 @@ const sorted=(xs:Iterable<string>)=>[...new Set(xs)].sort();
 // 내 일정: tap a date once to see who can come, tap the same date again (or pick a range/month) to stage
 // additions and removals, then save them together. Confirmed rehearsal days are shown in green and locked:
 // only the leader changes attendance there (합주 계획 › 참석자 명단).
-export function SchedulePlanner({today,members,available,memberId,plans,leader=false}:{today:string;members:Member[];available:{memberId:string;date:string}[];memberId:string;plans:PlanDay[];leader?:boolean}){
+export function SchedulePlanner({today,members,available,memberId,plans,leader=false,heading}:{today:string;members:Member[];available:{memberId:string;date:string}[];memberId:string;plans:PlanDay[];leader?:boolean;heading?:React.ReactNode}){
  const router=useRouter();
  const{firstMonth,lastMonth,endDate}=twoMonthWindow(today);
  const[month,setMonth]=useState(firstMonth),[focus,setFocus]=useState(today),[mode,setMode]=useState<'multi'|'range'>('multi'),[anchor,setAnchor]=useState('');
@@ -40,10 +42,10 @@ export function SchedulePlanner({today,members,available,memberId,plans,leader=f
  const saved=local&&local.base===available?local.dates:fromServer;
  const planByDate=useMemo(()=>new Map(plans.map(p=>[p.date,p])),[plans]);
  const others=useMemo(()=>{
-  const active=new Set(members.map(m=>m.id)),byDate=new Map<string,Set<string>>(),responded=new Set<string>();
-  for(const row of available){if(!active.has(row.memberId)||row.memberId===memberId)continue;if(row.date>=today&&row.date<=endDate)responded.add(row.memberId);const ids=byDate.get(row.date)??new Set<string>();ids.add(row.memberId);byDate.set(row.date,ids);}
-  return {byDate,responded};
- },[members,available,memberId,today,endDate]);
+  const active=new Set(members.map(m=>m.id)),byDate=new Map<string,Set<string>>();
+  for(const row of available){if(!active.has(row.memberId)||row.memberId===memberId)continue;const ids=byDate.get(row.date)??new Set<string>();ids.add(row.memberId);byDate.set(row.date,ids);}
+  return {byDate,answered:answeredMonths(available)};
+ },[members,available,memberId]);
  const dirty=add.length+remove.length>0;
  const mine=(day:string)=>(saved.has(day)&&!remove.includes(day))||add.includes(day);
  const count=(day:string)=>(others.byDate.get(day)?.size??0)+(me&&mine(day)?1:0);
@@ -108,15 +110,15 @@ export function SchedulePlanner({today,members,available,memberId,plans,leader=f
  }
 
  // Details for the focused date.
- const plan=planByDate.get(focus),focusMine=mine(focus);
- const can=members.filter(m=>m.id!==memberId&&others.byDate.get(focus)?.has(m.id)).map(m=>m.nickname),cannot=members.filter(m=>m.id!==memberId&&others.responded.has(m.id)&&!others.byDate.get(focus)?.has(m.id)).map(m=>m.nickname),silent=members.filter(m=>m.id!==memberId&&!others.responded.has(m.id)).map(m=>m.nickname);
+ const plan=planByDate.get(focus),focusMine=mine(focus),focusMonth=monthOf(focus),said=(id:string)=>Boolean(others.answered.get(id)?.has(focusMonth));
+ const can=members.filter(m=>m.id!==memberId&&others.byDate.get(focus)?.has(m.id)).map(m=>m.nickname),cannot=members.filter(m=>m.id!==memberId&&said(m.id)&&!others.byDate.get(focus)?.has(m.id)).map(m=>m.nickname),silent=members.filter(m=>m.id!==memberId&&!said(m.id)).map(m=>m.nickname);
  if(me){(focusMine?can:cannot).push('나');}
  const hint=mode==='range'?(anchor?'끝 날을 누르면 그 사이가 모두 추가돼요':'시작 날과 끝 날을 차례로 누르세요'):add.includes(focus)?'한 번 더 누르면 추가를 취소해요':remove.includes(focus)?'한 번 더 누르면 빼기를 취소해요':saved.has(focus)?'한 번 더 누르면 내 가능한 날에서 빠져요':'한 번 더 누르면 내 가능한 날에 추가돼요';
  const barTitle=dirty?[add.length?add.length+'일 추가':'',remove.length?remove.length+'일 빼기':''].filter(Boolean).join(' · '):'바뀐 날짜 없음';
  const segment=(on:boolean)=>'min-h-11 rounded-xl px-4 text-[15px] transition-colors focus-visible:outline-2 focus-visible:outline-brand '+(on?'border border-line-strong bg-white font-bold text-ink shadow-[0_1px_2px_rgba(16,24,40,0.08)]':'border border-transparent font-semibold text-muted');
 
  return <div className="mx-auto flex w-full max-w-xl flex-col gap-3 max-lg:min-h-[calc(100dvh-156px)] lg:grid lg:max-w-none lg:grid-cols-[minmax(0,1fr)_340px] lg:items-start lg:gap-x-5 lg:gap-y-4">
- <div className="flex h-9 shrink-0 items-center justify-between px-1 lg:col-span-2 lg:justify-start lg:gap-4"><h1 className="text-2xl font-extrabold">내 일정</h1><SavedDatesSheet today={today} endDate={endDate} saved={[...saved].sort()} count={count} total={total} plans={planByDate} label={'가능한 날 '+[...saved].filter(d=>d>=today&&d<=endDate).length+'개'}/></div>
+ <div className="flex min-h-9 shrink-0 flex-wrap items-center justify-between gap-x-2 gap-y-1 px-1 lg:col-span-2 lg:justify-start lg:gap-4">{heading??<h1 className="text-2xl font-extrabold">내 일정</h1>}<SavedDatesSheet today={today} endDate={endDate} saved={[...saved].sort()} count={count} total={total} plans={planByDate} label={'가능한 날 '+[...saved].filter(d=>d>=today&&d<=endDate).length+'개'}/></div>
  <section aria-label="달력" className="shrink-0 rounded-[20px] bg-white px-3.5 py-3 shadow-[0_1px_2px_rgba(16,24,40,0.06)] lg:px-5 lg:py-4">
  <div className="flex items-center gap-2"><div role="group" aria-label="선택 방식" className="flex rounded-xl bg-seg"><button type="button" aria-pressed={mode==='multi'} onClick={()=>{setMode('multi');setAnchor('');}} className={segment(mode==='multi')}>하루씩</button><button type="button" aria-pressed={mode==='range'} onClick={()=>{setMode('range');setAnchor('');}} className={segment(mode==='range')}>기간으로</button></div><div className="grow"/><button type="button" onClick={pickMonth} disabled={pending||monthChoices.length===0} aria-pressed={monthAll} className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-line-strong bg-white px-3 text-[15px] font-semibold text-ink-2 disabled:opacity-40"><SquareCheck size={16} aria-hidden="true"/>{monthAll?'전체 해제':'이번 달 전체'}</button></div>
  <div className="mt-2.5 flex items-center justify-center gap-1"><button type="button" aria-label="이전 달" onClick={()=>move(-1)} disabled={month<=firstMonth} className="grid size-11 place-items-center rounded-xl text-ink-2 disabled:text-line-strong"><ChevronLeft size={22}/></button><div className="flex min-w-32 flex-col items-center"><h2 aria-live="polite" className="text-lg font-bold">{cells.year}년 {cells.index+1}월</h2><span role="img" aria-label={'입력할 수 있는 2개월 중 '+(month===firstMonth?'첫째':'둘째')+' 달'} className="mt-1 flex gap-1">{[firstMonth,lastMonth].map(m=><span key={m} className={'h-1 rounded-full '+(m===month?'w-3.5 bg-brand':'w-1.5 bg-line-strong')}/>)}</span></div><button type="button" aria-label="다음 달" onClick={()=>move(1)} disabled={month>=lastMonth} className="grid size-11 place-items-center rounded-xl text-ink-2 disabled:text-line-strong"><ChevronRight size={22}/></button></div>
@@ -138,9 +140,9 @@ export function SchedulePlanner({today,members,available,memberId,plans,leader=f
  <section aria-label="선택한 날짜 현황" aria-live="polite" className="flex grow flex-col gap-1.5 rounded-[20px] bg-white px-4 py-3 shadow-[0_1px_2px_rgba(16,24,40,0.06)] lg:sticky lg:top-6 lg:min-h-[420px] lg:gap-2 lg:px-5 lg:py-4">
  <div className="flex items-baseline justify-between gap-2"><span className="inline-flex items-center gap-1.5"><span className="text-[17px] font-bold">{dayLabel(focus)}</span>{plan&&<span className="whitespace-nowrap rounded-md bg-plan-bg px-1.5 py-0.5 text-[13px] font-bold text-plan-ink">합주 확정</span>}</span><span className="whitespace-nowrap text-[15px] font-semibold text-ink-2">{plan?plan.attending.length+'/'+(plan.attending.length+plan.absent.length):count(focus)+'/'+total}명 참석</span></div>
  <div aria-hidden="true" className="hidden h-2 overflow-hidden rounded-full bg-surface-2 lg:block"><div className={'h-full rounded-full '+(plan?'bg-plan-dot':'bg-brand')} style={{width:Math.round(100*(plan?plan.attending.length/Math.max(1,plan.attending.length+plan.absent.length):count(focus)/Math.max(1,total)))+'%'}}/></div>
- <ul data-member-rows className="mt-1 hidden flex-col lg:flex">{(plan?[...plan.attending.map(name=>({name,part:'',status:'참석'})),...plan.absent.map(name=>({name,part:'',status:'불참'}))]:members.map(m=>({name:m.id===memberId?'나':m.nickname,part:m.id===memberId?'':m.part,status:m.id===memberId?(focusMine?'가능':'안 됨'):others.byDate.get(focus)?.has(m.id)?'가능':others.responded.has(m.id)?'안 됨':'미응답'}))).map(row=><li key={row.name+row.status} className="flex h-10 items-center gap-2.5 text-sm font-semibold"><span aria-hidden="true" className="grid size-7 shrink-0 place-items-center rounded-full bg-surface-2 text-xs font-bold text-ink-2">{[...row.name][0]}</span><span className="min-w-0 truncate">{row.name}</span>{row.part&&<span className="text-xs font-medium text-muted">{row.part}</span>}<span className={'ml-auto rounded-md px-2 py-0.5 text-xs font-bold '+(row.status==='가능'?'bg-brand-tint text-brand-ink':row.status==='참석'?'bg-plan-bg text-plan-ink':row.status==='미응답'?'border border-dashed border-pending text-warn-ink':'bg-seg text-ink-2')}>{row.status}</span></li>)}</ul>
+ <ul data-member-rows className="mt-1 hidden flex-col lg:flex">{(plan?[...plan.attending.map(name=>({name,part:'',status:'참석'})),...plan.absent.map(name=>({name,part:'',status:'불참'}))]:members.map(m=>({name:m.id===memberId?'나':m.nickname,part:m.id===memberId?'':m.part,status:m.id===memberId?(focusMine?'가능':'안 됨'):others.byDate.get(focus)?.has(m.id)?'가능':said(m.id)?'안 됨':'미응답'}))).map(row=><li key={row.name+row.status} className="flex h-10 items-center gap-2.5 text-sm font-semibold"><span aria-hidden="true" className="grid size-7 shrink-0 place-items-center rounded-full bg-surface-2 text-xs font-bold text-ink-2">{[...row.name][0]}</span><span className="min-w-0 truncate">{row.name}</span>{row.part&&<span className="text-xs font-medium text-muted">{row.part}</span>}<span className={'ml-auto rounded-md px-2 py-0.5 text-xs font-bold '+(row.status==='가능'?'bg-brand-tint text-brand-ink':row.status==='참석'?'bg-plan-bg text-plan-ink':row.status==='미응답'?'border border-dashed border-pending text-warn-ink':'bg-seg text-ink-2')}>{row.status}</span></li>)}</ul>
  {plan?<ul className="flex flex-col text-[15px] leading-5 lg:hidden"><NameLine dot="bg-plan-dot" label={'참석 '+plan.attending.length} names={plan.attending}/><NameLine dot="bg-faint" label={'불참 '+plan.absent.length} names={plan.absent}/></ul>
- :<ul className="flex flex-col text-[15px] leading-5 lg:hidden"><NameLine dot="bg-brand" label={'가능 '+can.length} names={can}/><NameLine dot="bg-faint" label={'안 됨 '+cannot.length} names={cannot}/>{silent.length>0&&<NameLine dot="border-2 border-pending bg-white" label={'미응답 '+silent.length} names={silent} note="이번 달·다음 달 날짜를 아직 안 냈어요"/>}</ul>}
+ :<ul className="flex flex-col text-[15px] leading-5 lg:hidden"><NameLine dot="bg-brand" label={'가능 '+can.length} names={can}/><NameLine dot="bg-faint" label={'안 됨 '+cannot.length} names={cannot}/>{silent.length>0&&<NameLine dot="border-2 border-pending bg-white" label={'미응답 '+silent.length} names={silent} note={monthLabel(focusMonth)+' 날짜를 아직 안 냈어요'}/>}</ul>}
  {focus>=today&&!plan&&<p className="inline-flex items-start gap-1.5 text-sm font-semibold leading-5 text-brand-ink"><Hand size={16} aria-hidden="true" className="mt-0.5 shrink-0"/>{hint}</p>}
  {plan&&<p className="inline-flex items-start gap-1.5 text-sm font-semibold leading-5 text-plan-ink"><Lock size={16} aria-hidden="true" className="mt-0.5 shrink-0"/>{leader?<span>확정된 합주 날이에요. 참석은 <Link href="/plans" className="underline underline-offset-2">합주 계획</Link>의 참석자 명단에서 바꿔요.</span>:'확정된 합주 날이라 직접 바꿀 수 없어요. 못 오게 되면 밴드장에게 알려 주세요.'}</p>}
  {error&&<p role="alert" className="text-sm font-semibold text-danger">{error}</p>}
