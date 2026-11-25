@@ -9,12 +9,12 @@ import Dashboard from '../src/app/(protected)/dashboard/page';
 beforeEach(()=>{state.count=2;state.role='leader';state.past=false;state.skill=false;state.location='';});
 describe('editable date-only plan views',()=>{
  it('renders all plans and labels date-only plans',async()=>{const html=renderToStaticMarkup(await PlansPage());expect(html).toContain('Song 1');expect(html).toContain('곡 미정');expect(html).toContain('계획 수정');expect(html).toContain('합주 삭제');expect(html).toContain('이 합주 계획을 삭제할까요?');expect(html).not.toContain('미리보기');});
- it('home shows the upcoming date and attendance without song titles',async()=>{const html=renderToStaticMarkup(await Dashboard());expect(html).toContain('Leader님, 안녕하세요');expect(html).toContain('예정 합주 2/5');expect(html).toContain('다가오는 합주');expect(html).toContain('1/1명 참석');expect(html).toContain('합주 계획 보기');expect(html).not.toContain('곡 미정');expect(html).not.toContain('회차');});
- it('at capacity keeps all editors but hides new confirmation',async()=>{state.count=5;const html=renderToStaticMarkup(await PlansPage());expect(html).toContain('Song 4');expect(html).toContain('계획이 5개');expect(html.match(/계획 수정 저장/g)).toHaveLength(5);expect(html).not.toContain('이 날로 확정하기');});
+ it('home shows the upcoming date and attendance without song titles',async()=>{const html=renderToStaticMarkup(await Dashboard());expect(html).toContain('Leader님, 안녕하세요');expect(html).toContain('예정 합주 2개');expect(html).toContain('다가오는 합주');expect(html).toContain('1/1명 참석');expect(html).toContain('합주 계획 보기');expect(html).not.toContain('곡 미정');expect(html).not.toContain('회차');});
+ it('more than five plans keeps all editors and allows creating another',async()=>{state.count=8;const html=renderToStaticMarkup(await PlansPage());expect(html).toContain('Song 7');expect(html).toContain('예정 8개');expect(html.match(/계획 수정 저장/g)).toHaveLength(8);expect(html).toContain('이 날로 확정하기');});
  it('ordinary members can read but cannot edit/delete/create plans',async()=>{state.role='member';const html=renderToStaticMarkup(await PlansPage());expect(html).toContain('Song 1');expect(html).not.toContain('계획 수정');expect(html).not.toContain('계획 삭제');expect(html).not.toContain('새 합주 정하기');expect(html).toContain('참석자 명단');});
 });
 
-it('archives old plans without consuming upcoming capacity or exposing edit forms',async()=>{state.count=5;state.past=true;const html=renderToStaticMarkup(await PlansPage());expect(html).toContain('지난 합주');expect(html).toContain('data-archived-plan-id="p0"');expect(html).toContain('예정 4/5');expect(html).toContain('이 날로 확정하기');expect(html.match(/계획 수정 저장/g)).toHaveLength(4);});
+it('archives old plans without consuming upcoming capacity or exposing edit forms',async()=>{state.count=5;state.past=true;const html=renderToStaticMarkup(await PlansPage());expect(html).toContain('지난 합주');expect(html).toContain('data-archived-plan-id="p0"');expect(html).toContain('예정 4개');expect(html).toContain('이 날로 확정하기');expect(html.match(/계획 수정 저장/g)).toHaveLength(4);});
 
 it('shows nearest rehearsal first with location and no task list',async()=>{
  state.location='홍대 합주실';let html=renderToStaticMarkup(await Dashboard());

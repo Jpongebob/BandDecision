@@ -132,7 +132,7 @@ export async function workflows({run,go,fill,touchText,wait,assert,layout,viewpo
  await go('/dashboard','다가오는 합주');assert(await run('document.body.innerText.includes("[테스트 A]")'),'home shows the songs of the next rehearsal');await shot('home-songs-'+(process.env.QA_DESKTOP?1280:390)+'.png');await go('/plans','합주 계획');
  await openEdit(card);assert(!(await run('!!document.querySelector('+JSON.stringify(planCal+' [data-day="'+day(11)+'"][data-taken]')+')')),'the edited plan does not mark its own day as taken');await pickPlanDay(day(12));assert(await run('document.querySelector("dialog[open] [data-date-move]")?.innerText.includes("옮겨요")'),'moving the date says the rehearsal moves');await touch('dialog[open] [data-song-choice][aria-pressed=true]');await savePlanEdit(card,'곡 미정');assert(await run(summaryHas(card,md(day(12)))),'plan date changed and songs removed in place');
  for(let i=1;i<=4;i++){await createDatePlan(day(12+i));}
- assert(await run('!document.body.innerText.includes("새 합주 정하기")&&document.body.innerText.includes("계획이 5개")'),'five-plan capacity enforced in screen');
+ assert(await run('document.body.innerText.includes("새 합주 정하기")&&!document.body.innerText.includes("계획이 5개")'),'new plans remain available with five upcoming plans');
  await openEdit(card);await pickPlanDay(day(17));await savePlanEdit(card,md(day(17)));assert((await planCount())===5,'existing plans remain editable at capacity');await layout('five plans');await shot('plans-390.png');
  for(const width of [1024,1152,1280]){
   await viewport(width,844,true);await go('/plans','합주 계획');await layout('PC plan list and detail');

@@ -128,7 +128,7 @@ describe('plan deletion and capacity actions',()=>{
  });
  it('explains capacity failure without deleting or redirecting',async()=>{
   mocks.rpc.mockResolvedValue({error:{message:'PLAN_LIMIT_REACHED'}});
-  expect((await confirmPlanAction({},form({round_id:band,date:'2026-11-05',version:'5'},['1']))).error).toContain('5개');
+  expect((await confirmPlanAction({},form({round_id:band,date:'2026-11-05',version:'5'},['1']))).error).toContain('030');
   expect(mocks.redirect).not.toHaveBeenCalled();expect(mocks.revalidate).not.toHaveBeenCalled();
  });
 });
